@@ -13,11 +13,15 @@ class OrderFlowEntryScreen extends StatelessWidget {
     super.key,
     this.draft,
     this.onBack,
+    this.onChooseSeal,
+    this.onChooseStone,
     this.onContinueToShipping,
   });
 
   final OrderDraft? draft;
   final VoidCallback? onBack;
+  final VoidCallback? onChooseSeal;
+  final VoidCallback? onChooseStone;
   final VoidCallback? onContinueToShipping;
 
   @override
@@ -25,7 +29,7 @@ class OrderFlowEntryScreen extends StatelessWidget {
     final l10n = context.l10n;
     final orderDraft = draft ?? OrderDraft.empty();
 
-    if (!orderDraft.hasCombinationSelections) {
+    if (!orderDraft.hasSealSelection && !orderDraft.hasStoneSelection) {
       return _OrderScreenFrame(
         title: l10n.order,
         onBack: onBack,
@@ -33,9 +37,32 @@ class OrderFlowEntryScreen extends StatelessWidget {
           HankoStateView.empty(
             title: l10n.noActiveDraft,
             message: l10n.noActiveDraftMessage,
-            actionLabel: l10n.reviewSelection,
+            actionLabel: l10n.orderChooseSealAction,
+            onAction: onChooseSeal,
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          _SecondaryOrderAction(
+            label: l10n.orderChooseStoneAction,
+            icon: Icons.diamond_outlined,
+            onPressed: onChooseStone,
           ),
         ],
+      );
+    }
+
+    if (!orderDraft.hasSealSelection) {
+      return _MissingSealScreen(
+        draft: orderDraft,
+        onBack: onBack,
+        onChooseSeal: onChooseSeal,
+      );
+    }
+
+    if (!orderDraft.hasStoneSelection) {
+      return _MissingStoneScreen(
+        draft: orderDraft,
+        onBack: onBack,
+        onChooseStone: onChooseStone,
       );
     }
 
@@ -43,6 +70,96 @@ class OrderFlowEntryScreen extends StatelessWidget {
       draft: orderDraft,
       onBack: onBack,
       onContinueToShipping: onContinueToShipping,
+    );
+  }
+}
+
+class _MissingSealScreen extends StatelessWidget {
+  const _MissingSealScreen({
+    required this.draft,
+    required this.onBack,
+    required this.onChooseSeal,
+  });
+
+  final OrderDraft draft;
+  final VoidCallback? onBack;
+  final VoidCallback? onChooseSeal;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final stone = draft.stoneSelection;
+
+    return _OrderScreenFrame(
+      title: l10n.orderReviewTitle,
+      onBack: onBack,
+      children: [
+        if (stone != null) ...[
+          _StoneSummaryCard(selection: stone),
+          const SizedBox(height: HankoSpacing.md),
+        ],
+        _MissingSelectionCard(
+          icon: Icons.draw_outlined,
+          title: l10n.orderMissingSealTitle,
+          message: l10n.orderMissingSealMessage,
+          actionLabel: l10n.orderChooseSealAction,
+          onAction: onChooseSeal,
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(message: l10n.orderMissingSealNotice),
+        const SizedBox(height: HankoSpacing.md),
+        HankoPrimaryButton(
+          label: l10n.orderChooseSealAction,
+          icon: Icons.arrow_forward,
+          onPressed: onChooseSeal,
+          height: 58,
+        ),
+      ],
+    );
+  }
+}
+
+class _MissingStoneScreen extends StatelessWidget {
+  const _MissingStoneScreen({
+    required this.draft,
+    required this.onBack,
+    required this.onChooseStone,
+  });
+
+  final OrderDraft draft;
+  final VoidCallback? onBack;
+  final VoidCallback? onChooseStone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final seal = draft.sealSelection;
+
+    return _OrderScreenFrame(
+      title: l10n.orderReviewTitle,
+      onBack: onBack,
+      children: [
+        if (seal != null) ...[
+          _SealSummaryCard(selection: seal),
+          const SizedBox(height: HankoSpacing.md),
+        ],
+        _MissingSelectionCard(
+          icon: Icons.diamond_outlined,
+          title: l10n.orderMissingStoneTitle,
+          message: l10n.orderMissingStoneMessage,
+          actionLabel: l10n.orderChooseStoneAction,
+          onAction: onChooseStone,
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(message: l10n.orderCustomMadeNotice),
+        const SizedBox(height: HankoSpacing.md),
+        HankoPrimaryButton(
+          label: l10n.orderChooseStoneAction,
+          icon: Icons.arrow_forward,
+          onPressed: onChooseStone,
+          height: 58,
+        ),
+      ],
     );
   }
 }
@@ -193,6 +310,157 @@ class _OrderTitleDivider extends StatelessWidget {
         ),
         Expanded(child: Divider(color: HankoColors.gold, thickness: 0.8)),
       ],
+    );
+  }
+}
+
+class _MissingSelectionCard extends StatelessWidget {
+  const _MissingSelectionCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final preview = _MissingPreview(icon: icon);
+          final detail = _MissingSelectionDetails(
+            title: title,
+            message: message,
+            actionLabel: actionLabel,
+            onAction: onAction,
+          );
+          if (constraints.maxWidth < 330) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: preview),
+                const SizedBox(height: HankoSpacing.md),
+                detail,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              preview,
+              const SizedBox(width: HankoSpacing.lg),
+              Expanded(child: detail),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MissingPreview extends StatelessWidget {
+  const _MissingPreview({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 132,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: HankoColors.surface,
+          border: Border.all(color: HankoColors.surfaceBorder, width: 1.2),
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+        ),
+        child: Center(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: HankoColors.medallion,
+              borderRadius: BorderRadius.circular(HankoRadii.md),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(HankoSpacing.md),
+              child: Icon(icon, color: HankoColors.gold, size: 48),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MissingSelectionDetails extends StatelessWidget {
+  const _MissingSelectionDetails({
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: HankoTextStyles.sectionTitle),
+        const SizedBox(height: HankoSpacing.md),
+        const _OrderTitleDivider(),
+        const SizedBox(height: HankoSpacing.md),
+        Text(message, style: HankoTextStyles.body),
+        const SizedBox(height: HankoSpacing.md),
+        _SecondaryOrderAction(
+          label: actionLabel,
+          icon: Icons.arrow_forward,
+          onPressed: onAction,
+        ),
+      ],
+    );
+  }
+}
+
+class _SecondaryOrderAction extends StatelessWidget {
+  const _SecondaryOrderAction({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: HankoColors.gold,
+        minimumSize: const Size.fromHeight(52),
+        side: const BorderSide(color: HankoColors.gold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+        ),
+      ),
+      icon: Icon(icon, size: 20),
+      label: Text(
+        label,
+        style: HankoTextStyles.label.copyWith(color: HankoColors.gold),
+      ),
     );
   }
 }

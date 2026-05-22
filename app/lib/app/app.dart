@@ -276,6 +276,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   String? _stoneListingsLocale;
   final _savingLocalSealKeys = <String>{};
   final _deletingLocalSealIds = <String>{};
+  HankoAppTab? _requestedTab;
   var _pages = const <PageEntry>[_shellPage];
 
   @override
@@ -332,6 +333,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
           constraints: const BoxConstraints(maxWidth: 432),
           child: HankoTabNavigationShell(
             tabs: _navigationTabs,
+            selectedTab: _requestedTab,
             buildPage: _buildTabPage,
             buildBottomNavigation: (context, selectedIndex, onSelected) {
               return _BottomTabs(
@@ -367,6 +369,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
           child: OrderFlowEntryScreen(
             draft: _orderDraft,
             onBack: _closeTopPage,
+            onChooseSeal: () => _showTabFromOrder(HankoAppTab.mySeals),
+            onChooseStone: () => _showTabFromOrder(HankoAppTab.stones),
           ),
         ),
       ),
@@ -755,9 +759,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       _orderDraftSealSelectionFromLocalSealDesign(design),
     );
     unawaited(_applyOrderDraft(nextDraft));
-    if (nextDraft.hasCombinationSelections) {
-      _openOrderReview();
-    }
+    _openOrderReview();
   }
 
   void _chooseStoneForOrder(StoneListing listing) {
@@ -768,9 +770,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       _orderDraftStoneSelectionFromStoneListing(listing),
     );
     unawaited(_applyOrderDraft(nextDraft));
-    if (nextDraft.hasCombinationSelections) {
-      _openOrderReview();
-    }
+    _openOrderReview();
   }
 
   Future<void> _applyOrderDraft(OrderDraft draft) async {
@@ -979,6 +979,19 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       return;
     }
     setState(() => _pages = const [_shellPage, _orderReviewPage]);
+  }
+
+  void _showTabFromOrder(HankoAppTab tab) {
+    setState(() {
+      _requestedTab = tab;
+      _pages = const [_shellPage];
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _requestedTab != tab) {
+        return;
+      }
+      setState(() => _requestedTab = null);
+    });
   }
 
   void _closeTopPage() {

@@ -904,6 +904,12 @@ void main() {
     await tester.tap(find.text('Choose for Order'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Stone missing'), findsOneWidget);
+    expect(find.text('Choose a Stone'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Selected for order'), findsOneWidget);
     expect(
       find.text('This seal is now saved in the order draft.'),
@@ -1383,6 +1389,12 @@ void main() {
     await tester.tap(find.byKey(const Key('stone-selection-confirm')));
     await tester.pumpAndSettle();
 
+    expect(find.text('Seal design missing'), findsOneWidget);
+    expect(find.text('Choose a Seal'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Selected for Order'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -1459,7 +1471,10 @@ void main() {
     await tester.tap(find.text('Choose for Order'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Stones').last);
+    expect(find.text('Stone missing'), findsOneWidget);
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Select Stone'));
     await tester.pump();
@@ -1527,7 +1542,10 @@ void main() {
     await tester.tap(find.text('Choose for Order'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Stones').last);
+    expect(find.text('Stone missing'), findsOneWidget);
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Select Stone'));
     await tester.pump();
@@ -1549,6 +1567,85 @@ void main() {
     expect(find.text('¥600'), findsOneWidget);
     expect(find.text('¥18,600'), findsOneWidget);
     expect(find.text('Continue to Shipping'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M08-T03 shows missing seal and stone next actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seal design missing'), findsOneWidget);
+    expect(
+      find.text('Choose a saved seal design before continuing to checkout.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Choose a Seal').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved on this device'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    final secondDraftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: secondDraftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stone missing'), findsOneWidget);
+    expect(
+      find.text('Choose a gemstone seal stone before continuing to checkout.'),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stones'), findsWidgets);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

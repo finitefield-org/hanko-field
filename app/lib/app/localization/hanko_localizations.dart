@@ -253,6 +253,13 @@ class HankoLocalizations {
   String get noActiveDraft => _strings.noActiveDraft;
   String get noActiveDraftMessage => _strings.noActiveDraftMessage;
   String get reviewSelection => _strings.reviewSelection;
+  String get orderMissingSealTitle => _strings.orderMissingSealTitle;
+  String get orderMissingSealMessage => _strings.orderMissingSealMessage;
+  String get orderMissingSealNotice => _strings.orderMissingSealNotice;
+  String get orderChooseSealAction => _strings.orderChooseSealAction;
+  String get orderMissingStoneTitle => _strings.orderMissingStoneTitle;
+  String get orderMissingStoneMessage => _strings.orderMissingStoneMessage;
+  String get orderChooseStoneAction => _strings.orderChooseStoneAction;
   String get orderReviewTitle => _strings.orderReviewTitle;
   String get orderReviewMessage => _strings.orderReviewMessage;
   String get orderItemPriceLabel => _strings.orderItemPriceLabel;
@@ -524,6 +531,13 @@ class _HankoStrings {
     required this.noActiveDraft,
     required this.noActiveDraftMessage,
     required this.reviewSelection,
+    required this.orderMissingSealTitle,
+    required this.orderMissingSealMessage,
+    required this.orderMissingSealNotice,
+    required this.orderChooseSealAction,
+    required this.orderMissingStoneTitle,
+    required this.orderMissingStoneMessage,
+    required this.orderChooseStoneAction,
     required this.orderReviewTitle,
     required this.orderReviewMessage,
     required this.orderItemPriceLabel,
@@ -764,6 +778,13 @@ class _HankoStrings {
   final String noActiveDraft;
   final String noActiveDraftMessage;
   final String reviewSelection;
+  final String orderMissingSealTitle;
+  final String orderMissingSealMessage;
+  final String orderMissingSealNotice;
+  final String orderChooseSealAction;
+  final String orderMissingStoneTitle;
+  final String orderMissingStoneMessage;
+  final String orderChooseStoneAction;
   final String orderReviewTitle;
   final String orderReviewMessage;
   final String orderItemPriceLabel;
@@ -1043,6 +1064,16 @@ const _localizedValues = {
       noActiveDraft: 'No active draft',
       noActiveDraftMessage: 'Choose a saved seal and a stone before checkout.',
       reviewSelection: 'Review Selection',
+      orderMissingSealTitle: 'Seal design missing',
+      orderMissingSealMessage:
+          'Choose a saved seal design before continuing to checkout.',
+      orderMissingSealNotice:
+          'A seal design is required to complete this custom order.',
+      orderChooseSealAction: 'Choose a Seal',
+      orderMissingStoneTitle: 'Stone missing',
+      orderMissingStoneMessage:
+          'Choose a gemstone seal stone before continuing to checkout.',
+      orderChooseStoneAction: 'Choose a Stone',
       orderReviewTitle: 'Order Review',
       orderReviewMessage:
           'Review the selected seal design and one-of-a-kind stone before entering shipping details.',
@@ -1295,6 +1326,13 @@ const _localizedValues = {
       noActiveDraft: '進行中の下書きはありません',
       noActiveDraftMessage: '注文前に保存済み印影と石を選択してください。',
       reviewSelection: '選択内容を確認',
+      orderMissingSealTitle: '印影が未選択です',
+      orderMissingSealMessage: 'ご注文に進む前に、印影デザインを選択してください。',
+      orderMissingSealNotice: '印影デザインは、ご注文を完了するために必要な項目です。必ずご選択ください。',
+      orderChooseSealAction: '印影を選ぶ',
+      orderMissingStoneTitle: '宝石材が未選択です',
+      orderMissingStoneMessage: 'ご注文に進む前に、宝石材を選択してください。',
+      orderChooseStoneAction: '宝石材を選ぶ',
       orderReviewTitle: 'ご注文内容確認',
       orderReviewMessage: '配送先入力へ進む前に、選択した印影と一点物の石を確認してください。',
       orderItemPriceLabel: '商品価格',
