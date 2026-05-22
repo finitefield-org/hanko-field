@@ -754,7 +754,7 @@ class SealGenerationLoadingScreen extends StatefulWidget {
 
   final SealGenerationRequest request;
   final SealDesignsGenerator generateSealDesigns;
-  final VoidCallback onGenerated;
+  final ValueChanged<SealGenerationResult> onGenerated;
   final ValueChanged<Object> onError;
   final VoidCallback onBack;
 
@@ -773,11 +773,11 @@ class _SealGenerationLoadingScreenState
 
   Future<void> _generateSealDesigns() async {
     try {
-      await widget.generateSealDesigns(widget.request);
+      final result = await widget.generateSealDesigns(widget.request);
       if (!mounted) {
         return;
       }
-      widget.onGenerated();
+      widget.onGenerated(result);
     } catch (error) {
       if (!mounted) {
         return;
@@ -829,6 +829,86 @@ class _SealGenerationLoadingScreenState
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class SealVariantSelectionScreen extends StatefulWidget {
+  const SealVariantSelectionScreen({
+    super.key,
+    required this.result,
+    required this.onSelected,
+    required this.onBack,
+  });
+
+  final SealGenerationResult result;
+  final ValueChanged<SealDesignVariant> onSelected;
+  final VoidCallback onBack;
+
+  @override
+  State<SealVariantSelectionScreen> createState() =>
+      _SealVariantSelectionScreenState();
+}
+
+class _SealVariantSelectionScreenState
+    extends State<SealVariantSelectionScreen> {
+  SealDesignVariant? _selectedVariant;
+
+  void _selectVariant(SealDesignVariant variant) {
+    setState(() => _selectedVariant = variant);
+    widget.onSelected(variant);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final variants = widget.result.variants;
+    final selectedVariant = _selectedVariant;
+
+    return _DesignStepScaffold(
+      title: l10n.sealVariantSelectionTitle,
+      onBack: widget.onBack,
+      children: [
+        HankoSurfaceCard(
+          padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: _SealMedallion(icon: Icons.dashboard)),
+              const SizedBox(height: 24),
+              const Center(child: _DividerMark()),
+              const SizedBox(height: 26),
+              Text(
+                l10n.sealVariantSelectionMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.sealVariantSelectionDetail,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              const SizedBox(height: 24),
+              _SealGenerationSummaryCard(request: widget.result.request),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        for (final variant in variants) ...[
+          _SealVariantCard(
+            variant: variant,
+            selected: selectedVariant?.id == variant.id,
+            onTap: () => _selectVariant(variant),
+          ),
+          const SizedBox(height: 14),
+        ],
+        if (selectedVariant != null)
+          _InlineConfirmation(
+            title: l10n.sealVariantSelectedTitle,
+            message: l10n.sealVariantSelectedMessage,
+          ),
       ],
     );
   }
@@ -1420,6 +1500,188 @@ class _SealGenerationSummaryCard extends StatelessWidget {
             _RequestSummaryRow(
               label: l10n.sealGenerationAttemptLabel,
               value: '${request.attemptNumber}/${request.maxAttempts}',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SealVariantCard extends StatelessWidget {
+  const _SealVariantCard({
+    required this.variant,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SealDesignVariant variant;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final borderColor = selected ? HankoColors.red : HankoColors.surfaceBorder;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: HankoColors.surface,
+            border: Border.all(color: borderColor, width: selected ? 1.4 : 0.7),
+            borderRadius: BorderRadius.circular(HankoRadii.sm),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x10000000),
+                blurRadius: 18,
+                offset: Offset(0, 9),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(HankoRadii.sm),
+                    child: _SealVariantImage(variant: variant),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(variant.label, style: HankoTextStyles.cardTitle),
+                          const SizedBox(height: 7),
+                          Text(variant.id, style: HankoTextStyles.compactBody),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 160),
+                      child: selected
+                          ? _VariantSelectedBadge(
+                              label: l10n.sealVariantSelectedBadge,
+                            )
+                          : _SmallBadge(icon: Icons.touch_app_outlined),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SealVariantImage extends StatelessWidget {
+  const _SealVariantImage({required this.variant});
+
+  final SealDesignVariant variant;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = variant.downloadUrl.trim();
+    if (url.isEmpty) {
+      return _SealVariantPlaceholder(variant: variant);
+    }
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return _SealVariantPlaceholder(variant: variant);
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          return child;
+        }
+        return _SealVariantPlaceholder(variant: variant, loading: true);
+      },
+    );
+  }
+}
+
+class _SealVariantPlaceholder extends StatelessWidget {
+  const _SealVariantPlaceholder({required this.variant, this.loading = false});
+
+  final SealDesignVariant variant;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: HankoColors.medallion),
+      child: Center(
+        child: SizedBox.square(
+          dimension: 124,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: HankoColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: HankoColors.gold, width: 1.2),
+            ),
+            child: Center(
+              child: loading
+                  ? const SizedBox.square(
+                      dimension: 34,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: HankoColors.gold,
+                      ),
+                    )
+                  : Text(
+                      String.fromCharCodes(variant.label.runes.take(2)),
+                      textAlign: TextAlign.center,
+                      style: HankoTextStyles.sectionTitle.copyWith(
+                        color: HankoColors.red,
+                        fontSize: 34,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VariantSelectedBadge extends StatelessWidget {
+  const _VariantSelectedBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.red,
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check, color: Colors.white, size: 17),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: HankoTextStyles.label.copyWith(color: Colors.white),
             ),
           ],
         ),

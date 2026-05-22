@@ -136,6 +136,16 @@ class _KanjiSuggestionFailure {
   final KanjiCandidatesRequest request;
 }
 
+class _KanjiCandidateSelection {
+  const _KanjiCandidateSelection({
+    required this.result,
+    required this.candidate,
+  });
+
+  final KanjiCandidatesResult result;
+  final KanjiCandidate candidate;
+}
+
 class _SealGenerationFailure {
   const _SealGenerationFailure({required this.request});
 
@@ -180,6 +190,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       'DES-006-seal-style-selection';
   static const _designSealGenerationLoadingPageKey =
       'DES-007-seal-generation-loading';
+  static const _designSealVariantSelectionPageKey =
+      'DES-008-seal-variant-selection';
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
   static const _designSealGenerationErrorPageKey =
       'DES-012-seal-generation-error';
@@ -293,32 +305,36 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       return KanjiSuggestionsScreen(
         result: pageData,
         onOpenCandidate: (candidate) {
-          stack.push(_kanjiCandidateDetailPage(candidate));
+          stack.push(_kanjiCandidateDetailPage(pageData, candidate));
         },
         onBack: stack.pop,
       );
     }
 
     if (page.key == _designKanjiCandidateDetailPageKey &&
-        pageData is KanjiCandidate) {
+        pageData is _KanjiCandidateSelection) {
       return KanjiCandidateDetailScreen(
-        candidate: pageData,
+        candidate: pageData.candidate,
         onSelected: (candidate) {
-          stack.push(_sealStyleSelectionPage(candidate));
+          stack.push(_sealStyleSelectionPage(pageData));
         },
         onBack: stack.pop,
       );
     }
 
     if (page.key == _designSealStyleSelectionPageKey &&
-        pageData is KanjiCandidate) {
+        pageData is _KanjiCandidateSelection) {
       return SealStyleSelectionScreen(
-        candidate: pageData,
+        candidate: pageData.candidate,
         onBack: stack.pop,
         onGenerate: (selection) {
           stack.push(
             _sealGenerationLoadingPage(
-              SealGenerationRequest(candidate: pageData, style: selection),
+              SealGenerationRequest(
+                inputName: pageData.result.realName,
+                candidate: pageData.candidate,
+                style: selection,
+              ),
             ),
           );
         },
@@ -330,7 +346,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       return SealGenerationLoadingScreen(
         request: pageData,
         generateSealDesigns: widget.generateSealDesigns,
-        onGenerated: () {},
+        onGenerated: (result) {
+          stack.replaceTop(_sealVariantSelectionPage(result));
+        },
         onError: (error) {
           if (pageData.hasReachedLimit) {
             stack.replaceTop(_sealGenerationLimitPage(pageData));
@@ -338,6 +356,15 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
           }
           stack.replaceTop(_sealGenerationErrorPage(pageData));
         },
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designSealVariantSelectionPageKey &&
+        pageData is SealGenerationResult) {
+      return SealVariantSelectionScreen(
+        result: pageData,
+        onSelected: (_) {},
         onBack: stack.pop,
       );
     }
@@ -405,19 +432,22 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     );
   }
 
-  PageEntry _kanjiCandidateDetailPage(KanjiCandidate candidate) {
+  PageEntry _kanjiCandidateDetailPage(
+    KanjiCandidatesResult result,
+    KanjiCandidate candidate,
+  ) {
     return PageEntry(
       key: _designKanjiCandidateDetailPageKey,
       name: '/design/kanji/candidate',
-      data: candidate,
+      data: _KanjiCandidateSelection(result: result, candidate: candidate),
     );
   }
 
-  PageEntry _sealStyleSelectionPage(KanjiCandidate candidate) {
+  PageEntry _sealStyleSelectionPage(_KanjiCandidateSelection selection) {
     return PageEntry(
       key: _designSealStyleSelectionPageKey,
       name: '/design/seal/style',
-      data: candidate,
+      data: selection,
     );
   }
 
@@ -426,6 +456,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       key: _designSealGenerationLoadingPageKey,
       name: '/design/seal/generating',
       data: request,
+    );
+  }
+
+  PageEntry _sealVariantSelectionPage(SealGenerationResult result) {
+    return PageEntry(
+      key: _designSealVariantSelectionPageKey,
+      name: '/design/seal/variants',
+      data: result,
     );
   }
 

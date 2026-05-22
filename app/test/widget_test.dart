@@ -179,13 +179,19 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final apiCall = Completer<KanjiCandidatesResult>();
+    final sealCall = Completer<SealGenerationResult>();
     KanjiCandidatesRequest? capturedRequest;
+    SealGenerationRequest? capturedSealRequest;
 
     await pumpLaunchedApp(
       tester,
       generateKanjiCandidates: (request) {
         capturedRequest = request;
         return apiCall.future;
+      },
+      generateSealDesigns: (request) {
+        capturedSealRequest = request;
+        return sealCall.future;
       },
     );
 
@@ -311,6 +317,35 @@ void main() {
     );
     expect(find.text('Generate Seal'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Generate Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Generate Seal'));
+    await tester.pump();
+
+    expect(find.byType(SealGenerationLoadingScreen), findsOneWidget);
+    expect(capturedSealRequest?.inputName, 'Michael Smith');
+    expect(capturedSealRequest?.candidate.kanji, '美空');
+    expect(capturedSealRequest?.style.shape, SealShape.round);
+    expect(capturedSealRequest?.style.style, SealStyleName.traditional);
+    expect(capturedSealRequest?.style.balance, SealBalance.airy);
+
+    sealCall.complete(_sealGenerationResult(request: capturedSealRequest!));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+    expect(find.text('Seal Options'), findsOneWidget);
+    expect(find.text('Elegant and balanced'), findsOneWidget);
+    expect(find.text('Soft spacing'), findsOneWidget);
+    expect(find.text('Bold readable seal'), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
+
     await tester.ensureVisible(find.byTooltip('Back').last);
     await tester.pump();
     await tester.tap(find.byTooltip('Back').last);
@@ -341,7 +376,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final generation = Completer<void>();
+    final generation = Completer<SealGenerationResult>();
     var started = false;
 
     await tester.pumpWidget(
@@ -357,7 +392,7 @@ void main() {
             expect(request.attemptNumber, 1);
             return generation.future;
           },
-          onGenerated: () {},
+          onGenerated: (_) {},
           onError: (_) {},
           onBack: () {},
         ),
@@ -377,8 +412,54 @@ void main() {
     expect(find.text('1/3'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    generation.complete();
+    generation.complete(_sealGenerationResult());
     await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-008 lets the user select one generated seal variant', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SealDesignVariant? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealVariantSelectionScreen(
+          result: _sealGenerationResult(),
+          onSelected: (variant) => selected = variant,
+          onBack: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('Seal Options'), findsOneWidget);
+    expect(find.text('Choose one AI seal design.'), findsOneWidget);
+    expect(find.text('Elegant and balanced'), findsOneWidget);
+    expect(find.text('Soft spacing'), findsOneWidget);
+    expect(find.text('Bold readable seal'), findsOneWidget);
+    expect(find.text('Selected'), findsNothing);
+
+    await tester.ensureVisible(find.text('Soft spacing'));
+    await tester.pump();
+    await tester.tap(find.text('Soft spacing'));
+    await tester.pumpAndSettle();
+
+    expect(selected?.id, 'seal_variant_002');
+    expect(find.text('Selected'), findsOneWidget);
+    expect(find.text('Seal design selected'), findsOneWidget);
+    expect(
+      find.text('This AI seal design is ready for preview and saving.'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -741,6 +822,7 @@ Future<KanjiCandidatesResult> _successfulKanjiGenerator(
 
 SealGenerationRequest _sealGenerationRequest({int attemptNumber = 1}) {
   return SealGenerationRequest(
+    inputName: 'Michael Smith',
     candidate: const KanjiCandidate(
       kanji: '美空',
       reading: 'Misora',
@@ -749,6 +831,39 @@ SealGenerationRequest _sealGenerationRequest({int attemptNumber = 1}) {
     ),
     style: const SealStyleSelection(),
     attemptNumber: attemptNumber,
+  );
+}
+
+SealGenerationResult _sealGenerationResult({SealGenerationRequest? request}) {
+  return SealGenerationResult(
+    request: request ?? _sealGenerationRequest(),
+    requestId: 'seal_request_001',
+    variants: const [
+      SealDesignVariant(
+        id: 'seal_variant_001',
+        storagePath: 'seal_designs/seal_request_001/seal_variant_001.png',
+        downloadUrl: '',
+        label: 'Elegant and balanced',
+        width: 1024,
+        height: 1024,
+      ),
+      SealDesignVariant(
+        id: 'seal_variant_002',
+        storagePath: 'seal_designs/seal_request_001/seal_variant_002.png',
+        downloadUrl: '',
+        label: 'Soft spacing',
+        width: 1024,
+        height: 1024,
+      ),
+      SealDesignVariant(
+        id: 'seal_variant_003',
+        storagePath: 'seal_designs/seal_request_001/seal_variant_003.png',
+        downloadUrl: '',
+        label: 'Bold readable seal',
+        width: 1024,
+        height: 1024,
+      ),
+    ],
   );
 }
 

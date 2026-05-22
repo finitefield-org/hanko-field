@@ -54,6 +54,80 @@ void main() {
     },
   );
 
+  test('SealGenerationRepository posts style and maps variants', () async {
+    final transport = FakeTransport([
+      HankoApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'request_id': 'seal_request_001',
+          'variants': [
+            {
+              'id': 'seal_variant_001',
+              'storage_path':
+                  'seal_designs/seal_request_001/seal_variant_001.png',
+              'download_url':
+                  'https://storage.googleapis.com/hanko-assets/seal_designs/seal_request_001/seal_variant_001.png',
+              'label': 'Elegant and balanced',
+              'width': 1024,
+              'height': 1024,
+            },
+            {
+              'id': 'seal_variant_002',
+              'storage_path':
+                  'seal_designs/seal_request_001/seal_variant_002.png',
+              'download_url':
+                  'https://storage.googleapis.com/hanko-assets/seal_designs/seal_request_001/seal_variant_002.png',
+              'label': 'Soft spacing',
+              'width': 1024,
+              'height': 1024,
+            },
+            {
+              'id': 'seal_variant_003',
+              'storage_path':
+                  'seal_designs/seal_request_001/seal_variant_003.png',
+              'download_url':
+                  'https://storage.googleapis.com/hanko-assets/seal_designs/seal_request_001/seal_variant_003.png',
+              'label': 'Bold readable seal',
+              'width': 1024,
+              'height': 1024,
+            },
+          ],
+        }),
+      ),
+    ]);
+    final repo = SealGenerationRepository(_client(transport));
+
+    final result = await repo.generateSealDesigns(
+      const SealGenerationRequest(
+        inputName: 'Michael',
+        candidate: KanjiCandidate(
+          kanji: '美空',
+          reading: 'Misora',
+          reason: 'A graceful two-character option.',
+        ),
+        style: SealStyleSelection(),
+      ),
+    );
+
+    expect(transport.singleRequest.method, 'POST');
+    expect(transport.singleRequest.uri.path, '/v1/seal-designs/generate');
+    expect(transport.singleRequest.body?['input_name'], 'Michael');
+    expect(transport.singleRequest.body?['kanji'], '美空');
+    expect(transport.singleRequest.body?['shape'], 'square');
+    expect(transport.singleRequest.body?['style'], 'elegant');
+    expect(transport.singleRequest.body?['stroke_weight'], 'standard');
+    expect(transport.singleRequest.body?['balance'], 'balanced');
+    expect(transport.singleRequest.body?['variant_count'], 3);
+    final rules = transport.singleRequest.body?['generation_rules'];
+    expect(rules, isA<Map>());
+    expect((rules! as Map)['plain_background'], isTrue);
+    expect(result.requestId, 'seal_request_001');
+    expect(result.variants, hasLength(3));
+    expect(result.variants[1].id, 'seal_variant_002');
+    expect(result.variants[1].storagePath, contains('seal_variant_002.png'));
+    expect(result.variants[1].width, 1024);
+  });
+
   test(
     'StoneListingsRepository maps list response into domain model',
     () async {

@@ -145,6 +145,13 @@ class HankoLocalizations {
   String get sealGenerationErrorTip => _strings.sealGenerationErrorTip;
   String get sealGenerationLimitTip => _strings.sealGenerationLimitTip;
   String get adjustStyle => _strings.adjustStyle;
+  String get sealVariantSelectionTitle => _strings.sealVariantSelectionTitle;
+  String get sealVariantSelectionMessage =>
+      _strings.sealVariantSelectionMessage;
+  String get sealVariantSelectionDetail => _strings.sealVariantSelectionDetail;
+  String get sealVariantSelectedBadge => _strings.sealVariantSelectedBadge;
+  String get sealVariantSelectedTitle => _strings.sealVariantSelectedTitle;
+  String get sealVariantSelectedMessage => _strings.sealVariantSelectedMessage;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -320,6 +327,12 @@ class _HankoStrings {
     required this.sealGenerationErrorTip,
     required this.sealGenerationLimitTip,
     required this.adjustStyle,
+    required this.sealVariantSelectionTitle,
+    required this.sealVariantSelectionMessage,
+    required this.sealVariantSelectionDetail,
+    required this.sealVariantSelectedBadge,
+    required this.sealVariantSelectedTitle,
+    required this.sealVariantSelectedMessage,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -464,6 +477,12 @@ class _HankoStrings {
   final String sealGenerationErrorTip;
   final String sealGenerationLimitTip;
   final String adjustStyle;
+  final String sealVariantSelectionTitle;
+  final String sealVariantSelectionMessage;
+  final String sealVariantSelectionDetail;
+  final String sealVariantSelectedBadge;
+  final String sealVariantSelectedTitle;
+  final String sealVariantSelectedMessage;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -632,6 +651,14 @@ const _localizedValues = {
       sealGenerationLimitTip:
           'Choose a different balance, stroke weight, or kanji to start a fresh generation.',
       adjustStyle: 'Adjust Style',
+      sealVariantSelectionTitle: 'Seal Options',
+      sealVariantSelectionMessage: 'Choose one AI seal design.',
+      sealVariantSelectionDetail:
+          'Each option is saved with a stable Storage path for later preview and ordering.',
+      sealVariantSelectedBadge: 'Selected',
+      sealVariantSelectedTitle: 'Seal design selected',
+      sealVariantSelectedMessage:
+          'This AI seal design is ready for preview and saving.',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -785,6 +812,12 @@ const _localizedValues = {
       sealGenerationErrorTip: '一度再試行し、続けて失敗する場合はスタイルや漢字をよりシンプルにしてください。',
       sealGenerationLimitTip: '余白感、線の太さ、または漢字を変えると新しく生成できます。',
       adjustStyle: 'スタイルを調整',
+      sealVariantSelectionTitle: '印影候補',
+      sealVariantSelectionMessage: 'AI印影候補から1件を選択してください。',
+      sealVariantSelectionDetail: '各候補は、プレビューと注文に使えるStorageパスと一緒に保存されています。',
+      sealVariantSelectedBadge: '選択中',
+      sealVariantSelectedTitle: '印影を選択しました',
+      sealVariantSelectedMessage: 'このAI印影をプレビュー確認と保存に進められます。',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',
