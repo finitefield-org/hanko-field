@@ -217,6 +217,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     key: 'CMB-001-order-combination-review',
     name: '/order/review',
   );
+  static const _checkoutInputPage = PageEntry(
+    key: 'CHK-001-checkout-input',
+    name: '/checkout/input',
+  );
   static const _navigationTabs = [
     HankoTabDefinition(
       tab: HankoAppTab.design,
@@ -306,6 +310,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return DeclarativePagesNavigator(
       pages: _pages,
       buildPage: (context, page) {
+        if (page.key == _checkoutInputPage.key) {
+          return _buildCheckoutInputPage();
+        }
         if (page.key == _orderReviewPage.key) {
           return _buildOrderReviewPage();
         }
@@ -371,6 +378,23 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             onBack: _closeTopPage,
             onChooseSeal: () => _showTabFromOrder(HankoAppTab.mySeals),
             onChooseStone: () => _showTabFromOrder(HankoAppTab.stones),
+            onContinueToShipping: _openCheckoutInput,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckoutInputPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: CheckoutInputScreen(
+            input: _orderDraft.input,
+            onBack: _closeTopPage,
+            onSave: _saveCheckoutInput,
           ),
         ),
       ),
@@ -981,6 +1005,19 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     setState(() => _pages = const [_shellPage, _orderReviewPage]);
   }
 
+  void _openCheckoutInput() {
+    if (_pages.last.key == _checkoutInputPage.key) {
+      return;
+    }
+    setState(
+      () => _pages = const [_shellPage, _orderReviewPage, _checkoutInputPage],
+    );
+  }
+
+  Future<void> _saveCheckoutInput(OrderDraftInput input) {
+    return _applyOrderDraft(_orderDraft.withInput(input));
+  }
+
   void _showTabFromOrder(HankoAppTab tab) {
     setState(() {
       _requestedTab = tab;
@@ -998,7 +1035,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     if (_pages.length <= 1) {
       return;
     }
-    setState(() => _pages = const [_shellPage]);
+    setState(() => _pages = List.unmodifiable(_pages.take(_pages.length - 1)));
   }
 }
 

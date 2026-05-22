@@ -227,6 +227,314 @@ class OrderCombinationReviewScreen extends StatelessWidget {
   }
 }
 
+class CheckoutInputScreen extends StatefulWidget {
+  const CheckoutInputScreen({
+    super.key,
+    this.input = const OrderDraftInput.empty(),
+    this.onBack,
+    this.onSave,
+  });
+
+  final OrderDraftInput input;
+  final VoidCallback? onBack;
+  final Future<void> Function(OrderDraftInput input)? onSave;
+
+  @override
+  State<CheckoutInputScreen> createState() => _CheckoutInputScreenState();
+}
+
+class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
+  static const _defaultCountryCode = 'JP';
+  static const _knownCountryCodes = ['JP', 'US', 'CA', 'GB', 'AU', 'SG'];
+
+  late final TextEditingController _emailController;
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _postalCodeController;
+  late final TextEditingController _stateController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _addressLine1Controller;
+  late final TextEditingController _addressLine2Controller;
+  late final TextEditingController _orderNoteController;
+  late String _countryCode;
+  var _isSaving = false;
+  var _hasSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController();
+    _fullNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _postalCodeController = TextEditingController();
+    _stateController = TextEditingController();
+    _cityController = TextEditingController();
+    _addressLine1Controller = TextEditingController();
+    _addressLine2Controller = TextEditingController();
+    _orderNoteController = TextEditingController();
+    _applyInput(widget.input);
+  }
+
+  @override
+  void didUpdateWidget(covariant CheckoutInputScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.input != widget.input) {
+      _applyInput(widget.input);
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _postalCodeController.dispose();
+    _stateController.dispose();
+    _cityController.dispose();
+    _addressLine1Controller.dispose();
+    _addressLine2Controller.dispose();
+    _orderNoteController.dispose();
+    super.dispose();
+  }
+
+  void _applyInput(OrderDraftInput input) {
+    _emailController.text = input.contact.email;
+    _fullNameController.text = input.shipping.recipientName;
+    _phoneController.text = input.shipping.phone;
+    _postalCodeController.text = input.shipping.postalCode;
+    _stateController.text = input.shipping.state;
+    _cityController.text = input.shipping.city;
+    _addressLine1Controller.text = input.shipping.addressLine1;
+    _addressLine2Controller.text = input.shipping.addressLine2;
+    _orderNoteController.text = input.orderNote;
+    _countryCode = _normalizedCountryCode(input.shipping.countryCode);
+  }
+
+  Future<void> _save() async {
+    if (_isSaving) {
+      return;
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    final input = widget.input.copyWith(
+      contact: OrderDraftContactInput(
+        email: _emailController.text.trim(),
+        preferredLocale: locale,
+      ),
+      shipping: OrderDraftShippingInput(
+        countryCode: _countryCode,
+        recipientName: _fullNameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        postalCode: _postalCodeController.text.trim(),
+        state: _stateController.text.trim(),
+        city: _cityController.text.trim(),
+        addressLine1: _addressLine1Controller.text.trim(),
+        addressLine2: _addressLine2Controller.text.trim(),
+      ),
+      orderNote: _orderNoteController.text.trim(),
+    );
+
+    setState(() {
+      _isSaving = true;
+      _hasSaved = false;
+    });
+    try {
+      await widget.onSave?.call(input);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _hasSaved = true);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final countryCodes = _countryCodesForSelection(_countryCode);
+
+    return _OrderScreenFrame(
+      title: l10n.checkoutInputTitle,
+      onBack: widget.onBack,
+      children: [
+        Text(l10n.checkoutInputMessage, style: HankoTextStyles.body),
+        const SizedBox(height: HankoSpacing.md),
+        _CheckoutSectionCard(
+          icon: Icons.alternate_email,
+          title: l10n.checkoutContactTitle,
+          children: [
+            HankoTextField(
+              key: const Key('checkout-email-field'),
+              label: l10n.email,
+              hintText: l10n.emailHint,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-full-name-field'),
+              label: l10n.checkoutFullNameLabel,
+              hintText: l10n.checkoutFullNameHint,
+              controller: _fullNameController,
+              keyboardType: TextInputType.name,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-phone-field'),
+              label: l10n.checkoutPhoneLabel,
+              hintText: l10n.checkoutPhoneHint,
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+            ),
+          ],
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _CheckoutSectionCard(
+          icon: Icons.local_shipping_outlined,
+          title: l10n.checkoutShippingTitle,
+          children: [
+            DropdownButtonFormField<String>(
+              key: const Key('checkout-country-field'),
+              initialValue: _countryCode,
+              isExpanded: true,
+              decoration: InputDecoration(labelText: l10n.checkoutCountryLabel),
+              items: [
+                for (final code in countryCodes)
+                  DropdownMenuItem(
+                    value: code,
+                    child: Text(_countryMenuLabel(code)),
+                  ),
+              ],
+              onChanged: (countryCode) {
+                if (countryCode == null) {
+                  return;
+                }
+                setState(() => _countryCode = countryCode);
+              },
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-postal-code-field'),
+              label: l10n.checkoutPostalCodeLabel,
+              hintText: l10n.checkoutPostalCodeHint,
+              controller: _postalCodeController,
+              keyboardType: TextInputType.streetAddress,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-address-line1-field'),
+              label: l10n.checkoutAddressLine1Label,
+              hintText: l10n.checkoutAddressLine1Hint,
+              controller: _addressLine1Controller,
+              keyboardType: TextInputType.streetAddress,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-address-line2-field'),
+              label: l10n.checkoutAddressLine2Label,
+              hintText: l10n.checkoutAddressLine2Hint,
+              controller: _addressLine2Controller,
+              keyboardType: TextInputType.streetAddress,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-city-field'),
+              label: l10n.checkoutCityLabel,
+              hintText: l10n.checkoutCityHint,
+              controller: _cityController,
+              keyboardType: TextInputType.streetAddress,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoTextField(
+              key: const Key('checkout-state-field'),
+              label: l10n.checkoutStateLabel,
+              hintText: l10n.checkoutStateHint,
+              controller: _stateController,
+              keyboardType: TextInputType.streetAddress,
+              textInputAction: TextInputAction.next,
+            ),
+          ],
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _CheckoutSectionCard(
+          icon: Icons.notes_outlined,
+          title: l10n.checkoutOrderNoteTitle,
+          children: [
+            TextFormField(
+              key: const Key('checkout-order-note-field'),
+              controller: _orderNoteController,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              minLines: 3,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: l10n.checkoutOrderNoteLabel,
+                hintText: l10n.checkoutOrderNoteHint,
+              ),
+            ),
+          ],
+        ),
+        if (_hasSaved) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _OrderNotice(message: l10n.checkoutInputSavedMessage),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        HankoPrimaryButton(
+          label: _isSaving
+              ? l10n.checkoutInputSavingAction
+              : l10n.checkoutInputSaveAction,
+          icon: Icons.save_outlined,
+          onPressed: _isSaving ? null : _save,
+          height: 58,
+        ),
+      ],
+    );
+  }
+}
+
+class _CheckoutSectionCard extends StatelessWidget {
+  const _CheckoutSectionCard({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: HankoColors.gold, size: 22),
+              const SizedBox(width: HankoSpacing.sm),
+              Expanded(child: Text(title, style: HankoTextStyles.sectionTitle)),
+            ],
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
 class _OrderScreenFrame extends StatelessWidget {
   const _OrderScreenFrame({
     required this.title,
@@ -992,6 +1300,34 @@ int _estimatedShippingAmount({
     'AU' => 2100,
     'SG' => 1300,
     _ => 600,
+  };
+}
+
+String _normalizedCountryCode(String value) {
+  final normalized = value.trim().toUpperCase();
+  return normalized.isEmpty
+      ? _CheckoutInputScreenState._defaultCountryCode
+      : normalized;
+}
+
+List<String> _countryCodesForSelection(String selectedCountryCode) {
+  if (_CheckoutInputScreenState._knownCountryCodes.contains(
+    selectedCountryCode,
+  )) {
+    return _CheckoutInputScreenState._knownCountryCodes;
+  }
+  return [selectedCountryCode, ..._CheckoutInputScreenState._knownCountryCodes];
+}
+
+String _countryMenuLabel(String code) {
+  return switch (code) {
+    'JP' => 'JP - Japan',
+    'US' => 'US - United States',
+    'CA' => 'CA - Canada',
+    'GB' => 'GB - United Kingdom',
+    'AU' => 'AU - Australia',
+    'SG' => 'SG - Singapore',
+    _ => code,
   };
 }
 

@@ -1747,6 +1747,120 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M09-T01 saves checkout contact shipping and note input', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Continue to Shipping'));
+    await tester.pump();
+    await tester.tap(find.text('Continue to Shipping'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CheckoutInputScreen), findsOneWidget);
+    expect(find.text('Checkout Information'), findsOneWidget);
+    expect(find.text('Contact'), findsOneWidget);
+    expect(find.text('Shipping address'), findsOneWidget);
+    expect(find.text('Order note'), findsWidgets);
+    expect(find.text('Country / Region'), findsOneWidget);
+
+    Future<void> enterCheckoutField(String key, String text) async {
+      final field = find.byKey(Key(key));
+      await tester.ensureVisible(field);
+      await tester.pump();
+      await tester.enterText(
+        find.descendant(of: field, matching: find.byType(EditableText)),
+        text,
+      );
+      await tester.pump();
+    }
+
+    await enterCheckoutField('checkout-email-field', 'customer@example.test');
+    await enterCheckoutField('checkout-full-name-field', 'Michael Smith');
+    await enterCheckoutField('checkout-phone-field', '+1 555 0100');
+
+    await tester.ensureVisible(find.byKey(const Key('checkout-country-field')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('checkout-country-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('US - United States').last);
+    await tester.pumpAndSettle();
+
+    await enterCheckoutField('checkout-postal-code-field', '10001');
+    await enterCheckoutField(
+      'checkout-address-line1-field',
+      '123 Example Street',
+    );
+    await enterCheckoutField('checkout-address-line2-field', 'Apt 1');
+    await enterCheckoutField('checkout-city-field', 'New York');
+    await enterCheckoutField('checkout-state-field', 'NY');
+    await enterCheckoutField(
+      'checkout-order-note-field',
+      'Please ship on a weekday.',
+    );
+
+    await tester.ensureVisible(find.text('Save Checkout Information'));
+    await tester.pump();
+    await tester.tap(find.text('Save Checkout Information'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Checkout information was saved to this order draft.'),
+      findsOneWidget,
+    );
+
+    final savedDraft = await draftRepository.loadOrderDraft();
+    expect(savedDraft.input.contact.email, 'customer@example.test');
+    expect(savedDraft.input.contact.preferredLocale, 'en');
+    expect(savedDraft.input.shipping.countryCode, 'US');
+    expect(savedDraft.input.shipping.recipientName, 'Michael Smith');
+    expect(savedDraft.input.shipping.phone, '+1 555 0100');
+    expect(savedDraft.input.shipping.postalCode, '10001');
+    expect(savedDraft.input.shipping.addressLine1, '123 Example Street');
+    expect(savedDraft.input.shipping.addressLine2, 'Apt 1');
+    expect(savedDraft.input.shipping.city, 'New York');
+    expect(savedDraft.input.shipping.state, 'NY');
+    expect(savedDraft.input.orderNote, 'Please ship on a weekday.');
+    expect(savedDraft.hasCombinationSelections, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {

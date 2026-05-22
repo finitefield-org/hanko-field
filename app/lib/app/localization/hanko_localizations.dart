@@ -270,6 +270,31 @@ class HankoLocalizations {
   String get orderTotalLabel => _strings.orderTotalLabel;
   String get orderCustomMadeNotice => _strings.orderCustomMadeNotice;
   String get continueToShipping => _strings.continueToShipping;
+  String get checkoutInputTitle => _strings.checkoutInputTitle;
+  String get checkoutInputMessage => _strings.checkoutInputMessage;
+  String get checkoutContactTitle => _strings.checkoutContactTitle;
+  String get checkoutShippingTitle => _strings.checkoutShippingTitle;
+  String get checkoutOrderNoteTitle => _strings.checkoutOrderNoteTitle;
+  String get checkoutFullNameLabel => _strings.checkoutFullNameLabel;
+  String get checkoutFullNameHint => _strings.checkoutFullNameHint;
+  String get checkoutPhoneLabel => _strings.checkoutPhoneLabel;
+  String get checkoutPhoneHint => _strings.checkoutPhoneHint;
+  String get checkoutCountryLabel => _strings.checkoutCountryLabel;
+  String get checkoutPostalCodeLabel => _strings.checkoutPostalCodeLabel;
+  String get checkoutPostalCodeHint => _strings.checkoutPostalCodeHint;
+  String get checkoutAddressLine1Label => _strings.checkoutAddressLine1Label;
+  String get checkoutAddressLine1Hint => _strings.checkoutAddressLine1Hint;
+  String get checkoutAddressLine2Label => _strings.checkoutAddressLine2Label;
+  String get checkoutAddressLine2Hint => _strings.checkoutAddressLine2Hint;
+  String get checkoutCityLabel => _strings.checkoutCityLabel;
+  String get checkoutCityHint => _strings.checkoutCityHint;
+  String get checkoutStateLabel => _strings.checkoutStateLabel;
+  String get checkoutStateHint => _strings.checkoutStateHint;
+  String get checkoutOrderNoteLabel => _strings.checkoutOrderNoteLabel;
+  String get checkoutOrderNoteHint => _strings.checkoutOrderNoteHint;
+  String get checkoutInputSaveAction => _strings.checkoutInputSaveAction;
+  String get checkoutInputSavingAction => _strings.checkoutInputSavingAction;
+  String get checkoutInputSavedMessage => _strings.checkoutInputSavedMessage;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -550,6 +575,31 @@ class _HankoStrings {
     required this.orderTotalLabel,
     required this.orderCustomMadeNotice,
     required this.continueToShipping,
+    required this.checkoutInputTitle,
+    required this.checkoutInputMessage,
+    required this.checkoutContactTitle,
+    required this.checkoutShippingTitle,
+    required this.checkoutOrderNoteTitle,
+    required this.checkoutFullNameLabel,
+    required this.checkoutFullNameHint,
+    required this.checkoutPhoneLabel,
+    required this.checkoutPhoneHint,
+    required this.checkoutCountryLabel,
+    required this.checkoutPostalCodeLabel,
+    required this.checkoutPostalCodeHint,
+    required this.checkoutAddressLine1Label,
+    required this.checkoutAddressLine1Hint,
+    required this.checkoutAddressLine2Label,
+    required this.checkoutAddressLine2Hint,
+    required this.checkoutCityLabel,
+    required this.checkoutCityHint,
+    required this.checkoutStateLabel,
+    required this.checkoutStateHint,
+    required this.checkoutOrderNoteLabel,
+    required this.checkoutOrderNoteHint,
+    required this.checkoutInputSaveAction,
+    required this.checkoutInputSavingAction,
+    required this.checkoutInputSavedMessage,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -799,6 +849,31 @@ class _HankoStrings {
   final String orderTotalLabel;
   final String orderCustomMadeNotice;
   final String continueToShipping;
+  final String checkoutInputTitle;
+  final String checkoutInputMessage;
+  final String checkoutContactTitle;
+  final String checkoutShippingTitle;
+  final String checkoutOrderNoteTitle;
+  final String checkoutFullNameLabel;
+  final String checkoutFullNameHint;
+  final String checkoutPhoneLabel;
+  final String checkoutPhoneHint;
+  final String checkoutCountryLabel;
+  final String checkoutPostalCodeLabel;
+  final String checkoutPostalCodeHint;
+  final String checkoutAddressLine1Label;
+  final String checkoutAddressLine1Hint;
+  final String checkoutAddressLine2Label;
+  final String checkoutAddressLine2Hint;
+  final String checkoutCityLabel;
+  final String checkoutCityHint;
+  final String checkoutStateLabel;
+  final String checkoutStateHint;
+  final String checkoutOrderNoteLabel;
+  final String checkoutOrderNoteHint;
+  final String checkoutInputSaveAction;
+  final String checkoutInputSavingAction;
+  final String checkoutInputSavedMessage;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1093,6 +1168,33 @@ const _localizedValues = {
       orderCustomMadeNotice:
           'This product is made by combining your seal design with the selected stone as a custom one-of-a-kind item.',
       continueToShipping: 'Continue to Shipping',
+      checkoutInputTitle: 'Checkout Information',
+      checkoutInputMessage:
+          'Enter the contact, shipping, and optional note details for this order draft.',
+      checkoutContactTitle: 'Contact',
+      checkoutShippingTitle: 'Shipping address',
+      checkoutOrderNoteTitle: 'Order note',
+      checkoutFullNameLabel: 'Full name',
+      checkoutFullNameHint: 'Michael Smith',
+      checkoutPhoneLabel: 'Phone number',
+      checkoutPhoneHint: '+1 000 000 0000',
+      checkoutCountryLabel: 'Country / Region',
+      checkoutPostalCodeLabel: 'Postal code',
+      checkoutPostalCodeHint: '10001',
+      checkoutAddressLine1Label: 'Address line 1',
+      checkoutAddressLine1Hint: '123 Example Street',
+      checkoutAddressLine2Label: 'Address line 2',
+      checkoutAddressLine2Hint: 'Apt 1',
+      checkoutCityLabel: 'City',
+      checkoutCityHint: 'New York',
+      checkoutStateLabel: 'State / Province',
+      checkoutStateHint: 'NY',
+      checkoutOrderNoteLabel: 'Order note',
+      checkoutOrderNoteHint: 'Optional production or delivery note',
+      checkoutInputSaveAction: 'Save Checkout Information',
+      checkoutInputSavingAction: 'Saving...',
+      checkoutInputSavedMessage:
+          'Checkout information was saved to this order draft.',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1351,6 +1453,31 @@ const _localizedValues = {
       orderTotalLabel: '合計',
       orderCustomMadeNotice: '本商品は、印影と石を組み合わせてお作りする、お客様だけの一点物の特注品です。',
       continueToShipping: '配送先入力へ進む',
+      checkoutInputTitle: 'Checkout情報',
+      checkoutInputMessage: 'この注文下書きに使う連絡先、配送先、任意の注文メモを入力してください。',
+      checkoutContactTitle: '連絡先',
+      checkoutShippingTitle: '配送先住所',
+      checkoutOrderNoteTitle: '注文メモ',
+      checkoutFullNameLabel: '氏名',
+      checkoutFullNameHint: '山田 太郎',
+      checkoutPhoneLabel: '電話番号',
+      checkoutPhoneHint: '+81 90 0000 0000',
+      checkoutCountryLabel: '国 / 地域',
+      checkoutPostalCodeLabel: '郵便番号',
+      checkoutPostalCodeHint: '100-0001',
+      checkoutAddressLine1Label: '住所1',
+      checkoutAddressLine1Hint: '千代田1-1',
+      checkoutAddressLine2Label: '住所2',
+      checkoutAddressLine2Hint: 'マンション名・部屋番号',
+      checkoutCityLabel: '市区町村',
+      checkoutCityHint: '千代田区',
+      checkoutStateLabel: '都道府県 / 州',
+      checkoutStateHint: '東京都',
+      checkoutOrderNoteLabel: '注文メモ',
+      checkoutOrderNoteHint: '製作や配送についての任意メモ',
+      checkoutInputSaveAction: 'Checkout情報を保存',
+      checkoutInputSavingAction: '保存中...',
+      checkoutInputSavedMessage: 'Checkout情報を注文下書きに保存しました。',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

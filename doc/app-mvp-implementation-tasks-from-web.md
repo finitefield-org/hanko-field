@@ -941,7 +941,7 @@ MVPで後回し可能:
 
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M09-T01 | `CHK-001` `CHK-002` `CHK-003` `CHK-004` | Checkout入力 | `features/order/presentation/` | 連絡先、配送先、注文メモを入力 |
+| M09-T01 | `CHK-001` `CHK-002` `CHK-003` `CHK-004` | [x] Checkout入力 | `features/order/presentation/` | 連絡先、配送先、注文メモを入力 |
 | M09-T02 | `CHK-005` | 入力不備表示 | `features/order/presentation/` | 不備をまとめて表示し、該当入力へ戻れる |
 | M09-T03 | `CHK-006` `CHK-007` | 注文前確認/同意 | `features/order/presentation/` | 漢字/印影確認とcustom-made確認が必須 |
 | M09-T04 | API | app注文用Request拡張 | `api/src/main.rs` | app注文でAI印影と顧客確認を保存 |
