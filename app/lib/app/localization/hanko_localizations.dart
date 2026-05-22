@@ -94,6 +94,13 @@ class HankoLocalizations {
   String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
   String get kanjiSuggestionsMessage => _strings.kanjiSuggestionsMessage;
   String get kanjiReadingLabel => _strings.kanjiReadingLabel;
+  String get kanjiMeaningLabel => _strings.kanjiMeaningLabel;
+  String get kanjiImpressionLabel => _strings.kanjiImpressionLabel;
+  String get kanjiReasonLabel => _strings.kanjiReasonLabel;
+  String get kanjiCharacterCountLabel => _strings.kanjiCharacterCountLabel;
+  String get kanjiStrokeComplexityLabel => _strings.kanjiStrokeComplexityLabel;
+  String get kanjiEngravingSuitabilityLabel =>
+      _strings.kanjiEngravingSuitabilityLabel;
   String get selectKanji => _strings.selectKanji;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
@@ -224,6 +231,12 @@ class _HankoStrings {
     required this.kanjiSuggestionsTitle,
     required this.kanjiSuggestionsMessage,
     required this.kanjiReadingLabel,
+    required this.kanjiMeaningLabel,
+    required this.kanjiImpressionLabel,
+    required this.kanjiReasonLabel,
+    required this.kanjiCharacterCountLabel,
+    required this.kanjiStrokeComplexityLabel,
+    required this.kanjiEngravingSuitabilityLabel,
     required this.selectKanji,
     required this.savedSeals,
     required this.savedSealsDescription,
@@ -323,6 +336,12 @@ class _HankoStrings {
   final String kanjiSuggestionsTitle;
   final String kanjiSuggestionsMessage;
   final String kanjiReadingLabel;
+  final String kanjiMeaningLabel;
+  final String kanjiImpressionLabel;
+  final String kanjiReasonLabel;
+  final String kanjiCharacterCountLabel;
+  final String kanjiStrokeComplexityLabel;
+  final String kanjiEngravingSuitabilityLabel;
   final String selectKanji;
   final String savedSeals;
   final String savedSealsDescription;
@@ -438,6 +457,12 @@ const _localizedValues = {
       kanjiSuggestionsTitle: 'Kanji Suggestions',
       kanjiSuggestionsMessage: 'Choose the kanji that best fits your seal.',
       kanjiReadingLabel: 'Reading',
+      kanjiMeaningLabel: 'Meaning',
+      kanjiImpressionLabel: 'Impression',
+      kanjiReasonLabel: 'Reason',
+      kanjiCharacterCountLabel: 'Characters',
+      kanjiStrokeComplexityLabel: 'Stroke complexity',
+      kanjiEngravingSuitabilityLabel: 'Engraving suitability',
       selectKanji: 'Select Kanji',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
@@ -545,6 +570,12 @@ const _localizedValues = {
       kanjiSuggestionsTitle: '漢字候補',
       kanjiSuggestionsMessage: '印鑑に使う漢字を選んでください。',
       kanjiReadingLabel: '読み',
+      kanjiMeaningLabel: '意味',
+      kanjiImpressionLabel: '印象',
+      kanjiReasonLabel: '理由',
+      kanjiCharacterCountLabel: '文字数',
+      kanjiStrokeComplexityLabel: '画数の複雑さ',
+      kanjiEngravingSuitabilityLabel: '彫刻適性',
       selectKanji: '漢字を選択',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',

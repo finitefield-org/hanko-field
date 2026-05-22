@@ -461,6 +461,31 @@ class _KanjiCandidateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final reason = candidate.reason.trim();
+    final meaning = candidate.meaning?.trim();
+    final strokeComplexity = candidate.strokeComplexity?.trim();
+    final engravingSuitability = candidate.engravingSuitability?.trim();
+    final impressions = candidate.impression
+        .map((impression) => impression.trim())
+        .where((impression) => impression.isNotEmpty)
+        .toList(growable: false);
+    final metrics = <({String label, String value})>[
+      if (candidate.characterCount != null)
+        (
+          label: l10n.kanjiCharacterCountLabel,
+          value: candidate.characterCount.toString(),
+        ),
+      if (strokeComplexity != null && strokeComplexity.isNotEmpty)
+        (
+          label: l10n.kanjiStrokeComplexityLabel,
+          value: _candidateMetricLabel(context, strokeComplexity),
+        ),
+      if (engravingSuitability != null && engravingSuitability.isNotEmpty)
+        (
+          label: l10n.kanjiEngravingSuitabilityLabel,
+          value: _candidateMetricLabel(context, engravingSuitability),
+        ),
+    ];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -470,51 +495,174 @@ class _KanjiCandidateCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DecoratedBox(
-              decoration: const BoxDecoration(
-                color: HankoColors.medallion,
-                shape: BoxShape.circle,
-              ),
-              child: SizedBox.square(
-                dimension: 74,
-                child: Center(
-                  child: Text(
-                    candidate.kanji,
-                    textAlign: TextAlign.center,
-                    style: HankoTextStyles.sectionTitle.copyWith(
-                      color: HankoColors.red,
-                      fontSize: candidate.kanji.length <= 1 ? 36 : 28,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: HankoColors.medallion,
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox.square(
+                    dimension: 74,
+                    child: Center(
+                      child: Text(
+                        candidate.kanji,
+                        textAlign: TextAlign.center,
+                        style: HankoTextStyles.sectionTitle.copyWith(
+                          color: HankoColors.red,
+                          fontSize: candidate.kanji.length <= 1 ? 36 : 28,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.kanjiReadingLabel,
-                    style: HankoTextStyles.compactBody,
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.kanjiReadingLabel,
+                        style: HankoTextStyles.compactBody,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(candidate.reading, style: HankoTextStyles.cardTitle),
+                      if (meaning != null && meaning.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _CandidateDetailLine(
+                          label: l10n.kanjiMeaningLabel,
+                          value: meaning,
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(candidate.reading, style: HankoTextStyles.cardTitle),
-                  if (candidate.reason.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(candidate.reason, style: HankoTextStyles.compactBody),
-                  ],
+                ),
+              ],
+            ),
+            if (impressions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(l10n.kanjiImpressionLabel, style: HankoTextStyles.label),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final impression in impressions)
+                    _CandidatePill(label: impression),
                 ],
               ),
-            ),
-            const SizedBox(width: 10),
-            const Icon(Icons.chevron_right, color: HankoColors.gold, size: 26),
+            ],
+            if (reason.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _CandidateDetailBlock(
+                label: l10n.kanjiReasonLabel,
+                value: reason,
+              ),
+            ],
+            if (metrics.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _CandidateMetrics(metrics: metrics),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CandidateDetailLine extends StatelessWidget {
+  const _CandidateDetailLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ',
+          style: HankoTextStyles.label.copyWith(color: HankoColors.gold),
+        ),
+        Expanded(child: Text(value, style: HankoTextStyles.compactBody)),
+      ],
+    );
+  }
+}
+
+class _CandidateDetailBlock extends StatelessWidget {
+  const _CandidateDetailBlock({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: HankoTextStyles.label),
+        const SizedBox(height: 8),
+        Text(value, style: HankoTextStyles.compactBody),
+      ],
+    );
+  }
+}
+
+class _CandidatePill extends StatelessWidget {
+  const _CandidatePill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.medallion,
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Text(
+          label,
+          style: HankoTextStyles.compactBody.copyWith(color: HankoColors.ink),
+        ),
+      ),
+    );
+  }
+}
+
+class _CandidateMetrics extends StatelessWidget {
+  const _CandidateMetrics({required this.metrics});
+
+  final List<({String label, String value})> metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Divider(color: HankoColors.surfaceBorder, height: 1),
+        const SizedBox(height: 10),
+        for (final metric in metrics)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(metric.label, style: HankoTextStyles.compactBody),
+                ),
+                const SizedBox(width: 12),
+                Text(metric.value, style: HankoTextStyles.label),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -976,6 +1124,19 @@ String _kanjiStyleLabel(HankoLocalizations l10n, KanjiNameStyle style) {
     KanjiNameStyle.japanese => l10n.designKanjiStyleJapanese,
     KanjiNameStyle.chinese => l10n.designKanjiStyleChinese,
     KanjiNameStyle.taiwanese => l10n.designKanjiStyleTaiwanese,
+  };
+}
+
+String _candidateMetricLabel(BuildContext context, String value) {
+  final normalized = value.trim().toLowerCase().replaceAll('_', ' ');
+  final isJapanese = context.l10n.locale.languageCode == 'ja';
+  return switch (normalized) {
+    'high' => isJapanese ? '高い' : 'High',
+    'medium' => isJapanese ? '中' : 'Medium',
+    'low' => isJapanese ? '低い' : 'Low',
+    'simple' => isJapanese ? 'シンプル' : 'Simple',
+    'complex' => isJapanese ? '複雑' : 'Complex',
+    _ => normalized.isEmpty ? value : normalized,
   };
 }
 

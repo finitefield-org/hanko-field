@@ -239,7 +239,15 @@ void main() {
     expect(find.text('Kanji Suggestions'), findsOneWidget);
     expect(find.text('美空'), findsOneWidget);
     expect(find.text('Misora'), findsOneWidget);
+    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('Elegant'), findsOneWidget);
+    expect(find.text('Gentle'), findsOneWidget);
     expect(find.text('A graceful two-character option.'), findsOneWidget);
+    expect(find.text('Characters'), findsOneWidget);
+    expect(find.text('Stroke complexity'), findsOneWidget);
+    expect(find.text('Medium'), findsOneWidget);
+    expect(find.text('Engraving suitability'), findsOneWidget);
+    expect(find.text('High'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Back').last);
     await tester.pumpAndSettle();

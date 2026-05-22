@@ -448,7 +448,12 @@ impl KanjiStyle {
 struct KanjiNameCandidate {
     kanji: String,
     reading: String,
+    meaning: String,
+    impression: Vec<String>,
     reason: String,
+    character_count: usize,
+    stroke_complexity: String,
+    engraving_suitability: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1080,7 +1085,12 @@ async fn handle_generate_kanji_candidates(State(state): State<AppState>, body: B
                 json!({
                     "kanji": candidate.kanji,
                     "reading": candidate.reading,
+                    "meaning": candidate.meaning,
+                    "impression": candidate.impression,
                     "reason": candidate.reason,
+                    "character_count": candidate.character_count,
+                    "stroke_complexity": candidate.stroke_complexity,
+                    "engraving_suitability": candidate.engraving_suitability,
                 })
             }).collect::<Vec<_>>(),
         }),
@@ -3317,12 +3327,50 @@ fn build_kanji_candidates_response_schema(max_count: usize) -> JsonValue {
                             "type": "string",
                             "description": "Lowercase romaji for Japanese style or lowercase Hanyu Pinyin without tone marks for Chinese/Taiwanese styles.",
                         },
+                        "meaning": {
+                            "type": "string",
+                            "description": "Concise meaning of the kanji candidate, written in the requested reason language.",
+                        },
+                        "impression": {
+                            "type": "array",
+                            "minItems": 2,
+                            "maxItems": 4,
+                            "items": {
+                                "type": "string",
+                            },
+                            "description": "Short impression words for the candidate, written in the requested reason language.",
+                        },
                         "reason": {
                             "type": "string",
                             "description": "Why this Kanji name was chosen.",
                         },
+                        "character_count": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 2,
+                            "description": "Number of kanji characters.",
+                        },
+                        "stroke_complexity": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high"],
+                            "description": "Overall visual stroke complexity for engraving.",
+                        },
+                        "engraving_suitability": {
+                            "type": "string",
+                            "enum": ["high", "medium", "low"],
+                            "description": "Suitability for small gemstone seal engraving.",
+                        },
                     },
-                    "required": ["kanji", "reading", "reason"],
+                    "required": [
+                        "kanji",
+                        "reading",
+                        "meaning",
+                        "impression",
+                        "reason",
+                        "character_count",
+                        "stroke_complexity",
+                        "engraving_suitability"
+                    ],
                 },
             },
         },
@@ -3343,10 +3391,21 @@ Think through the name fit internally before answering. Consider balance, seal s
 For each candidate, return these fields:\n\
 - kanji: 1-2 CJK Han characters suitable for a seal (no spaces)\n\
 - reading: lowercase romaji for japanese style, lowercase Hanyu Pinyin without tone marks for chinese/taiwanese styles\n\
+- meaning: concise literal or symbolic meaning, written in {}\n\
+- impression: 2-4 short impression words, written in {}\n\
 - reason: why this Kanji name was chosen, written in {}\n\
+- character_count: number of kanji characters, 1 or 2\n\
+- stroke_complexity: one of low, medium, high\n\
+- engraving_suitability: one of high, medium, low\n\
 Return only JSON (no markdown, no explanation) in this exact shape:\n\
-{{\"candidates\":[{{\"kanji\":\"\",\"reading\":\"\",\"reason\":\"\"}}]}}",
-        input.count, input.real_name, gender_instruction, style_instruction, reason_language
+{{\"candidates\":[{{\"kanji\":\"\",\"reading\":\"\",\"meaning\":\"\",\"impression\":[\"\",\"\"],\"reason\":\"\",\"character_count\":2,\"stroke_complexity\":\"medium\",\"engraving_suitability\":\"high\"}}]}}",
+        input.count,
+        input.real_name,
+        gender_instruction,
+        style_instruction,
+        reason_language,
+        reason_language,
+        reason_language
     )
 }
 
@@ -3449,15 +3508,27 @@ fn normalize_kanji_candidate(value: &JsonValue) -> Option<KanjiNameCandidate> {
     }
 
     let reading = read_json_string(value, &["reading", "reading_romaji", "romaji"]);
+    let meaning = read_json_string(value, &["meaning"]);
+    let impression = read_json_string_list(value, &["impression", "impressions"]);
     let reason = read_json_string(value, &["reason"]);
     if reading.is_empty() || reason.is_empty() {
         return None;
     }
+    let character_count = read_json_usize(value, &["character_count"])
+        .filter(|count| (1..=2).contains(count))
+        .unwrap_or_else(|| kanji.chars().count());
+    let stroke_complexity = read_json_string(value, &["stroke_complexity"]);
+    let engraving_suitability = read_json_string(value, &["engraving_suitability"]);
 
     Some(KanjiNameCandidate {
         kanji,
         reading,
+        meaning,
+        impression,
         reason,
+        character_count,
+        stroke_complexity,
+        engraving_suitability,
     })
 }
 
@@ -3471,6 +3542,42 @@ fn read_json_string(value: &JsonValue, keys: &[&str]) -> String {
         }
     }
     String::new()
+}
+
+fn read_json_string_list(value: &JsonValue, keys: &[&str]) -> Vec<String> {
+    for key in keys {
+        if let Some(array) = value.get(*key).and_then(JsonValue::as_array) {
+            let items = array
+                .iter()
+                .filter_map(JsonValue::as_str)
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            if !items.is_empty() {
+                return items;
+            }
+        }
+
+        if let Some(text) = value.get(*key).and_then(JsonValue::as_str) {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() {
+                return vec![trimmed.to_owned()];
+            }
+        }
+    }
+    Vec::new()
+}
+
+fn read_json_usize(value: &JsonValue, keys: &[&str]) -> Option<usize> {
+    for key in keys {
+        if let Some(number) = value.get(*key).and_then(JsonValue::as_u64) {
+            if let Ok(value) = usize::try_from(number) {
+                return Some(value);
+            }
+        }
+    }
+    None
 }
 
 fn validate_create_stripe_checkout_session_request(
@@ -5251,12 +5358,22 @@ mod tests {
     {
       "kanji": "蒼真",
       "reading": "soma",
-      "reason": "Balanced and clear for seal engraving."
+      "meaning": "Blue truth",
+      "impression": ["Clear", "Sincere"],
+      "reason": "Balanced and clear for seal engraving.",
+      "character_count": 2,
+      "stroke_complexity": "medium",
+      "engraving_suitability": "high"
     },
     {
       "kanji": "悠花",
       "reading": "yuka",
-      "reason": "Soft sound and elegant strokes."
+      "meaning": "Graceful flower",
+      "impression": ["Soft", "Elegant"],
+      "reason": "Soft sound and elegant strokes.",
+      "character_count": 2,
+      "stroke_complexity": "low",
+      "engraving_suitability": "high"
     }
   ]
 }
@@ -5268,6 +5385,11 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert_eq!(candidates[0].kanji, "蒼真");
         assert_eq!(candidates[0].reading, "soma");
+        assert_eq!(candidates[0].meaning, "Blue truth");
+        assert_eq!(candidates[0].impression, vec!["Clear", "Sincere"]);
+        assert_eq!(candidates[0].character_count, 2);
+        assert_eq!(candidates[0].stroke_complexity, "medium");
+        assert_eq!(candidates[0].engraving_suitability, "high");
     }
 
     #[test]
@@ -5282,6 +5404,8 @@ mod tests {
 
         let prompt = build_kanji_candidates_prompt(&input);
         assert!(prompt.contains("written in Japanese"));
+        assert!(prompt.contains("meaning: concise literal or symbolic meaning"));
+        assert!(prompt.contains("engraving_suitability"));
         assert!(!prompt.contains("written in ja"));
         assert!(prompt.contains("Think through the name fit internally"));
     }
@@ -5312,7 +5436,16 @@ mod tests {
         );
         assert_eq!(
             body["generationConfig"]["responseJsonSchema"]["properties"]["candidates"]["items"]["required"],
-            json!(["kanji", "reading", "reason"])
+            json!([
+                "kanji",
+                "reading",
+                "meaning",
+                "impression",
+                "reason",
+                "character_count",
+                "stroke_complexity",
+                "engraving_suitability"
+            ])
         );
     }
 }
