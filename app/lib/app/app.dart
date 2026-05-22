@@ -23,6 +23,7 @@ class HankoApp extends StatelessWidget {
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
     this.listStoneListings = listStoneListingsWithDefaultApi,
+    this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
     this.localSealDesignRepository,
   });
 
@@ -33,6 +34,7 @@ class HankoApp extends StatelessWidget {
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
   final StoneListingsLoader listStoneListings;
+  final StoneListingDetailLoader getStoneListingDetail;
   final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
@@ -51,6 +53,7 @@ class HankoApp extends StatelessWidget {
         generateKanjiCandidates: generateKanjiCandidates,
         generateSealDesigns: generateSealDesigns,
         listStoneListings: listStoneListings,
+        getStoneListingDetail: getStoneListingDetail,
         localSealDesignRepository: localSealDesignRepository,
       ),
     );
@@ -75,6 +78,7 @@ class _AppLaunchGate extends StatefulWidget {
     required this.generateKanjiCandidates,
     required this.generateSealDesigns,
     required this.listStoneListings,
+    required this.getStoneListingDetail,
     required this.localSealDesignRepository,
   });
 
@@ -84,6 +88,7 @@ class _AppLaunchGate extends StatefulWidget {
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
   final StoneListingsLoader listStoneListings;
+  final StoneListingDetailLoader getStoneListingDetail;
   final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
@@ -108,6 +113,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         generateKanjiCandidates: widget.generateKanjiCandidates,
         generateSealDesigns: widget.generateSealDesigns,
         listStoneListings: widget.listStoneListings,
+        getStoneListingDetail: widget.getStoneListingDetail,
         localSealDesignRepository: widget.localSealDesignRepository,
       ),
     };
@@ -137,12 +143,14 @@ class BottomNavigationShell extends StatefulWidget {
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
     this.listStoneListings = listStoneListingsWithDefaultApi,
+    this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
     this.localSealDesignRepository,
   });
 
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
   final StoneListingsLoader listStoneListings;
+  final StoneListingDetailLoader getStoneListingDetail;
   final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
@@ -229,6 +237,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   static const _designSealGenerationLimitPageKey =
       'DES-015-seal-generation-limit';
   static const _mySealsDetailPageKey = 'MYS-003-seal-detail';
+  static const _stoneDetailPageKey = 'STN-007-stone-detail';
 
   late final LocalSealDesignRepository _localSealDesignRepository;
   var _localSealDesigns = const <LocalSealDesign>[];
@@ -327,16 +336,27 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return switch (tab) {
       HankoAppTab.design => _buildDesignPage(page, stack),
       HankoAppTab.mySeals => _buildMySealsPage(page, stack),
-      HankoAppTab.stones => _buildStonesPage(),
+      HankoAppTab.stones => _buildStonesPage(page, stack),
     };
   }
 
-  Widget _buildStonesPage() {
+  Widget _buildStonesPage(PageEntry page, HankoTabStackController stack) {
+    final pageData = page.data;
+    if (page.key == _stoneDetailPageKey && pageData is StoneListing) {
+      return StoneDetailScreen(
+        listing: pageData,
+        locale: _stoneListingsLocale ?? _stoneListingsResult?.locale,
+        loadStoneListing: widget.getStoneListingDetail,
+        onBack: stack.pop,
+      );
+    }
+
     return StonesHomeScreen(
       result: _stoneListingsResult,
       isLoading: !_stoneListingsLoaded || _stoneListingsLoading,
       loadError: _stoneListingsLoadError,
       onRetry: _retryStoneListings,
+      onOpenStoneDetail: (listing) => stack.push(_stoneDetailPage(listing)),
     );
   }
 
@@ -802,6 +822,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       key: _mySealsDetailPageKey,
       name: '/my-seals/detail',
       data: design,
+    );
+  }
+
+  PageEntry _stoneDetailPage(StoneListing listing) {
+    return PageEntry(
+      key: _stoneDetailPageKey,
+      name: '/stones/detail',
+      data: listing,
     );
   }
 

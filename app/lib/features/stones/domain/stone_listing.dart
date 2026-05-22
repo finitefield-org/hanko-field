@@ -18,6 +18,13 @@ class StoneListingsQuery {
   final String? status;
 }
 
+class StoneListingDetailQuery {
+  const StoneListingDetailQuery({required this.listingId, this.locale});
+
+  final String listingId;
+  final String? locale;
+}
+
 class StoneListingsResult {
   const StoneListingsResult({
     required this.locale,

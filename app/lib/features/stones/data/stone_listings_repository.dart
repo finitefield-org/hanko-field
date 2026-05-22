@@ -4,6 +4,8 @@ import '../domain/stone_listing.dart';
 
 typedef StoneListingsLoader =
     Future<StoneListingsResult> Function(StoneListingsQuery query);
+typedef StoneListingDetailLoader =
+    Future<StoneListing> Function(StoneListingDetailQuery query);
 
 final _defaultStoneListingsRepository = StoneListingsRepository(
   HankoApiClient(baseUri: Uri.parse(defaultHankoApiBaseUrl)),
@@ -13,6 +15,12 @@ Future<StoneListingsResult> listStoneListingsWithDefaultApi(
   StoneListingsQuery query,
 ) {
   return _defaultStoneListingsRepository.listStoneListings(query);
+}
+
+Future<StoneListing> getStoneListingDetailWithDefaultApi(
+  StoneListingDetailQuery query,
+) {
+  return _defaultStoneListingsRepository.getStoneListingDetail(query);
 }
 
 class StoneListingsRepository {
@@ -35,6 +43,18 @@ class StoneListingsRepository {
       },
     );
     return StoneListingsResponseDto.fromJson(json).toDomain();
+  }
+
+  Future<StoneListing> getStoneListingDetail(
+    StoneListingDetailQuery query,
+  ) async {
+    final json = await _apiClient.getJson(
+      '/v1/stone-listings/${Uri.encodeComponent(query.listingId)}',
+      queryParameters: {'locale': query.locale},
+    );
+    return StoneListingDto.fromJson(
+      json,
+    ).toDomain(defaultCurrency: _detailDefaultCurrency(json));
   }
 }
 
@@ -197,6 +217,18 @@ class StoneListingDto {
     }
     throw const FormatException('price must be a number or JSON object');
   }
+}
+
+String _detailDefaultCurrency(JsonMap json) {
+  final price = json['price'];
+  if (price is Map) {
+    return readString(
+      asJsonMap(price, 'stone listing price'),
+      'currency',
+      defaultValue: 'JPY',
+    );
+  }
+  return 'JPY';
 }
 
 class StoneListingFacetsDto {

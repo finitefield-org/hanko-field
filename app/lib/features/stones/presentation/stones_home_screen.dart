@@ -13,6 +13,7 @@ class StonesHomeScreen extends StatefulWidget {
     this.isLoading = false,
     this.loadError,
     this.onRetry,
+    this.onOpenStoneDetail,
     this.onSelectStone,
   });
 
@@ -20,6 +21,7 @@ class StonesHomeScreen extends StatefulWidget {
   final bool isLoading;
   final Object? loadError;
   final VoidCallback? onRetry;
+  final ValueChanged<StoneListing>? onOpenStoneDetail;
   final ValueChanged<StoneListing>? onSelectStone;
 
   @override
@@ -87,6 +89,7 @@ class _StonesHomeScreenState extends State<StonesHomeScreen> {
             for (var index = 0; index < sortedListings.length; index++) ...[
               _StoneListingCard(
                 listing: sortedListings[index],
+                onOpenStoneDetail: widget.onOpenStoneDetail,
                 onSelectStone: widget.onSelectStone,
               ),
               if (index < sortedListings.length - 1)
@@ -641,9 +644,14 @@ String _filterKeyToken(String value) {
 }
 
 class _StoneListingCard extends StatelessWidget {
-  const _StoneListingCard({required this.listing, required this.onSelectStone});
+  const _StoneListingCard({
+    required this.listing,
+    required this.onOpenStoneDetail,
+    required this.onSelectStone,
+  });
 
   final StoneListing listing;
+  final ValueChanged<StoneListing>? onOpenStoneDetail;
   final ValueChanged<StoneListing>? onSelectStone;
 
   @override
@@ -693,6 +701,25 @@ class _StoneListingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: HankoSpacing.md),
+          OutlinedButton.icon(
+            onPressed: onOpenStoneDetail == null
+                ? null
+                : () => onOpenStoneDetail?.call(listing),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: HankoColors.ink,
+              minimumSize: const Size.fromHeight(48),
+              side: const BorderSide(color: HankoColors.surfaceBorder),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(HankoRadii.sm),
+              ),
+            ),
+            icon: const Icon(Icons.info_outline, size: 20),
+            label: Text(
+              l10n.viewStoneDetails,
+              style: HankoTextStyles.label.copyWith(color: HankoColors.ink),
+            ),
+          ),
+          const SizedBox(height: HankoSpacing.sm),
           HankoPrimaryButton(
             label: l10n.selectStone,
             icon: Icons.arrow_forward,

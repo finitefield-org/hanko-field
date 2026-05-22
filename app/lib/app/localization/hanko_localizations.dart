@@ -219,6 +219,21 @@ class HankoLocalizations {
   String get stoneSortNewest => _strings.stoneSortNewest;
   String get stoneSortPriceLowToHigh => _strings.stoneSortPriceLowToHigh;
   String get stoneSortPriceHighToLow => _strings.stoneSortPriceHighToLow;
+  String get viewStoneDetails => _strings.viewStoneDetails;
+  String get stoneDetailTitle => _strings.stoneDetailTitle;
+  String get stoneDetailDescriptionTitle =>
+      _strings.stoneDetailDescriptionTitle;
+  String get stoneDetailStoryTitle => _strings.stoneDetailStoryTitle;
+  String get stoneDetailSpecsTitle => _strings.stoneDetailSpecsTitle;
+  String get stoneDetailNotesTitle => _strings.stoneDetailNotesTitle;
+  String get stoneDetailNotesMessage => _strings.stoneDetailNotesMessage;
+  String get stoneDetailMaterialLabel => _strings.stoneDetailMaterialLabel;
+  String get stoneDetailSizeLabel => _strings.stoneDetailSizeLabel;
+  String get stoneDetailColorLabel => _strings.stoneDetailColorLabel;
+  String get stoneDetailPatternLabel => _strings.stoneDetailPatternLabel;
+  String get stoneDetailShapeLabel => _strings.stoneDetailShapeLabel;
+  String get stoneDetailTextureLabel => _strings.stoneDetailTextureLabel;
+  String get stoneDetailStatusLabel => _strings.stoneDetailStatusLabel;
   String get selectStone => _strings.selectStone;
   String get stoneAvailable => _strings.stoneAvailable;
   String get stoneUnavailable => _strings.stoneUnavailable;
@@ -460,6 +475,20 @@ class _HankoStrings {
     required this.stoneSortNewest,
     required this.stoneSortPriceLowToHigh,
     required this.stoneSortPriceHighToLow,
+    required this.viewStoneDetails,
+    required this.stoneDetailTitle,
+    required this.stoneDetailDescriptionTitle,
+    required this.stoneDetailStoryTitle,
+    required this.stoneDetailSpecsTitle,
+    required this.stoneDetailNotesTitle,
+    required this.stoneDetailNotesMessage,
+    required this.stoneDetailMaterialLabel,
+    required this.stoneDetailSizeLabel,
+    required this.stoneDetailColorLabel,
+    required this.stoneDetailPatternLabel,
+    required this.stoneDetailShapeLabel,
+    required this.stoneDetailTextureLabel,
+    required this.stoneDetailStatusLabel,
     required this.selectStone,
     required this.stoneAvailable,
     required this.stoneUnavailable,
@@ -670,6 +699,20 @@ class _HankoStrings {
   final String stoneSortNewest;
   final String stoneSortPriceLowToHigh;
   final String stoneSortPriceHighToLow;
+  final String viewStoneDetails;
+  final String stoneDetailTitle;
+  final String stoneDetailDescriptionTitle;
+  final String stoneDetailStoryTitle;
+  final String stoneDetailSpecsTitle;
+  final String stoneDetailNotesTitle;
+  final String stoneDetailNotesMessage;
+  final String stoneDetailMaterialLabel;
+  final String stoneDetailSizeLabel;
+  final String stoneDetailColorLabel;
+  final String stoneDetailPatternLabel;
+  final String stoneDetailShapeLabel;
+  final String stoneDetailTextureLabel;
+  final String stoneDetailStatusLabel;
   final String selectStone;
   final String stoneAvailable;
   final String stoneUnavailable;
@@ -915,6 +958,21 @@ const _localizedValues = {
       stoneSortNewest: 'Newest',
       stoneSortPriceLowToHigh: 'Price: Low to High',
       stoneSortPriceHighToLow: 'Price: High to Low',
+      viewStoneDetails: 'View Details',
+      stoneDetailTitle: 'Stone Detail',
+      stoneDetailDescriptionTitle: 'Description',
+      stoneDetailStoryTitle: 'Story',
+      stoneDetailSpecsTitle: 'Details',
+      stoneDetailNotesTitle: 'Notes',
+      stoneDetailNotesMessage:
+          'Natural stone color, pattern, and translucency vary by piece. Review the photos and details before ordering.',
+      stoneDetailMaterialLabel: 'Material',
+      stoneDetailSizeLabel: 'Size',
+      stoneDetailColorLabel: 'Color',
+      stoneDetailPatternLabel: 'Pattern',
+      stoneDetailShapeLabel: 'Shape',
+      stoneDetailTextureLabel: 'Texture',
+      stoneDetailStatusLabel: 'Status',
       selectStone: 'Select Stone',
       stoneAvailable: 'Available',
       stoneUnavailable: 'Unavailable',
@@ -1134,6 +1192,20 @@ const _localizedValues = {
       stoneSortNewest: '新着順',
       stoneSortPriceLowToHigh: '価格が安い順',
       stoneSortPriceHighToLow: '価格が高い順',
+      viewStoneDetails: '詳細を見る',
+      stoneDetailTitle: '石の詳細',
+      stoneDetailDescriptionTitle: '説明',
+      stoneDetailStoryTitle: 'ストーリー',
+      stoneDetailSpecsTitle: '詳細',
+      stoneDetailNotesTitle: '注意事項',
+      stoneDetailNotesMessage: '天然石は一点ごとに色、模様、透け感が異なります。注文前に写真と詳細を確認してください。',
+      stoneDetailMaterialLabel: '素材',
+      stoneDetailSizeLabel: 'サイズ',
+      stoneDetailColorLabel: '色',
+      stoneDetailPatternLabel: '模様',
+      stoneDetailShapeLabel: '形状',
+      stoneDetailTextureLabel: '質感',
+      stoneDetailStatusLabel: '在庫',
       selectStone: '石を選択',
       stoneAvailable: '販売中',
       stoneUnavailable: '選択不可',

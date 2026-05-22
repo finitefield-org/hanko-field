@@ -924,7 +924,7 @@ MVPで後回し可能:
 | M07-T02 | API | [x] 石一覧/詳細API | `api/src/main.rs` | `GET /v1/stone-listings` をアプリ一覧で使えるレスポンスにし、`GET /v1/stone-listings/{listing_id}` を追加する |
 | M07-T03 | `STN-005` | [x] フィルタ | `features/stones/presentation/` | Material/Color/Pattern/Availabilityで絞り込み |
 | M07-T04 | `STN-006` | [x] ソート | `features/stones/presentation/` | 後回し可能。仕様は新着/価格順 |
-| M07-T05 | `STN-007` | 詳細 | `features/stones/presentation/` | 画像、説明、サイズ、価格、在庫、注意事項を表示 |
+| M07-T05 | `STN-007` | [x] 詳細 | `features/stones/presentation/` | 画像、説明、サイズ、価格、在庫、注意事項を表示 |
 | M07-T06 | `STN-008` | 画像ギャラリー | `features/stones/presentation/` | 複数画像を拡大表示 |
 | M07-T07 | `STN-009` `STN-010` | 選択確認/売り切れ | `features/stones/presentation/` | 売り切れ時は注文へ進めない |
 

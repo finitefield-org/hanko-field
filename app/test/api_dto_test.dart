@@ -198,6 +198,70 @@ void main() {
     },
   );
 
+  test('StoneListingsRepository gets a stone listing detail', () async {
+    final transport = FakeTransport([
+      HankoApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'id': 'stone_listing_001',
+          'code': 'RQZ-0001',
+          'material_key': 'rose_quartz',
+          'material_label': 'Rose Quartz',
+          'size': {'width_mm': 24, 'height_mm': 24, 'depth_mm': 60},
+          'title': 'Soft Pink Rose Quartz Seal Stone',
+          'description': 'A soft pink rose quartz seal stone.',
+          'story': 'A one-of-a-kind piece.',
+          'facets': {
+            'color_family': 'pink',
+            'color_tags': ['soft'],
+            'pattern_primary': 'plain',
+            'pattern_tags': ['clear'],
+            'stone_shape': 'square',
+            'translucency': 'semi_translucent',
+          },
+          'price': {
+            'amount': 18000,
+            'currency': 'JPY',
+            'display': 'JPY 18,000',
+          },
+          'status': 'published',
+          'is_active': true,
+          'is_orderable': true,
+          'sort_order': 7,
+          'photos': [
+            {
+              'asset_id': 'asset_001',
+              'asset_url': 'https://example.test/stone.png',
+              'alt': 'Rose quartz',
+              'sort_order': 1,
+              'is_primary': true,
+            },
+          ],
+        }),
+      ),
+    ]);
+    final repo = StoneListingsRepository(_client(transport));
+
+    final result = await repo.getStoneListingDetail(
+      const StoneListingDetailQuery(
+        listingId: 'stone_listing_001',
+        locale: 'en',
+      ),
+    );
+
+    expect(transport.singleRequest.method, 'GET');
+    expect(
+      transport.singleRequest.uri.path,
+      '/v1/stone-listings/stone_listing_001',
+    );
+    expect(transport.singleRequest.uri.queryParameters['locale'], 'en');
+    expect(result.id, 'stone_listing_001');
+    expect(result.code, 'RQZ-0001');
+    expect(result.sizeLabel, '24x24x60 mm');
+    expect(result.price.display, 'JPY 18,000');
+    expect(result.photos.single.assetUrl, 'https://example.test/stone.png');
+  });
+
   test('OrderRepository maps order and checkout responses', () async {
     final transport = FakeTransport([
       HankoApiResponse(

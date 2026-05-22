@@ -24,6 +24,7 @@ void main() {
     KanjiCandidatesGenerator? generateKanjiCandidates,
     SealDesignsGenerator? generateSealDesigns,
     StoneListingsLoader? listStoneListings,
+    StoneListingDetailLoader? getStoneListingDetail,
     LocalSealDesignRepository? localSealDesignRepository,
   }) async {
     await tester.pumpWidget(
@@ -38,6 +39,8 @@ void main() {
           generateSealDesigns:
               generateSealDesigns ?? generateSealDesignsWithDefaultApi,
           listStoneListings: listStoneListings ?? _emptyStoneListingsLoader,
+          getStoneListingDetail:
+              getStoneListingDetail ?? _successfulStoneDetailLoader,
           localSealDesignRepository: localSealDesignRepository,
         ),
       ),
@@ -1196,6 +1199,102 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('STN-007 displays stone detail fields and notes', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var backCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StoneDetailScreen(
+          listing: _stoneListing(
+            description: 'A soft pink rose quartz seal stone.',
+            story: 'A one-of-a-kind piece with delicate translucency.',
+          ),
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text('Stone Detail'), findsOneWidget);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Rose Quartz'), findsWidgets);
+    expect(find.text('¥18,000'), findsOneWidget);
+    expect(find.text('Description'), findsOneWidget);
+    expect(find.text('A soft pink rose quartz seal stone.'), findsOneWidget);
+    expect(find.text('Story'), findsOneWidget);
+    expect(
+      find.text('A one-of-a-kind piece with delicate translucency.'),
+      findsOneWidget,
+    );
+    expect(find.text('Details'), findsOneWidget);
+    expect(find.text('Size'), findsOneWidget);
+    expect(find.text('24x24x60 mm'), findsOneWidget);
+    expect(find.text('Color'), findsOneWidget);
+    expect(find.text('Pattern'), findsOneWidget);
+    expect(find.text('Texture'), findsOneWidget);
+    expect(find.text('Available'), findsWidgets);
+    expect(find.text('Notes'), findsOneWidget);
+    expect(
+      find.textContaining('Natural stone color, pattern, and translucency'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+
+    expect(backCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-007 opens from stones list and refreshes detail', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    StoneListingDetailQuery? capturedQuery;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      getStoneListingDetail: (query) async {
+        capturedQuery = query;
+        return _stoneListing(
+          id: query.listingId,
+          title: 'Detailed Rose Quartz Seal Stone',
+          description: 'Detailed description from the API.',
+          story: 'Detailed story from the API.',
+        );
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('View Details'));
+    await tester.pump();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    expect(capturedQuery?.listingId, 'stone_listing_001');
+    expect(capturedQuery?.locale, 'en');
+    expect(find.text('Stone Detail'), findsOneWidget);
+    expect(find.text('Detailed Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Detailed description from the API.'), findsOneWidget);
+    expect(find.text('Detailed story from the API.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {
@@ -1593,6 +1692,12 @@ Future<StoneListingsResult> _emptyStoneListingsLoader(
   );
 }
 
+Future<StoneListing> _successfulStoneDetailLoader(
+  StoneListingDetailQuery query,
+) async {
+  return _stoneListing(id: query.listingId);
+}
+
 StoneListingsResult _stoneListingsResult({List<StoneListing>? listings}) {
   return StoneListingsResult(
     locale: 'en',
@@ -1614,6 +1719,8 @@ List<String> _stoneTitleOrder(WidgetTester tester, List<String> titles) {
 StoneListing _stoneListing({
   String id = 'stone_listing_001',
   String title = 'Soft Pink Rose Quartz Seal Stone',
+  String description = 'A soft pink rose quartz seal stone.',
+  String story = 'A one-of-a-kind piece.',
   String materialKey = 'rose_quartz',
   String materialLabel = 'Rose Quartz',
   String colorFamily = 'pink',
@@ -1631,8 +1738,8 @@ StoneListing _stoneListing({
     materialLabel: materialLabel,
     sizeLabel: '24x24x60 mm',
     title: title,
-    description: 'A soft pink rose quartz seal stone.',
-    story: 'A one-of-a-kind piece.',
+    description: description,
+    story: story,
     facets: StoneListingFacets(
       colorFamily: colorFamily,
       colorTags: [colorFamily],
