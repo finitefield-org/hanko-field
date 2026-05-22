@@ -160,6 +160,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   );
   static const _designKanjiLoadingPageKey = 'DES-003-kanji-suggestion-loading';
   static const _designKanjiSuggestionsPageKey = 'DES-004-kanji-suggestions';
+  static const _designKanjiCandidateDetailPageKey =
+      'DES-005-kanji-candidate-detail';
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
   static const _designUnsupportedKanjiPageKey =
       'DES-014-unsupported-kanji-result';
@@ -266,7 +268,18 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
 
     if (page.key == _designKanjiSuggestionsPageKey &&
         pageData is KanjiCandidatesResult) {
-      return KanjiSuggestionsScreen(result: pageData, onBack: stack.pop);
+      return KanjiSuggestionsScreen(
+        result: pageData,
+        onOpenCandidate: (candidate) {
+          stack.push(_kanjiCandidateDetailPage(candidate));
+        },
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designKanjiCandidateDetailPageKey &&
+        pageData is KanjiCandidate) {
+      return KanjiCandidateDetailScreen(candidate: pageData, onBack: stack.pop);
     }
 
     if (page.key == _designKanjiErrorPageKey &&
@@ -307,6 +320,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       key: _designKanjiSuggestionsPageKey,
       name: '/design/kanji/suggestions',
       data: result,
+    );
+  }
+
+  PageEntry _kanjiCandidateDetailPage(KanjiCandidate candidate) {
+    return PageEntry(
+      key: _designKanjiCandidateDetailPageKey,
+      name: '/design/kanji/candidate',
+      data: candidate,
     );
   }
 

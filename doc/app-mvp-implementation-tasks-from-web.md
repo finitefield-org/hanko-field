@@ -892,7 +892,7 @@ MVPで後回し可能:
 | M04-T02 | `DES-003` `DES-011` `DES-013` `DES-014` | [x] Loading/Error/Invalid/No result状態 | `features/design/presentation/` | 状態ごとの表示と再試行導線がある |
 | M04-T03 | `DES-004` | [x] 漢字候補API接続 | `features/design/data/` | `POST /v1/kanji-candidates` の結果を表示 |
 | M04-T04 | `DES-004` | [x] 候補カード詳細項目 | `features/design/domain/` | 漢字、読み方、意味、印象、理由、彫刻適性を表示 |
-| M04-T05 | `DES-005` | 候補詳細 | `features/design/presentation/` | 候補の詳細を確認して選択できる |
+| M04-T05 | `DES-005` | [x] 候補詳細 | `features/design/presentation/` | 候補の詳細を確認して選択できる |
 
 ### M05: Designタブ - AI印影生成
 

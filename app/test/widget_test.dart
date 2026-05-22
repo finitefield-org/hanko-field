@@ -249,6 +249,39 @@ void main() {
     expect(find.text('Engraving suitability'), findsOneWidget);
     expect(find.text('High'), findsOneWidget);
 
+    await tester.tap(find.text('美空'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(KanjiCandidateDetailScreen), findsOneWidget);
+    expect(find.text('Kanji Detail'), findsOneWidget);
+    expect(
+      find.text(
+        'Review the meaning and engraving fit before choosing this kanji.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('美空'), findsOneWidget);
+    expect(find.text('Misora'), findsOneWidget);
+    expect(find.text('Beautiful sky'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Select Kanji'));
+    await tester.pump();
+    await tester.tap(find.text('Select Kanji'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kanji selected'), findsWidgets);
+    expect(
+      find.text('This kanji is ready for seal style selection.'),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(KanjiSuggestionsScreen), findsOneWidget);
+
     await tester.tap(find.byTooltip('Back').last);
     await tester.pumpAndSettle();
 

@@ -93,6 +93,9 @@ class HankoLocalizations {
   String get back => _strings.back;
   String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
   String get kanjiSuggestionsMessage => _strings.kanjiSuggestionsMessage;
+  String get kanjiCandidateDetailTitle => _strings.kanjiCandidateDetailTitle;
+  String get kanjiCandidateDetailMessage =>
+      _strings.kanjiCandidateDetailMessage;
   String get kanjiReadingLabel => _strings.kanjiReadingLabel;
   String get kanjiMeaningLabel => _strings.kanjiMeaningLabel;
   String get kanjiImpressionLabel => _strings.kanjiImpressionLabel;
@@ -102,6 +105,8 @@ class HankoLocalizations {
   String get kanjiEngravingSuitabilityLabel =>
       _strings.kanjiEngravingSuitabilityLabel;
   String get selectKanji => _strings.selectKanji;
+  String get kanjiSelectedTitle => _strings.kanjiSelectedTitle;
+  String get kanjiSelectedMessage => _strings.kanjiSelectedMessage;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -230,6 +235,8 @@ class _HankoStrings {
     required this.back,
     required this.kanjiSuggestionsTitle,
     required this.kanjiSuggestionsMessage,
+    required this.kanjiCandidateDetailTitle,
+    required this.kanjiCandidateDetailMessage,
     required this.kanjiReadingLabel,
     required this.kanjiMeaningLabel,
     required this.kanjiImpressionLabel,
@@ -238,6 +245,8 @@ class _HankoStrings {
     required this.kanjiStrokeComplexityLabel,
     required this.kanjiEngravingSuitabilityLabel,
     required this.selectKanji,
+    required this.kanjiSelectedTitle,
+    required this.kanjiSelectedMessage,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -335,6 +344,8 @@ class _HankoStrings {
   final String back;
   final String kanjiSuggestionsTitle;
   final String kanjiSuggestionsMessage;
+  final String kanjiCandidateDetailTitle;
+  final String kanjiCandidateDetailMessage;
   final String kanjiReadingLabel;
   final String kanjiMeaningLabel;
   final String kanjiImpressionLabel;
@@ -343,6 +354,8 @@ class _HankoStrings {
   final String kanjiStrokeComplexityLabel;
   final String kanjiEngravingSuitabilityLabel;
   final String selectKanji;
+  final String kanjiSelectedTitle;
+  final String kanjiSelectedMessage;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -456,6 +469,9 @@ const _localizedValues = {
       back: 'Back',
       kanjiSuggestionsTitle: 'Kanji Suggestions',
       kanjiSuggestionsMessage: 'Choose the kanji that best fits your seal.',
+      kanjiCandidateDetailTitle: 'Kanji Detail',
+      kanjiCandidateDetailMessage:
+          'Review the meaning and engraving fit before choosing this kanji.',
       kanjiReadingLabel: 'Reading',
       kanjiMeaningLabel: 'Meaning',
       kanjiImpressionLabel: 'Impression',
@@ -464,6 +480,8 @@ const _localizedValues = {
       kanjiStrokeComplexityLabel: 'Stroke complexity',
       kanjiEngravingSuitabilityLabel: 'Engraving suitability',
       selectKanji: 'Select Kanji',
+      kanjiSelectedTitle: 'Kanji selected',
+      kanjiSelectedMessage: 'This kanji is ready for seal style selection.',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -569,6 +587,8 @@ const _localizedValues = {
       back: '戻る',
       kanjiSuggestionsTitle: '漢字候補',
       kanjiSuggestionsMessage: '印鑑に使う漢字を選んでください。',
+      kanjiCandidateDetailTitle: '漢字の詳細',
+      kanjiCandidateDetailMessage: '意味と彫刻適性を確認して、この漢字を選択します。',
       kanjiReadingLabel: '読み',
       kanjiMeaningLabel: '意味',
       kanjiImpressionLabel: '印象',
@@ -577,6 +597,8 @@ const _localizedValues = {
       kanjiStrokeComplexityLabel: '画数の複雑さ',
       kanjiEngravingSuitabilityLabel: '彫刻適性',
       selectKanji: '漢字を選択',
+      kanjiSelectedTitle: '漢字を選択しました',
+      kanjiSelectedMessage: 'この漢字で印影スタイル選択へ進めます。',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',
