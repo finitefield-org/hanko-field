@@ -909,7 +909,7 @@ MVPで後回し可能:
 
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M06-T01 | `MYS-*` | `LocalSealDesign` domain/data実装 | `features/my_seals/domain/`, `features/my_seals/data/` | ローカル保存/読込/削除ができる |
+| M06-T01 | `MYS-*` | [x] `LocalSealDesign` domain/data実装 | `features/my_seals/domain/`, `features/my_seals/data/` | ローカル保存/読込/削除ができる |
 | M06-T02 | `DES-010` | 保存完了画面 | `features/design/presentation/` | My Sealsへ移動、石選択へ移動、Designへ戻る導線 |
 | M06-T03 | `MYS-001` `MYS-002` | 一覧/空状態 | `features/my_seals/presentation/` | 保存済み印影カードと空状態を表示 |
 | M06-T04 | `MYS-003` | 詳細 | `features/my_seals/presentation/` | 印影画像、漢字、意味、スタイル、作成日を表示 |
