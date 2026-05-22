@@ -49,7 +49,16 @@ class MySealsHomeScreen extends StatelessWidget {
             onStartDesigning: onStartDesigning,
             onExploreStones: onExploreStones,
           )
-        else
+        else ...[
+          if (designs.length >= 2) ...[
+            _UnavailableFeatureButton(
+              label: l10n.compareSavedSeals,
+              icon: Icons.compare_arrows,
+              dialogTitle: l10n.compareSavedSealsTitle,
+              dialogMessage: l10n.compareSavedSealsMessage,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+          ],
           for (var index = 0; index < designs.length; index++) ...[
             _SavedSealCard(
               design: designs[index],
@@ -60,6 +69,7 @@ class MySealsHomeScreen extends StatelessWidget {
             if (index < designs.length - 1)
               const SizedBox(height: HankoSpacing.md),
           ],
+        ],
       ],
     );
   }
@@ -317,6 +327,13 @@ class _SealDetailActions extends StatelessWidget {
               : () => onChooseForOrder?.call(design),
         ),
         const SizedBox(height: HankoSpacing.sm),
+        _UnavailableFeatureButton(
+          label: l10n.editSavedSeal,
+          icon: Icons.tune,
+          dialogTitle: l10n.editSavedSealTitle,
+          dialogMessage: l10n.editSavedSealMessage,
+        ),
+        const SizedBox(height: HankoSpacing.sm),
         OutlinedButton.icon(
           onPressed: onDelete == null
               ? null
@@ -371,6 +388,70 @@ class _SealDetailActions extends StatelessWidget {
     }
     await deleteDesign(design);
   }
+}
+
+class _UnavailableFeatureButton extends StatelessWidget {
+  const _UnavailableFeatureButton({
+    required this.label,
+    required this.icon,
+    required this.dialogTitle,
+    required this.dialogMessage,
+  });
+
+  final String label;
+  final IconData icon;
+  final String dialogTitle;
+  final String dialogMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        _showUnavailableFeatureDialog(
+          context,
+          title: dialogTitle,
+          message: dialogMessage,
+        );
+      },
+      style: OutlinedButton.styleFrom(
+        foregroundColor: HankoColors.ink,
+        minimumSize: const Size.fromHeight(52),
+        side: const BorderSide(color: HankoColors.surfaceBorder),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+        ),
+      ),
+      icon: Icon(icon, size: 20),
+      label: Text(
+        label,
+        style: HankoTextStyles.label.copyWith(color: HankoColors.ink),
+      ),
+    );
+  }
+}
+
+Future<void> _showUnavailableFeatureDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+}) {
+  final l10n = context.l10n;
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: HankoColors.surface,
+        title: Text(title, style: HankoTextStyles.cardTitle),
+        content: Text(message, style: HankoTextStyles.body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _SealDetailHeader extends StatelessWidget {

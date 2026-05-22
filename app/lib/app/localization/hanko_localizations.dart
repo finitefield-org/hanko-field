@@ -176,6 +176,12 @@ class HankoLocalizations {
   String get sealDetailTitle => _strings.sealDetailTitle;
   String get kanjiLabel => _strings.kanjiLabel;
   String get createdAtLabel => _strings.createdAtLabel;
+  String get compareSavedSeals => _strings.compareSavedSeals;
+  String get compareSavedSealsTitle => _strings.compareSavedSealsTitle;
+  String get compareSavedSealsMessage => _strings.compareSavedSealsMessage;
+  String get editSavedSeal => _strings.editSavedSeal;
+  String get editSavedSealTitle => _strings.editSavedSealTitle;
+  String get editSavedSealMessage => _strings.editSavedSealMessage;
   String get chooseSealForOrder => _strings.chooseSealForOrder;
   String get sealSelectedForOrderTitle => _strings.sealSelectedForOrderTitle;
   String get sealSelectedForOrderMessage =>
@@ -186,6 +192,7 @@ class HankoLocalizations {
   String get deleteSealMessage => _strings.deleteSealMessage;
   String get deleteSealConfirm => _strings.deleteSealConfirm;
   String get cancel => _strings.cancel;
+  String get close => _strings.close;
   String get browseStones => _strings.browseStones;
   String get browseStonesDescription => _strings.browseStonesDescription;
   String get noSavedSeals => _strings.noSavedSeals;
@@ -389,6 +396,12 @@ class _HankoStrings {
     required this.sealDetailTitle,
     required this.kanjiLabel,
     required this.createdAtLabel,
+    required this.compareSavedSeals,
+    required this.compareSavedSealsTitle,
+    required this.compareSavedSealsMessage,
+    required this.editSavedSeal,
+    required this.editSavedSealTitle,
+    required this.editSavedSealMessage,
     required this.chooseSealForOrder,
     required this.sealSelectedForOrderTitle,
     required this.sealSelectedForOrderMessage,
@@ -398,6 +411,7 @@ class _HankoStrings {
     required this.deleteSealMessage,
     required this.deleteSealConfirm,
     required this.cancel,
+    required this.close,
     required this.browseStones,
     required this.browseStonesDescription,
     required this.noSavedSeals,
@@ -570,6 +584,12 @@ class _HankoStrings {
   final String sealDetailTitle;
   final String kanjiLabel;
   final String createdAtLabel;
+  final String compareSavedSeals;
+  final String compareSavedSealsTitle;
+  final String compareSavedSealsMessage;
+  final String editSavedSeal;
+  final String editSavedSealTitle;
+  final String editSavedSealMessage;
   final String chooseSealForOrder;
   final String sealSelectedForOrderTitle;
   final String sealSelectedForOrderMessage;
@@ -579,6 +599,7 @@ class _HankoStrings {
   final String deleteSealMessage;
   final String deleteSealConfirm;
   final String cancel;
+  final String close;
   final String browseStones;
   final String browseStonesDescription;
   final String noSavedSeals;
@@ -779,6 +800,14 @@ const _localizedValues = {
       sealDetailTitle: 'Seal Detail',
       kanjiLabel: 'Kanji',
       createdAtLabel: 'Created',
+      compareSavedSeals: 'Compare Seals',
+      compareSavedSealsTitle: 'Compare saved seals',
+      compareSavedSealsMessage:
+          'Open each saved seal to review its preview, kanji, and style details. Side-by-side comparison will be added later.',
+      editSavedSeal: 'Edit / Regenerate',
+      editSavedSealTitle: 'Create a new version from Design',
+      editSavedSealMessage:
+          'Saved seals stay unchanged. To try different kanji or style choices, start a new design and save it.',
       chooseSealForOrder: 'Choose for Order',
       sealSelectedForOrderTitle: 'Selected for order',
       sealSelectedForOrderMessage: 'This seal is now saved in the order draft.',
@@ -789,6 +818,7 @@ const _localizedValues = {
           'This removes the seal design from this device. This action cannot be undone.',
       deleteSealConfirm: 'Delete',
       cancel: 'Cancel',
+      close: 'Close',
       browseStones: 'Browse Stones',
       browseStonesDescription: 'Explore our collection of\nnatural gemstones.',
       noSavedSeals: 'No saved seals',
@@ -970,6 +1000,14 @@ const _localizedValues = {
       sealDetailTitle: '印影詳細',
       kanjiLabel: '漢字',
       createdAtLabel: '作成日',
+      compareSavedSeals: '印影を比較',
+      compareSavedSealsTitle: '保存済み印影の比較',
+      compareSavedSealsMessage:
+          '今は各印影の詳細を開いて、プレビュー、漢字、スタイルを確認してください。横並び比較は後続で追加します。',
+      editSavedSeal: '編集 / 再生成',
+      editSavedSealTitle: 'Designから新しい案を作成',
+      editSavedSealMessage:
+          '保存済み印影はそのまま残ります。漢字やスタイルを変える場合は、Designから新しい印影を作成して保存してください。',
       chooseSealForOrder: '注文に使う',
       sealSelectedForOrderTitle: '注文用に選択済み',
       sealSelectedForOrderMessage: 'この印影を注文下書きに反映しました。',
@@ -979,6 +1017,7 @@ const _localizedValues = {
       deleteSealMessage: 'この端末から印影デザインを削除します。この操作は元に戻せません。',
       deleteSealConfirm: '削除',
       cancel: 'キャンセル',
+      close: '閉じる',
       browseStones: '石を探す',
       browseStonesDescription: '天然石コレクションを\nご覧ください。',
       noSavedSeals: '保存済み印影はありません',

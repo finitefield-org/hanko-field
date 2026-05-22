@@ -668,6 +668,23 @@ void main() {
     expect(find.text('Soft'), findsOneWidget);
     expect(find.text('Standard'), findsWidgets);
     expect(find.text('Balanced'), findsWidgets);
+    expect(find.text('Compare Seals'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Compare Seals'));
+    await tester.pump();
+    await tester.tap(find.text('Compare Seals'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Compare saved seals'), findsOneWidget);
+    expect(
+      find.text(
+        'Open each saved seal to review its preview, kanji, and style details. Side-by-side comparison will be added later.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('View Details').first);
     await tester.pump();
@@ -761,7 +778,24 @@ void main() {
     expect(find.text('Created'), findsOneWidget);
     expect(find.text('2026-05-21 11:00'), findsOneWidget);
     expect(find.text('Choose for Order'), findsOneWidget);
+    expect(find.text('Edit / Regenerate'), findsOneWidget);
     expect(find.text('Delete Seal'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Edit / Regenerate'));
+    await tester.pump();
+    await tester.tap(find.text('Edit / Regenerate'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create a new version from Design'), findsOneWidget);
+    expect(
+      find.text(
+        'Saved seals stay unchanged. To try different kanji or style choices, start a new design and save it.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Choose for Order'));
     await tester.pump();
