@@ -6795,6 +6795,48 @@ mod tests {
     }
 
     #[test]
+    fn create_order_request_deserializes_legacy_web_payload_without_app_fields() {
+        let request = serde_json::from_value::<CreateOrderRequest>(json!({
+            "channel": "web",
+            "locale": "ja",
+            "idempotency_key": "demo_key_123",
+            "terms_agreed": true,
+            "seal": {
+                "line1": "田中",
+                "line2": "太郎",
+                "shape": "square",
+                "font_key": "zen_maru_gothic"
+            },
+            "listing_id": "rose_quartz_01",
+            "shipping": {
+                "country_code": "jp",
+                "recipient_name": "田中 太郎",
+                "phone": "09000001111",
+                "postal_code": "1000001",
+                "state": "東京都",
+                "city": "千代田区",
+                "address_line1": "1-1-1",
+                "address_line2": ""
+            },
+            "contact": {
+                "email": "taro@example.com",
+                "preferred_locale": "ja"
+            }
+        }))
+        .expect("legacy web payload should deserialize");
+
+        let input = validate_create_order_request(request).expect("legacy web payload is valid");
+
+        assert_eq!(input.channel, "web");
+        assert!(input.seal.ai_generation_id.is_none());
+        assert!(input.seal.ai_variant_id.is_none());
+        assert!(input.seal.preview_image.is_none());
+        assert!(input.seal.style.is_none());
+        assert!(input.customer_confirmation.is_none());
+        assert!(input.order_note.is_none());
+    }
+
+    #[test]
     fn validate_create_order_request_accepts_app_payload_with_ai_metadata() {
         let input =
             validate_create_order_request(valid_app_create_order_request()).expect("request valid");

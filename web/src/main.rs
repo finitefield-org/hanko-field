@@ -4963,6 +4963,76 @@ mod tests {
         ])
     }
 
+    #[test]
+    fn create_order_api_request_serializes_legacy_web_payload_without_app_fields() {
+        let request = CreateOrderApiRequest {
+            channel: "web".to_owned(),
+            locale: "ja".to_owned(),
+            idempotency_key: "demo_key_123".to_owned(),
+            terms_agreed: true,
+            seal: CreateOrderSealApiRequest {
+                line1: "田中".to_owned(),
+                line2: "太郎".to_owned(),
+                shape: "square".to_owned(),
+                font_key: "zen_maru_gothic".to_owned(),
+            },
+            listing_id: "rose_quartz_01".to_owned(),
+            shipping: CreateOrderShippingApiRequest {
+                country_code: "JP".to_owned(),
+                recipient_name: "田中 太郎".to_owned(),
+                phone: "09000001111".to_owned(),
+                postal_code: "1000001".to_owned(),
+                state: "東京都".to_owned(),
+                city: "千代田区".to_owned(),
+                address_line1: "1-1-1".to_owned(),
+                address_line2: String::new(),
+            },
+            contact: CreateOrderContactApiRequest {
+                email: "taro@example.com".to_owned(),
+                preferred_locale: "ja".to_owned(),
+            },
+        };
+
+        let payload = serde_json::to_value(&request).expect("request should serialize");
+
+        assert_eq!(
+            payload,
+            json!({
+                "channel": "web",
+                "locale": "ja",
+                "idempotency_key": "demo_key_123",
+                "terms_agreed": true,
+                "seal": {
+                    "line1": "田中",
+                    "line2": "太郎",
+                    "shape": "square",
+                    "font_key": "zen_maru_gothic"
+                },
+                "listing_id": "rose_quartz_01",
+                "shipping": {
+                    "country_code": "JP",
+                    "recipient_name": "田中 太郎",
+                    "phone": "09000001111",
+                    "postal_code": "1000001",
+                    "state": "東京都",
+                    "city": "千代田区",
+                    "address_line1": "1-1-1",
+                    "address_line2": ""
+                },
+                "contact": {
+                    "email": "taro@example.com",
+                    "preferred_locale": "ja"
+                }
+            })
+        );
+        assert!(payload.get("customer_confirmation").is_none());
+        assert!(payload.get("order_note").is_none());
+        assert!(payload["seal"].get("ai_generation_id").is_none());
+        assert!(payload["seal"].get("ai_variant_id").is_none());
+        assert!(payload["seal"].get("preview_image").is_none());
+        assert!(payload["seal"].get("style").is_none());
+    }
+
     #[tokio::test]
     async fn catalog_load_uses_requested_locale_for_mock_source() {
         let source = CatalogSource::Mock(new_mock_catalog_source("ja"));
