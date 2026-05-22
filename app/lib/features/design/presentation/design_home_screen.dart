@@ -914,6 +914,111 @@ class _SealVariantSelectionScreenState
   }
 }
 
+class SealPreviewDetailScreen extends StatelessWidget {
+  const SealPreviewDetailScreen({
+    super.key,
+    required this.result,
+    required this.variant,
+    required this.onSave,
+    required this.onChooseStone,
+    required this.onBack,
+  });
+
+  final SealGenerationResult result;
+  final SealDesignVariant variant;
+  final VoidCallback onSave;
+  final VoidCallback onChooseStone;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final request = result.request;
+    final candidate = request.candidate;
+    final style = request.style;
+
+    return _DesignStepScaffold(
+      title: l10n.sealPreviewTitle,
+      onBack: onBack,
+      children: [
+        HankoSurfaceCard(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 26),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.sealPreviewMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              const SizedBox(height: 22),
+              _SealPreviewFrame(variant: variant, shape: style.shape),
+              const SizedBox(height: 20),
+              _SealPreviewRulesNote(message: l10n.sealPreviewRulesNote),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SealPreviewDetailsCard(
+          rows: [
+            (
+              icon: Icons.draw_outlined,
+              label: l10n.kanjiSuggestionsTitle,
+              value: candidate.kanji,
+            ),
+            (
+              icon: Icons.translate,
+              label: l10n.kanjiMeaningLabel,
+              value: _previewDetailValue(candidate.meaning, candidate.reason),
+            ),
+            (
+              icon: Icons.auto_awesome_outlined,
+              label: l10n.sealPreviewVariantLabel,
+              value: variant.label,
+            ),
+            (
+              icon: Icons.category_outlined,
+              label: l10n.sealShapeLabel,
+              value: _sealShapeLabel(l10n, style.shape),
+            ),
+            (
+              icon: Icons.brush_outlined,
+              label: l10n.sealStyleNameLabel,
+              value: _sealStyleNameLabel(l10n, style.style),
+            ),
+            (
+              icon: Icons.line_weight,
+              label: l10n.sealStrokeWeightLabel,
+              value: _sealStrokeWeightLabel(l10n, style.strokeWeight),
+            ),
+            (
+              icon: Icons.balance_outlined,
+              label: l10n.sealBalanceLabel,
+              value: _sealBalanceLabel(l10n, style.balance),
+            ),
+            (
+              icon: Icons.folder_outlined,
+              label: l10n.sealPreviewStorageLabel,
+              value: variant.storagePath,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        HankoPrimaryButton(
+          label: l10n.saveSeal,
+          icon: Icons.bookmark_add_outlined,
+          onPressed: onSave,
+        ),
+        const SizedBox(height: 12),
+        _SecondaryActionButton(
+          label: l10n.chooseStone,
+          onPressed: onChooseStone,
+        ),
+      ],
+    );
+  }
+}
+
 class SealGenerationErrorScreen extends StatelessWidget {
   const SealGenerationErrorScreen({
     super.key,
@@ -1660,6 +1765,129 @@ class _SealVariantPlaceholder extends StatelessWidget {
   }
 }
 
+class _SealPreviewFrame extends StatelessWidget {
+  const _SealPreviewFrame({required this.variant, required this.shape});
+
+  final SealDesignVariant variant;
+  final SealShape shape;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewImage = shape == SealShape.round
+        ? ClipOval(child: _SealVariantImage(variant: variant))
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(HankoRadii.sm),
+            child: _SealVariantImage(variant: variant),
+          );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.medallion,
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: HankoColors.surface,
+              shape: shape == SealShape.round
+                  ? BoxShape.circle
+                  : BoxShape.rectangle,
+              borderRadius: shape == SealShape.round
+                  ? null
+                  : BorderRadius.circular(HankoRadii.sm),
+              border: Border.all(color: HankoColors.gold, width: 1.2),
+            ),
+            child: ClipRRect(
+              borderRadius: shape == SealShape.round
+                  ? BorderRadius.zero
+                  : BorderRadius.circular(HankoRadii.sm),
+              child: previewImage,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SealPreviewRulesNote extends StatelessWidget {
+  const _SealPreviewRulesNote({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const _SmallBadge(icon: Icons.verified_user_outlined),
+        const SizedBox(width: 14),
+        Expanded(child: Text(message, style: HankoTextStyles.compactBody)),
+      ],
+    );
+  }
+}
+
+class _SealPreviewDetailsCard extends StatelessWidget {
+  const _SealPreviewDetailsCard({required this.rows});
+
+  final List<({IconData icon, String label, String value})> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+      child: Column(
+        children: [
+          for (var index = 0; index < rows.length; index++) ...[
+            _SealPreviewDetailRow(row: rows[index]),
+            if (index < rows.length - 1)
+              const Divider(color: HankoColors.surfaceBorder, height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SealPreviewDetailRow extends StatelessWidget {
+  const _SealPreviewDetailRow({required this.row});
+
+  final ({IconData icon, String label, String value}) row;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          _SmallBadge(icon: row.icon),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(row.label, style: HankoTextStyles.label),
+                const SizedBox(height: 7),
+                Text(
+                  row.value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: HankoTextStyles.compactBody,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _VariantSelectedBadge extends StatelessWidget {
   const _VariantSelectedBadge({required this.label});
 
@@ -2254,6 +2482,14 @@ List<({String label, String value})> _candidateMetricItems(
         value: _candidateMetricLabel(context, engravingSuitability),
       ),
   ];
+}
+
+String _previewDetailValue(String? value, String fallback) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return fallback;
+  }
+  return trimmed;
 }
 
 String _candidateMetricLabel(BuildContext context, String value) {

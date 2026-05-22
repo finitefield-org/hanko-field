@@ -339,6 +339,42 @@ void main() {
     expect(find.text('Soft spacing'), findsOneWidget);
     expect(find.text('Bold readable seal'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Soft spacing'));
+    await tester.pump();
+    await tester.tap(find.text('Soft spacing'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+    expect(find.text('Seal Preview'), findsOneWidget);
+    expect(
+      find.text('Review your selected seal design before saving.'),
+      findsOneWidget,
+    );
+    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('AI Variant'), findsOneWidget);
+    expect(find.text('Soft spacing'), findsOneWidget);
+    expect(find.text('Save Seal'), findsOneWidget);
+    expect(find.text('Choose a Stone'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Choose a Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No stones loaded'), findsOneWidget);
+
+    await tester.tap(find.text('Design').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+
     await tester.ensureVisible(find.byTooltip('Back').last);
     await tester.pump();
     await tester.tap(find.byTooltip('Back').last);
@@ -460,6 +496,67 @@ void main() {
       find.text('This AI seal design is ready for preview and saving.'),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-009 previews selected seal and exposes next actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var saveCount = 0;
+    var chooseStoneCount = 0;
+    final result = _sealGenerationResult();
+    final variant = result.variants[1];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealPreviewDetailScreen(
+          result: result,
+          variant: variant,
+          onSave: () => saveCount += 1,
+          onChooseStone: () => chooseStoneCount += 1,
+          onBack: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('Seal Preview'), findsOneWidget);
+    expect(
+      find.text('Review your selected seal design before saving.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Created within engraving-friendly design rules.'),
+      findsOneWidget,
+    );
+    expect(find.text('美空'), findsOneWidget);
+    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('AI Variant'), findsOneWidget);
+    expect(find.text('Soft spacing'), findsOneWidget);
+    expect(
+      find.text('seal_designs/seal_request_001/seal_variant_002.png'),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.text('Save Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Save Seal'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Choose a Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone'));
+    await tester.pump();
+
+    expect(saveCount, 1);
+    expect(chooseStoneCount, 1);
     expect(tester.takeException(), isNull);
   });
 

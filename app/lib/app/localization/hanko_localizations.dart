@@ -152,6 +152,13 @@ class HankoLocalizations {
   String get sealVariantSelectedBadge => _strings.sealVariantSelectedBadge;
   String get sealVariantSelectedTitle => _strings.sealVariantSelectedTitle;
   String get sealVariantSelectedMessage => _strings.sealVariantSelectedMessage;
+  String get sealPreviewTitle => _strings.sealPreviewTitle;
+  String get sealPreviewMessage => _strings.sealPreviewMessage;
+  String get sealPreviewRulesNote => _strings.sealPreviewRulesNote;
+  String get sealPreviewVariantLabel => _strings.sealPreviewVariantLabel;
+  String get sealPreviewStorageLabel => _strings.sealPreviewStorageLabel;
+  String get saveSeal => _strings.saveSeal;
+  String get chooseStone => _strings.chooseStone;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -333,6 +340,13 @@ class _HankoStrings {
     required this.sealVariantSelectedBadge,
     required this.sealVariantSelectedTitle,
     required this.sealVariantSelectedMessage,
+    required this.sealPreviewTitle,
+    required this.sealPreviewMessage,
+    required this.sealPreviewRulesNote,
+    required this.sealPreviewVariantLabel,
+    required this.sealPreviewStorageLabel,
+    required this.saveSeal,
+    required this.chooseStone,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -483,6 +497,13 @@ class _HankoStrings {
   final String sealVariantSelectedBadge;
   final String sealVariantSelectedTitle;
   final String sealVariantSelectedMessage;
+  final String sealPreviewTitle;
+  final String sealPreviewMessage;
+  final String sealPreviewRulesNote;
+  final String sealPreviewVariantLabel;
+  final String sealPreviewStorageLabel;
+  final String saveSeal;
+  final String chooseStone;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -659,6 +680,13 @@ const _localizedValues = {
       sealVariantSelectedTitle: 'Seal design selected',
       sealVariantSelectedMessage:
           'This AI seal design is ready for preview and saving.',
+      sealPreviewTitle: 'Seal Preview',
+      sealPreviewMessage: 'Review your selected seal design before saving.',
+      sealPreviewRulesNote: 'Created within engraving-friendly design rules.',
+      sealPreviewVariantLabel: 'AI Variant',
+      sealPreviewStorageLabel: 'Storage path',
+      saveSeal: 'Save Seal',
+      chooseStone: 'Choose a Stone',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -818,6 +846,13 @@ const _localizedValues = {
       sealVariantSelectedBadge: '選択中',
       sealVariantSelectedTitle: '印影を選択しました',
       sealVariantSelectedMessage: 'このAI印影をプレビュー確認と保存に進められます。',
+      sealPreviewTitle: '印影プレビュー',
+      sealPreviewMessage: '保存前に選択した印影デザインを確認してください。',
+      sealPreviewRulesNote: '彫刻しやすいデザインルール内で作成されています。',
+      sealPreviewVariantLabel: 'AI候補',
+      sealPreviewStorageLabel: 'Storageパス',
+      saveSeal: '印影を保存',
+      chooseStone: '石を選ぶ',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',

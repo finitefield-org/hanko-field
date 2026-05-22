@@ -152,6 +152,13 @@ class _SealGenerationFailure {
   final SealGenerationRequest request;
 }
 
+class _SealPreviewSelection {
+  const _SealPreviewSelection({required this.result, required this.variant});
+
+  final SealGenerationResult result;
+  final SealDesignVariant variant;
+}
+
 class _BottomNavigationShellState extends State<BottomNavigationShell> {
   static const _shellPage = PageEntry(
     key: 'COM-003-bottom-navigation-shell',
@@ -192,6 +199,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       'DES-007-seal-generation-loading';
   static const _designSealVariantSelectionPageKey =
       'DES-008-seal-variant-selection';
+  static const _designSealPreviewDetailPageKey = 'DES-009-seal-preview-detail';
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
   static const _designSealGenerationErrorPageKey =
       'DES-012-seal-generation-error';
@@ -364,7 +372,20 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         pageData is SealGenerationResult) {
       return SealVariantSelectionScreen(
         result: pageData,
-        onSelected: (_) {},
+        onSelected: (variant) {
+          stack.push(_sealPreviewDetailPage(pageData, variant));
+        },
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designSealPreviewDetailPageKey &&
+        pageData is _SealPreviewSelection) {
+      return SealPreviewDetailScreen(
+        result: pageData.result,
+        variant: pageData.variant,
+        onSave: () {},
+        onChooseStone: () => stack.selectTab(HankoAppTab.stones),
         onBack: stack.pop,
       );
     }
@@ -464,6 +485,17 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       key: _designSealVariantSelectionPageKey,
       name: '/design/seal/variants',
       data: result,
+    );
+  }
+
+  PageEntry _sealPreviewDetailPage(
+    SealGenerationResult result,
+    SealDesignVariant variant,
+  ) {
+    return PageEntry(
+      key: _designSealPreviewDetailPageKey,
+      name: '/design/seal/preview',
+      data: _SealPreviewSelection(result: result, variant: variant),
     );
   }
 

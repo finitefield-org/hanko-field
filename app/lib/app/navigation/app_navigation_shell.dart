@@ -39,17 +39,20 @@ class HankoTabStackController {
     required void Function(PageEntry page) replaceTopPage,
     required VoidCallback popPage,
     required VoidCallback popToRootPage,
+    required void Function(HankoAppTab tab) selectTab,
   }) : _readPages = readPages,
        _pushPage = pushPage,
        _replaceTopPage = replaceTopPage,
        _popPage = popPage,
-       _popToRootPage = popToRootPage;
+       _popToRootPage = popToRootPage,
+       _selectTab = selectTab;
 
   final List<PageEntry> Function() _readPages;
   final void Function(PageEntry page) _pushPage;
   final void Function(PageEntry page) _replaceTopPage;
   final VoidCallback _popPage;
   final VoidCallback _popToRootPage;
+  final void Function(HankoAppTab tab) _selectTab;
 
   List<PageEntry> get pages => _readPages();
 
@@ -60,6 +63,8 @@ class HankoTabStackController {
   void pop() => _popPage();
 
   void popToRoot() => _popToRootPage();
+
+  void selectTab(HankoAppTab tab) => _selectTab(tab);
 }
 
 class HankoTabNavigationShell extends StatefulWidget {
@@ -121,6 +126,10 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
 
   void _selectTabIndex(int index) {
     final nextTab = widget.tabs[index].tab;
+    _selectTab(nextTab);
+  }
+
+  void _selectTab(HankoAppTab nextTab) {
     if (nextTab == _currentTab) {
       final pages = _pagesByTab[nextTab] ?? const <PageEntry>[];
       if (pages.length > 1) {
@@ -175,6 +184,7 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
         }
         _setPagesForTab(tab.tab, [pages.first]);
       },
+      selectTab: _selectTab,
     );
   }
 
