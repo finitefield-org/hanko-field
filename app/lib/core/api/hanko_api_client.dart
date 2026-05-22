@@ -3,6 +3,11 @@ import 'dart:io';
 
 import 'api_json.dart';
 
+const defaultHankoApiBaseUrl = String.fromEnvironment(
+  'HANKO_API_BASE_URL',
+  defaultValue: 'http://127.0.0.1:3050',
+);
+
 class HankoApiClient {
   HankoApiClient({required this.baseUri, HankoApiTransport? transport})
     : _transport = transport ?? HankoHttpApiTransport();

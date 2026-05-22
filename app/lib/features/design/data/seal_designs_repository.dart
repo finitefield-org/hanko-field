@@ -1,5 +1,4 @@
 import '../../../core/api/core_api.dart';
-import 'kanji_candidates_repository.dart';
 import '../domain/seal_generation.dart';
 
 final _defaultSealGenerationRepository = SealGenerationRepository(

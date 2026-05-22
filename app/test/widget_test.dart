@@ -23,6 +23,7 @@ void main() {
     bool hasSeenOnboarding = true,
     KanjiCandidatesGenerator? generateKanjiCandidates,
     SealDesignsGenerator? generateSealDesigns,
+    StoneListingsLoader? listStoneListings,
     LocalSealDesignRepository? localSealDesignRepository,
   }) async {
     await tester.pumpWidget(
@@ -36,6 +37,7 @@ void main() {
               generateKanjiCandidates ?? _successfulKanjiGenerator,
           generateSealDesigns:
               generateSealDesigns ?? generateSealDesignsWithDefaultApi,
+          listStoneListings: listStoneListings ?? _emptyStoneListingsLoader,
           localSealDesignRepository: localSealDesignRepository,
         ),
       ),
@@ -53,6 +55,7 @@ void main() {
           hasSeenOnboardingResolver: () => launchCheck.future,
           markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
+          listStoneListings: _emptyStoneListingsLoader,
         ),
       ),
     );
@@ -88,6 +91,7 @@ void main() {
             return saveCompleter.future;
           },
           splashMinimumDuration: Duration.zero,
+          listStoneListings: _emptyStoneListingsLoader,
         ),
       ),
     );
@@ -125,6 +129,7 @@ void main() {
           hasSeenOnboardingResolver: () async => throw StateError('no storage'),
           markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
+          listStoneListings: _emptyStoneListingsLoader,
         ),
       ),
     );
@@ -950,6 +955,123 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('STN-003 displays the stones loading state', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: const StonesHomeScreen(isLoading: true),
+      ),
+    );
+
+    expect(find.text('Stones'), findsOneWidget);
+    expect(find.text('Loading stones'), findsOneWidget);
+    expect(
+      find.text('Checking available one-of-a-kind seal stones.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-004 displays stones load errors and retry', (tester) async {
+    var retryCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          loadError: StateError('offline'),
+          onRetry: () => retryCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text("Couldn't load stones"), findsOneWidget);
+    expect(
+      find.text('Try again to refresh the available stone listings.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Try Again'));
+    await tester.pump();
+
+    expect(retryCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-001 displays stone listing cards', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    StoneListing? selectedStone;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          result: _stoneListingsResult(),
+          onSelectStone: (listing) => selectedStone = listing,
+        ),
+      ),
+    );
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Rose Quartz'), findsOneWidget);
+    expect(find.text('¥18,000'), findsOneWidget);
+    expect(find.text('Pink'), findsOneWidget);
+    expect(find.text('Plain'), findsOneWidget);
+    expect(find.text('24x24x60 mm'), findsOneWidget);
+    expect(find.text('Available'), findsOneWidget);
+    expect(find.text('Select Stone'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pump();
+
+    expect(selectedStone?.id, 'stone_listing_001');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-001 loads stone listings from the app shell', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    StoneListingsQuery? capturedQuery;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async {
+        capturedQuery = query;
+        return _stoneListingsResult();
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+
+    expect(capturedQuery?.locale, 'en');
+    expect(capturedQuery?.status, 'published');
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Select Stone'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('DES-012 and DES-015 expose retry and limit actions', (
     tester,
   ) async {
@@ -1142,6 +1264,7 @@ void main() {
           hasSeenOnboardingResolver: () async => true,
           markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
+          listStoneListings: _emptyStoneListingsLoader,
         ),
       ),
     );
@@ -1305,6 +1428,54 @@ Future<KanjiCandidatesResult> _successfulKanjiGenerator(
   KanjiCandidatesRequest request,
 ) async {
   return _kanjiResult(request);
+}
+
+Future<StoneListingsResult> _emptyStoneListingsLoader(
+  StoneListingsQuery query,
+) async {
+  return StoneListingsResult(
+    locale: query.locale ?? 'en',
+    currency: 'JPY',
+    listings: const [],
+  );
+}
+
+StoneListingsResult _stoneListingsResult({List<StoneListing>? listings}) {
+  return StoneListingsResult(
+    locale: 'en',
+    currency: 'JPY',
+    listings: listings ?? [_stoneListing()],
+  );
+}
+
+StoneListing _stoneListing({
+  String id = 'stone_listing_001',
+  String title = 'Soft Pink Rose Quartz Seal Stone',
+  String materialKey = 'rose_quartz',
+  String status = 'published',
+  bool isActive = true,
+}) {
+  return StoneListing(
+    id: id,
+    code: 'RQZ-0001',
+    materialKey: materialKey,
+    sizeLabel: '24x24x60 mm',
+    title: title,
+    description: 'A soft pink rose quartz seal stone.',
+    story: 'A one-of-a-kind piece.',
+    facets: const StoneListingFacets(
+      colorFamily: 'pink',
+      colorTags: ['soft'],
+      patternPrimary: 'plain',
+      patternTags: ['clear'],
+      stoneShape: 'square',
+      translucency: 'semi_translucent',
+    ),
+    price: const Money(amount: 18000, currency: 'JPY'),
+    status: status,
+    isActive: isActive,
+    photos: const [],
+  );
 }
 
 LocalSealDesign _localSealDesign({

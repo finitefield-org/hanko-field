@@ -197,8 +197,15 @@ class HankoLocalizations {
   String get browseStonesDescription => _strings.browseStonesDescription;
   String get noSavedSeals => _strings.noSavedSeals;
   String get noSavedSealsMessage => _strings.noSavedSealsMessage;
+  String get stonesLoadingTitle => _strings.stonesLoadingTitle;
+  String get stonesLoadingMessage => _strings.stonesLoadingMessage;
+  String get stonesLoadErrorTitle => _strings.stonesLoadErrorTitle;
+  String get stonesLoadErrorMessage => _strings.stonesLoadErrorMessage;
   String get noStonesLoaded => _strings.noStonesLoaded;
   String get noStonesLoadedMessage => _strings.noStonesLoadedMessage;
+  String get selectStone => _strings.selectStone;
+  String get stoneAvailable => _strings.stoneAvailable;
+  String get stoneUnavailable => _strings.stoneUnavailable;
   String get order => _strings.order;
   String get noActiveDraft => _strings.noActiveDraft;
   String get noActiveDraftMessage => _strings.noActiveDraftMessage;
@@ -416,8 +423,15 @@ class _HankoStrings {
     required this.browseStonesDescription,
     required this.noSavedSeals,
     required this.noSavedSealsMessage,
+    required this.stonesLoadingTitle,
+    required this.stonesLoadingMessage,
+    required this.stonesLoadErrorTitle,
+    required this.stonesLoadErrorMessage,
     required this.noStonesLoaded,
     required this.noStonesLoadedMessage,
+    required this.selectStone,
+    required this.stoneAvailable,
+    required this.stoneUnavailable,
     required this.order,
     required this.noActiveDraft,
     required this.noActiveDraftMessage,
@@ -604,8 +618,15 @@ class _HankoStrings {
   final String browseStonesDescription;
   final String noSavedSeals;
   final String noSavedSealsMessage;
+  final String stonesLoadingTitle;
+  final String stonesLoadingMessage;
+  final String stonesLoadErrorTitle;
+  final String stonesLoadErrorMessage;
   final String noStonesLoaded;
   final String noStonesLoadedMessage;
+  final String selectStone;
+  final String stoneAvailable;
+  final String stoneUnavailable;
   final String order;
   final String noActiveDraft;
   final String noActiveDraftMessage;
@@ -824,9 +845,17 @@ const _localizedValues = {
       noSavedSeals: 'No saved seals',
       noSavedSealsMessage:
           'Saved seal designs will appear here after you create one.',
+      stonesLoadingTitle: 'Loading stones',
+      stonesLoadingMessage: 'Checking available one-of-a-kind seal stones.',
+      stonesLoadErrorTitle: "Couldn't load stones",
+      stonesLoadErrorMessage:
+          'Try again to refresh the available stone listings.',
       noStonesLoaded: 'No stones loaded',
       noStonesLoadedMessage:
           'Available one-of-a-kind stones will be shown here.',
+      selectStone: 'Select Stone',
+      stoneAvailable: 'Available',
+      stoneUnavailable: 'Unavailable',
       order: 'Order',
       noActiveDraft: 'No active draft',
       noActiveDraftMessage: 'Choose a saved seal and a stone before checkout.',
@@ -1022,8 +1051,15 @@ const _localizedValues = {
       browseStonesDescription: '天然石コレクションを\nご覧ください。',
       noSavedSeals: '保存済み印影はありません',
       noSavedSealsMessage: '作成した印影デザインがここに表示されます。',
+      stonesLoadingTitle: '石を読み込み中',
+      stonesLoadingMessage: '販売中の一点物の石を確認しています。',
+      stonesLoadErrorTitle: '石を読み込めません',
+      stonesLoadErrorMessage: '販売中の石一覧を再読み込みしてください。',
       noStonesLoaded: '石を読み込んでいません',
       noStonesLoadedMessage: '販売中の一点物の石がここに表示されます。',
+      selectStone: '石を選択',
+      stoneAvailable: '販売中',
+      stoneUnavailable: '選択不可',
       order: '注文',
       noActiveDraft: '進行中の下書きはありません',
       noActiveDraftMessage: '注文前に保存済み印影と石を選択してください。',

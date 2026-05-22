@@ -4,11 +4,6 @@ import '../domain/kanji_candidate.dart';
 typedef KanjiCandidatesGenerator =
     Future<KanjiCandidatesResult> Function(KanjiCandidatesRequest request);
 
-const defaultHankoApiBaseUrl = String.fromEnvironment(
-  'HANKO_API_BASE_URL',
-  defaultValue: 'http://127.0.0.1:3050',
-);
-
 final _defaultKanjiCandidatesRepository = KanjiCandidatesRepository(
   HankoApiClient(baseUri: Uri.parse(defaultHankoApiBaseUrl)),
 );

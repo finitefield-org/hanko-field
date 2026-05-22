@@ -2,6 +2,19 @@ import '../../../core/api/core_api.dart';
 import '../../../core/domain/money.dart';
 import '../domain/stone_listing.dart';
 
+typedef StoneListingsLoader =
+    Future<StoneListingsResult> Function(StoneListingsQuery query);
+
+final _defaultStoneListingsRepository = StoneListingsRepository(
+  HankoApiClient(baseUri: Uri.parse(defaultHankoApiBaseUrl)),
+);
+
+Future<StoneListingsResult> listStoneListingsWithDefaultApi(
+  StoneListingsQuery query,
+) {
+  return _defaultStoneListingsRepository.listStoneListings(query);
+}
+
 class StoneListingsRepository {
   const StoneListingsRepository(this._apiClient);
 

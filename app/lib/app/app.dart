@@ -22,6 +22,7 @@ class HankoApp extends StatelessWidget {
     this.splashMinimumDuration = const Duration(milliseconds: 700),
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
+    this.listStoneListings = listStoneListingsWithDefaultApi,
     this.localSealDesignRepository,
   });
 
@@ -31,6 +32,7 @@ class HankoApp extends StatelessWidget {
   final Duration splashMinimumDuration;
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
+  final StoneListingsLoader listStoneListings;
   final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
@@ -48,6 +50,7 @@ class HankoApp extends StatelessWidget {
         splashMinimumDuration: splashMinimumDuration,
         generateKanjiCandidates: generateKanjiCandidates,
         generateSealDesigns: generateSealDesigns,
+        listStoneListings: listStoneListings,
         localSealDesignRepository: localSealDesignRepository,
       ),
     );
@@ -71,6 +74,7 @@ class _AppLaunchGate extends StatefulWidget {
     required this.splashMinimumDuration,
     required this.generateKanjiCandidates,
     required this.generateSealDesigns,
+    required this.listStoneListings,
     required this.localSealDesignRepository,
   });
 
@@ -79,6 +83,7 @@ class _AppLaunchGate extends StatefulWidget {
   final Duration splashMinimumDuration;
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
+  final StoneListingsLoader listStoneListings;
   final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
@@ -102,6 +107,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
       _AppLaunchStage.shell => BottomNavigationShell(
         generateKanjiCandidates: widget.generateKanjiCandidates,
         generateSealDesigns: widget.generateSealDesigns,
+        listStoneListings: widget.listStoneListings,
         localSealDesignRepository: widget.localSealDesignRepository,
       ),
     };
@@ -130,11 +136,13 @@ class BottomNavigationShell extends StatefulWidget {
     super.key,
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
+    this.listStoneListings = listStoneListingsWithDefaultApi,
     this.localSealDesignRepository,
   });
 
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
+  final StoneListingsLoader listStoneListings;
   final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
@@ -227,6 +235,11 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   var _localSealDesignsLoaded = false;
   Object? _localSealDesignsLoadError;
   OrderDraftSealSelection? _orderDraftSealSelection;
+  StoneListingsResult? _stoneListingsResult;
+  var _stoneListingsLoaded = false;
+  var _stoneListingsLoading = false;
+  Object? _stoneListingsLoadError;
+  String? _stoneListingsLocale;
   final _savingLocalSealKeys = <String>{};
   final _deletingLocalSealIds = <String>{};
   var _pages = const <PageEntry>[_shellPage];
@@ -237,6 +250,17 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     _localSealDesignRepository =
         widget.localSealDesignRepository ?? InMemoryLocalSealDesignRepository();
     unawaited(_loadLocalSealDesigns());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = Localizations.localeOf(context).languageCode;
+    if (_stoneListingsLocale == locale) {
+      return;
+    }
+    _stoneListingsLocale = locale;
+    unawaited(_loadStoneListings(locale: locale));
   }
 
   @override
@@ -303,8 +327,17 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return switch (tab) {
       HankoAppTab.design => _buildDesignPage(page, stack),
       HankoAppTab.mySeals => _buildMySealsPage(page, stack),
-      HankoAppTab.stones => const StonesHomeScreen(),
+      HankoAppTab.stones => _buildStonesPage(),
     };
+  }
+
+  Widget _buildStonesPage() {
+    return StonesHomeScreen(
+      result: _stoneListingsResult,
+      isLoading: !_stoneListingsLoaded || _stoneListingsLoading,
+      loadError: _stoneListingsLoadError,
+      onRetry: _retryStoneListings,
+    );
   }
 
   Widget _buildMySealsPage(PageEntry page, HankoTabStackController stack) {
@@ -529,6 +562,45 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         _localSealDesignsLoadError = error;
       });
     }
+  }
+
+  Future<void> _loadStoneListings({required String locale}) async {
+    if (_stoneListingsLoading) {
+      return;
+    }
+    setState(() {
+      _stoneListingsLoading = true;
+      _stoneListingsLoadError = null;
+    });
+    try {
+      final result = await widget.listStoneListings(
+        StoneListingsQuery(locale: locale, status: 'published'),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _stoneListingsResult = result;
+        _stoneListingsLoaded = true;
+        _stoneListingsLoading = false;
+        _stoneListingsLoadError = null;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _stoneListingsLoaded = true;
+        _stoneListingsLoading = false;
+        _stoneListingsLoadError = error;
+      });
+    }
+  }
+
+  void _retryStoneListings() {
+    final locale =
+        _stoneListingsLocale ?? Localizations.localeOf(context).languageCode;
+    unawaited(_loadStoneListings(locale: locale));
   }
 
   Future<void> _saveLocalSealDesign({
