@@ -26,6 +26,7 @@ void main() {
     StoneListingsLoader? listStoneListings,
     StoneListingDetailLoader? getStoneListingDetail,
     LocalSealDesignRepository? localSealDesignRepository,
+    LocalOrderDraftRepository? localOrderDraftRepository,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -42,6 +43,7 @@ void main() {
           getStoneListingDetail:
               getStoneListingDetail ?? _successfulStoneDetailLoader,
           localSealDesignRepository: localSealDesignRepository,
+          localOrderDraftRepository: localOrderDraftRepository,
         ),
       ),
     );
@@ -1424,6 +1426,74 @@ void main() {
 
     expect(find.text('Select this stone?'), findsNothing);
     expect(find.text('Selected for Order'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M08-T01 keeps order draft across tabs and app shell reload', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    final savedDraft = await draftRepository.loadOrderDraft();
+    expect(savedDraft.sealSelection?.localSealDesignId, 'local_seal_001');
+    expect(savedDraft.stoneSelection?.listingId, 'stone_listing_001');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected for order'), findsOneWidget);
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected for Order'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

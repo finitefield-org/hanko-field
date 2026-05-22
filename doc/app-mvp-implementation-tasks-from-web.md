@@ -932,7 +932,7 @@ MVPで後回し可能:
 
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M08-T01 | Order Draft | 注文下書きモデル | `features/order/domain/`, `features/order/data/` | タブをまたいで選択印影/石/入力が保持される |
+| M08-T01 | Order Draft | [x] 注文下書きモデル | `features/order/domain/`, `features/order/data/` | タブをまたいで選択印影/石/入力が保持される |
 | M08-T02 | `CMB-001` | 組み合わせ確認 | `features/order/presentation/` | 印影画像、漢字、スタイル、石、価格、送料、合計を表示 |
 | M08-T03 | `CMB-002` `CMB-003` | Missing状態 | `features/order/presentation/` | 印影または石未選択時に次アクションを提示 |
 | M08-T04 | `CMB-004` `CMB-005` | 変更導線 | `features/order/presentation/` | My Seals/Stonesへ戻って選び直せる |

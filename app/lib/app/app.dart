@@ -25,6 +25,7 @@ class HankoApp extends StatelessWidget {
     this.listStoneListings = listStoneListingsWithDefaultApi,
     this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
     this.localSealDesignRepository,
+    this.localOrderDraftRepository,
   });
 
   final Locale? locale;
@@ -36,6 +37,7 @@ class HankoApp extends StatelessWidget {
   final StoneListingsLoader listStoneListings;
   final StoneListingDetailLoader getStoneListingDetail;
   final LocalSealDesignRepository? localSealDesignRepository;
+  final LocalOrderDraftRepository? localOrderDraftRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +57,7 @@ class HankoApp extends StatelessWidget {
         listStoneListings: listStoneListings,
         getStoneListingDetail: getStoneListingDetail,
         localSealDesignRepository: localSealDesignRepository,
+        localOrderDraftRepository: localOrderDraftRepository,
       ),
     );
   }
@@ -80,6 +83,7 @@ class _AppLaunchGate extends StatefulWidget {
     required this.listStoneListings,
     required this.getStoneListingDetail,
     required this.localSealDesignRepository,
+    required this.localOrderDraftRepository,
   });
 
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
@@ -90,6 +94,7 @@ class _AppLaunchGate extends StatefulWidget {
   final StoneListingsLoader listStoneListings;
   final StoneListingDetailLoader getStoneListingDetail;
   final LocalSealDesignRepository? localSealDesignRepository;
+  final LocalOrderDraftRepository? localOrderDraftRepository;
 
   @override
   State<_AppLaunchGate> createState() => _AppLaunchGateState();
@@ -115,6 +120,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         listStoneListings: widget.listStoneListings,
         getStoneListingDetail: widget.getStoneListingDetail,
         localSealDesignRepository: widget.localSealDesignRepository,
+        localOrderDraftRepository: widget.localOrderDraftRepository,
       ),
     };
   }
@@ -145,6 +151,7 @@ class BottomNavigationShell extends StatefulWidget {
     this.listStoneListings = listStoneListingsWithDefaultApi,
     this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
     this.localSealDesignRepository,
+    this.localOrderDraftRepository,
   });
 
   final KanjiCandidatesGenerator generateKanjiCandidates;
@@ -152,6 +159,7 @@ class BottomNavigationShell extends StatefulWidget {
   final StoneListingsLoader listStoneListings;
   final StoneListingDetailLoader getStoneListingDetail;
   final LocalSealDesignRepository? localSealDesignRepository;
+  final LocalOrderDraftRepository? localOrderDraftRepository;
 
   @override
   State<BottomNavigationShell> createState() => _BottomNavigationShellState();
@@ -251,11 +259,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   static const _stoneImageGalleryPageKey = 'STN-008-stone-image-gallery';
 
   late final LocalSealDesignRepository _localSealDesignRepository;
+  late final LocalOrderDraftRepository _localOrderDraftRepository;
   var _localSealDesigns = const <LocalSealDesign>[];
   var _localSealDesignsLoaded = false;
   Object? _localSealDesignsLoadError;
-  OrderDraftSealSelection? _orderDraftSealSelection;
-  StoneListing? _orderDraftStoneSelection;
+  var _orderDraft = OrderDraft.empty();
+  var _orderDraftHasLocalChanges = false;
   StoneListingsResult? _stoneListingsResult;
   var _stoneListingsLoaded = false;
   var _stoneListingsLoading = false;
@@ -270,7 +279,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     super.initState();
     _localSealDesignRepository =
         widget.localSealDesignRepository ?? InMemoryLocalSealDesignRepository();
+    _localOrderDraftRepository =
+        widget.localOrderDraftRepository ?? InMemoryLocalOrderDraftRepository();
     unawaited(_loadLocalSealDesigns());
+    unawaited(_loadOrderDraft());
   }
 
   @override
@@ -365,7 +377,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             initialPhotoIndex: initialPhotoIndex,
           ),
         ),
-        isSelectedForOrder: _orderDraftStoneSelection?.id == pageData.id,
+        isSelectedForOrder:
+            _orderDraft.stoneSelection?.listingId == pageData.id,
         onSelectStone: _chooseStoneForOrder,
         onBack: stack.pop,
       );
@@ -385,7 +398,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       loadError: _stoneListingsLoadError,
       onRetry: _retryStoneListings,
       onOpenStoneDetail: (listing) => stack.push(_stoneDetailPage(listing)),
-      selectedStoneId: _orderDraftStoneSelection?.id,
+      selectedStoneId: _orderDraft.stoneSelection?.listingId,
       onSelectStone: _chooseStoneForOrder,
     );
   }
@@ -396,7 +409,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       return SealDetailScreen(
         design: pageData,
         isSelectedForOrder:
-            _orderDraftSealSelection?.localSealDesignId == pageData.id,
+            _orderDraft.sealSelection?.localSealDesignId == pageData.id,
         onChooseForOrder: _chooseLocalSealForOrder,
         onDelete: (design) => _deleteLocalSealDesign(design, stack),
         onBack: stack.pop,
@@ -614,6 +627,27 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     }
   }
 
+  Future<void> _loadOrderDraft() async {
+    try {
+      final draft = await _localOrderDraftRepository.loadOrderDraft();
+      if (!mounted) {
+        return;
+      }
+      if (_orderDraftHasLocalChanges) {
+        return;
+      }
+      setState(() => _orderDraft = draft);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      if (_orderDraftHasLocalChanges) {
+        return;
+      }
+      setState(() => _orderDraft = OrderDraft.empty());
+    }
+  }
+
   Future<void> _loadStoneListings({required String locale}) async {
     if (_stoneListingsLoading) {
       return;
@@ -695,18 +729,45 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   }
 
   void _chooseLocalSealForOrder(LocalSealDesign design) {
-    setState(() {
-      _orderDraftSealSelection = _orderDraftSealSelectionFromLocalSealDesign(
-        design,
-      );
-    });
+    unawaited(
+      _applyOrderDraft(
+        _orderDraft.withSealSelection(
+          _orderDraftSealSelectionFromLocalSealDesign(design),
+        ),
+      ),
+    );
   }
 
   void _chooseStoneForOrder(StoneListing listing) {
     if (!listing.isOrderable) {
       return;
     }
-    setState(() => _orderDraftStoneSelection = listing);
+    unawaited(
+      _applyOrderDraft(
+        _orderDraft.withStoneSelection(
+          _orderDraftStoneSelectionFromStoneListing(listing),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _applyOrderDraft(OrderDraft draft) async {
+    final nextDraft = OrderDraft(
+      sealSelection: draft.sealSelection,
+      stoneSelection: draft.stoneSelection,
+      input: draft.input,
+    );
+    if (mounted) {
+      setState(() {
+        _orderDraft = nextDraft;
+        _orderDraftHasLocalChanges = true;
+      });
+    }
+    try {
+      await _localOrderDraftRepository.saveOrderDraft(nextDraft);
+    } catch (_) {
+      // Keep the in-memory draft so tab-to-tab flow remains usable.
+    }
   }
 
   Future<void> _deleteLocalSealDesign(
@@ -740,12 +801,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       _localSealDesigns = List.unmodifiable(
         _localSealDesigns.where((savedDesign) => savedDesign.id != design.id),
       );
-      if (_orderDraftSealSelection?.localSealDesignId == design.id) {
-        _orderDraftSealSelection = null;
-      }
       _localSealDesignsLoaded = true;
       _localSealDesignsLoadError = null;
     });
+    if (_orderDraft.sealSelection?.localSealDesignId == design.id) {
+      unawaited(_applyOrderDraft(_orderDraft.withoutSealSelection()));
+    }
     stack.pop();
   }
 
@@ -954,6 +1015,40 @@ OrderDraftSealSelection _orderDraftSealSelectionFromLocalSealDesign(
     previewImageDownloadUrl: design.previewImageDownloadUrl,
     localImagePath: design.localImagePath,
   );
+}
+
+OrderDraftStoneSelection _orderDraftStoneSelectionFromStoneListing(
+  StoneListing listing,
+) {
+  return OrderDraftStoneSelection(
+    listingId: listing.id,
+    code: listing.code,
+    materialKey: listing.materialKey,
+    materialLabel: listing.materialLabel,
+    sizeLabel: listing.sizeLabel,
+    title: listing.title,
+    price: listing.price,
+    status: listing.status,
+    isOrderable: listing.isOrderable,
+    primaryPhotoUrl: _primaryStonePhotoUrl(listing.photos),
+  );
+}
+
+String _primaryStonePhotoUrl(List<StoneListingPhoto> photos) {
+  if (photos.isEmpty) {
+    return '';
+  }
+  for (final photo in photos) {
+    if (photo.isPrimary) {
+      return photo.assetUrl;
+    }
+  }
+  final sorted = [...photos]
+    ..sort((left, right) {
+      final order = left.sortOrder.compareTo(right.sortOrder);
+      return order == 0 ? left.assetId.compareTo(right.assetId) : order;
+    });
+  return sorted.first.assetUrl;
 }
 
 class _BottomTabs extends StatelessWidget {
