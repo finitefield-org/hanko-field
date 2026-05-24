@@ -3998,12 +3998,15 @@ fn validate_generate_seal_designs_request(
     if kanji.is_empty() {
         bail!("kanji is required");
     }
+    if kanji.chars().any(char::is_whitespace) {
+        bail!("kanji must not contain whitespace");
+    }
     let kanji_count = kanji.chars().count();
     if kanji_count > rules.max_characters {
         bail!("kanji must be {} characters or fewer", rules.max_characters);
     }
-    if kanji.chars().any(char::is_whitespace) {
-        bail!("kanji must not contain whitespace");
+    if !kanji.chars().all(is_cjk_han_character) {
+        bail!("kanji must contain only CJK Han characters");
     }
 
     let shape = parse_seal_shape(&request.shape)?;
@@ -4645,9 +4648,10 @@ Balance: {}\n\
 {}\n\
 Image requirements:\n\
 - Square image intended for {}x{} display.\n\
-- Plain light background, no texture, no shadow, no gradient, no watermark-like decoration.\n\
+- Plain light background only, with no background pattern, texture, shadow, gradient, or watermark-like decoration.\n\
 - Engraving-friendly monochrome seal artwork with readable strokes.\n\
 - Avoid thin lines, tiny decorative details, overly complex stroke arrangements, and illegible forms.\n\
+- Preserve clear inner margin so artwork never touches the image edge or seal frame.\n\
 - Output image data only as image/png.",
         variant.label,
         input.input_name,
@@ -5114,7 +5118,11 @@ fn normalize_kanji_candidate(value: &JsonValue) -> Option<KanjiNameCandidate> {
     if kanji.is_empty() {
         return None;
     }
-    if kanji.chars().count() > 2 || kanji.chars().any(char::is_whitespace) {
+    let kanji_count = kanji.chars().count();
+    if kanji_count > 2
+        || kanji.chars().any(char::is_whitespace)
+        || !kanji.chars().all(is_cjk_han_character)
+    {
         return None;
     }
 
@@ -5125,11 +5133,22 @@ fn normalize_kanji_candidate(value: &JsonValue) -> Option<KanjiNameCandidate> {
     if reading.is_empty() || reason.is_empty() {
         return None;
     }
-    let character_count = read_json_usize(value, &["character_count"])
-        .filter(|count| (1..=2).contains(count))
-        .unwrap_or_else(|| kanji.chars().count());
-    let stroke_complexity = read_json_string(value, &["stroke_complexity"]);
-    let engraving_suitability = read_json_string(value, &["engraving_suitability"]);
+    let character_count = match read_json_usize(value, &["character_count"]) {
+        Some(count) if (1..=2).contains(&count) => count,
+        Some(_) => return None,
+        None => kanji_count,
+    };
+    if character_count != kanji_count {
+        return None;
+    }
+    let stroke_complexity = normalize_ai_quality_level(
+        &read_json_string(value, &["stroke_complexity"]),
+        &["low", "medium", "high"],
+    )?;
+    let engraving_suitability = normalize_ai_quality_level(
+        &read_json_string(value, &["engraving_suitability"]),
+        &["high", "medium", "low"],
+    )?;
 
     Some(KanjiNameCandidate {
         kanji,
@@ -5141,6 +5160,22 @@ fn normalize_kanji_candidate(value: &JsonValue) -> Option<KanjiNameCandidate> {
         stroke_complexity,
         engraving_suitability,
     })
+}
+
+fn is_cjk_han_character(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x3400..=0x4dbf | 0x4e00..=0x9fff | 0xf900..=0xfaff
+    )
+}
+
+fn normalize_ai_quality_level(raw: &str, allowed: &[&str]) -> Option<String> {
+    let normalized = raw.trim().to_ascii_lowercase();
+    if allowed.contains(&normalized.as_str()) {
+        Some(normalized)
+    } else {
+        None
+    }
 }
 
 fn read_json_string(value: &JsonValue, keys: &[&str]) -> String {
@@ -8359,6 +8394,35 @@ mod tests {
     }
 
     #[test]
+    fn m13_t07_seal_design_request_rejects_invalid_kanji_quality_inputs() {
+        let mut too_many = valid_seal_designs_request();
+        too_many.kanji = "美空翔".to_owned();
+        let err = validate_generate_seal_designs_request(too_many).expect_err("3 kanji must fail");
+        assert!(
+            err.to_string()
+                .contains("kanji must be 2 characters or fewer")
+        );
+
+        let mut non_han = valid_seal_designs_request();
+        non_han.kanji = "M".to_owned();
+        let err = validate_generate_seal_designs_request(non_han)
+            .expect_err("latin text must not be accepted as seal kanji");
+        assert!(
+            err.to_string()
+                .contains("kanji must contain only CJK Han characters")
+        );
+
+        let mut whitespace = valid_seal_designs_request();
+        whitespace.kanji = "美 空".to_owned();
+        let err = validate_generate_seal_designs_request(whitespace)
+            .expect_err("kanji with whitespace must fail");
+        assert!(
+            err.to_string()
+                .contains("kanji must not contain whitespace")
+        );
+    }
+
+    #[test]
     fn parse_seal_design_labels_from_gemini_text_accepts_markdown_json() {
         let payload = r#"
 ```json
@@ -8460,6 +8524,40 @@ mod tests {
         assert!(prompt.contains("Render exactly this kanji and no other text: \"美空\""));
         assert!(prompt.contains("Output image data only as image/png"));
         assert!(prompt.contains("Plain light background"));
+    }
+
+    #[test]
+    fn m13_t07_seal_quality_prompts_cover_visual_acceptance_criteria() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+        let variant = SealDesignVariant {
+            id: "seal_variant_001".to_owned(),
+            storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
+            download_url: String::new(),
+            label: "Elegant and balanced".to_owned(),
+            width: SEAL_DESIGN_IMAGE_SIZE,
+            height: SEAL_DESIGN_IMAGE_SIZE,
+        };
+
+        let label_prompt = build_seal_designs_prompt(&input);
+        let image_prompt = build_seal_design_image_prompt(&input, &variant);
+        let combined = format!("{label_prompt}\n{image_prompt}").to_ascii_lowercase();
+
+        for required in [
+            "2 or fewer cjk han characters",
+            "readable",
+            "stroke weight",
+            "line thickness",
+            "thin lines",
+            "no background pattern",
+            "plain light background",
+            "inner margin",
+        ] {
+            assert!(
+                combined.contains(required),
+                "AI quality prompt must include {required}"
+            );
+        }
     }
 
     #[test]
@@ -8609,6 +8707,107 @@ mod tests {
         assert_eq!(candidates[0].character_count, 2);
         assert_eq!(candidates[0].stroke_complexity, "medium");
         assert_eq!(candidates[0].engraving_suitability, "high");
+    }
+
+    #[test]
+    fn m13_t07_kanji_candidate_parser_enforces_quality_contract() {
+        let payload = r#"
+{
+  "candidates": [
+    {
+      "kanji": "美",
+      "reading": "mi",
+      "meaning": "Beauty",
+      "impression": ["Clear", "Readable"],
+      "reason": "One readable kanji for a small seal.",
+      "character_count": 1,
+      "stroke_complexity": "LOW",
+      "engraving_suitability": "HIGH"
+    },
+    {
+      "kanji": "美空",
+      "reading": "miku",
+      "meaning": "Beautiful sky",
+      "impression": ["Balanced", "Open"],
+      "reason": "Two clear kanji with balanced strokes.",
+      "character_count": 2,
+      "stroke_complexity": "medium",
+      "engraving_suitability": "high"
+    },
+    {
+      "kanji": "美空翔",
+      "reading": "misorasho",
+      "meaning": "Too long",
+      "impression": ["Crowded", "Complex"],
+      "reason": "Should be rejected for character count.",
+      "character_count": 3,
+      "stroke_complexity": "medium",
+      "engraving_suitability": "medium"
+    },
+    {
+      "kanji": "Mika",
+      "reading": "mika",
+      "meaning": "Not kanji",
+      "impression": ["Latin", "Invalid"],
+      "reason": "Should be rejected because it is not CJK Han text.",
+      "character_count": 2,
+      "stroke_complexity": "low",
+      "engraving_suitability": "high"
+    },
+    {
+      "kanji": "翔太",
+      "reading": "shota",
+      "meaning": "Mismatched count",
+      "impression": ["Readable", "Mismatch"],
+      "reason": "Should be rejected because metadata does not match text.",
+      "character_count": 1,
+      "stroke_complexity": "medium",
+      "engraving_suitability": "high"
+    },
+    {
+      "kanji": "美雨",
+      "reading": "miu",
+      "meaning": "Out-of-range count",
+      "impression": ["Readable", "Invalid"],
+      "reason": "Should be rejected because character_count is outside the enum range.",
+      "character_count": 3,
+      "stroke_complexity": "medium",
+      "engraving_suitability": "high"
+    },
+    {
+      "kanji": "美海",
+      "reading": "mimi",
+      "meaning": "Invalid stroke level",
+      "impression": ["Thin", "Invalid"],
+      "reason": "Should be rejected because stroke_complexity is outside the enum.",
+      "character_count": 2,
+      "stroke_complexity": "thin",
+      "engraving_suitability": "high"
+    },
+    {
+      "kanji": "悠",
+      "reading": "yu",
+      "meaning": "Invalid suitability",
+      "impression": ["Calm", "Invalid"],
+      "reason": "Should be rejected because suitability is outside the enum.",
+      "character_count": 1,
+      "stroke_complexity": "low",
+      "engraving_suitability": "unknown"
+    }
+  ]
+}
+"#;
+
+        let candidates =
+            parse_kanji_candidates_from_gemini_text(payload, 10).expect("payload must parse");
+
+        assert_eq!(candidates.len(), 2);
+        assert_eq!(candidates[0].kanji, "美");
+        assert_eq!(candidates[0].character_count, 1);
+        assert_eq!(candidates[0].stroke_complexity, "low");
+        assert_eq!(candidates[0].engraving_suitability, "high");
+        assert_eq!(candidates[1].kanji, "美空");
+        assert_eq!(candidates[1].character_count, 2);
     }
 
     #[test]
