@@ -400,6 +400,19 @@ class HankoLocalizations {
       _strings.orderCompleteBackToDesignAction;
   String get emailSentNoticeTitle => _strings.emailSentNoticeTitle;
   String get emailSentNoticeMessage => _strings.emailSentNoticeMessage;
+  String get orderEmailMissingGuideTitle =>
+      _strings.orderEmailMissingGuideTitle;
+  String get orderEmailMissingGuideMessage =>
+      _strings.orderEmailMissingGuideMessage;
+  String get orderEmailMissingSpamCheck => _strings.orderEmailMissingSpamCheck;
+  String get orderEmailMissingAddressCheck =>
+      _strings.orderEmailMissingAddressCheck;
+  String get orderEmailMissingDeliveryWait =>
+      _strings.orderEmailMissingDeliveryWait;
+  String get orderEmailMissingContactSupport =>
+      _strings.orderEmailMissingContactSupport;
+  String get orderEmailMissingContactAction =>
+      _strings.orderEmailMissingContactAction;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -807,6 +820,13 @@ class _HankoStrings {
     required this.orderCompleteBackToDesignAction,
     required this.emailSentNoticeTitle,
     required this.emailSentNoticeMessage,
+    required this.orderEmailMissingGuideTitle,
+    required this.orderEmailMissingGuideMessage,
+    required this.orderEmailMissingSpamCheck,
+    required this.orderEmailMissingAddressCheck,
+    required this.orderEmailMissingDeliveryWait,
+    required this.orderEmailMissingContactSupport,
+    required this.orderEmailMissingContactAction,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -1175,6 +1195,13 @@ class _HankoStrings {
   final String orderCompleteBackToDesignAction;
   final String emailSentNoticeTitle;
   final String emailSentNoticeMessage;
+  final String orderEmailMissingGuideTitle;
+  final String orderEmailMissingGuideMessage;
+  final String orderEmailMissingSpamCheck;
+  final String orderEmailMissingAddressCheck;
+  final String orderEmailMissingDeliveryWait;
+  final String orderEmailMissingContactSupport;
+  final String orderEmailMissingContactAction;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1614,6 +1641,15 @@ const _localizedValues = {
       emailSentNoticeTitle: 'Confirmation email sent',
       emailSentNoticeMessage:
           'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
+      orderEmailMissingGuideTitle: "Can't find your email?",
+      orderEmailMissingGuideMessage: 'Here are a few quick things to check.',
+      orderEmailMissingSpamCheck: 'Check your spam or junk folder.',
+      orderEmailMissingAddressCheck:
+          'Make sure the email address on the order is correct.',
+      orderEmailMissingDeliveryWait: 'Please allow a few minutes for delivery.',
+      orderEmailMissingContactSupport:
+          "If you still can't find it, contact support with your order number.",
+      orderEmailMissingContactAction: 'Contact Support',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1997,6 +2033,13 @@ const _localizedValues = {
       emailSentNoticeTitle: '確認メールを送信しました',
       emailSentNoticeMessage:
           '注文確認メールを注文時のメールアドレスへ送信しました。受信箱と迷惑メールフォルダをご確認ください。',
+      orderEmailMissingGuideTitle: 'メールが見つからない場合',
+      orderEmailMissingGuideMessage: 'まず次の項目をご確認ください。',
+      orderEmailMissingSpamCheck: '迷惑メールフォルダやプロモーションフォルダを確認してください。',
+      orderEmailMissingAddressCheck: '注文時のメールアドレスに誤りがないか確認してください。',
+      orderEmailMissingDeliveryWait: '配信まで数分かかる場合があります。',
+      orderEmailMissingContactSupport: 'それでも見つからない場合は、注文番号を添えてお問い合わせください。',
+      orderEmailMissingContactAction: 'お問い合わせ',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

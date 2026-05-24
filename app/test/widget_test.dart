@@ -2505,6 +2505,24 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text("Can't find your email?"), findsOneWidget);
+    expect(find.text('Here are a few quick things to check.'), findsOneWidget);
+    expect(find.text('Check your spam or junk folder.'), findsOneWidget);
+    expect(
+      find.text('Make sure the email address on the order is correct.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Please allow a few minutes for delivery.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        "If you still can't find it, contact support with your order number.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Contact Support'), findsOneWidget);
     expect(find.text('Open Order Lookup'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Open Order Lookup'));
@@ -2515,6 +2533,48 @@ void main() {
     expect(find.text('Order Lookup'), findsOneWidget);
     expect(find.text('HF-20260521-0001'), findsOneWidget);
     expect(find.text('customer@example.test'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M12-T02 opens contact support from missing email guide', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/success?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(find.text("Can't find your email?"), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Contact Support'));
+    await tester.pump();
+    await tester.tap(find.text('Contact Support'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Contact'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

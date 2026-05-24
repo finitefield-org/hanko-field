@@ -726,6 +726,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             status: _paymentStatus,
             createdOrder: _checkoutCreatedOrder,
             onOpenOrderLookup: _openOrderLookup,
+            onContactSupport: _openContactSupport,
             onBackToDesign: () => _showTabFromOrder(HankoAppTab.design),
           ),
         ),
@@ -1644,6 +1645,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     setState(
       () => _pages = const [_shellPage, _orderCompletePage, _orderLookupPage],
     );
+  }
+
+  void _openContactSupport() {
+    setState(() => _pages = const [_shellPage, _settingsPage]);
   }
 
   void _closeTopPage() {

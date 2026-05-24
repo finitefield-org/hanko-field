@@ -980,7 +980,7 @@ MVPで後回し可能:
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
 | M12-T01 | `NTC-001` | [x] メール送信済み案内 | `features/order/presentation/`, `features/order_lookup/presentation/` | 注文完了/照会で表示 |
-| M12-T02 | `NTC-002` | メール未着ガイド | `features/order/presentation/` | 確認事項と問い合わせ導線 |
+| M12-T02 | `NTC-002` | [x] メール未着ガイド | `features/order/presentation/` | 確認事項と問い合わせ導線 |
 | M12-T03 | `NTC-003` | 問い合わせ導線 | `features/settings/`, `core/widgets/` | 困った時にContactへ遷移 |
 | M12-T04 | `ERR-001` `ERR-002` `ERR-007` | 共通エラー | `core/errors/`, `core/widgets/` | API失敗を統一表示 |
 | M12-T05 | `ERR-005` `ERR-006` | Storage/Deep Linkエラー | `features/design/`, `features/order/` | 保存失敗/戻りURL失敗を表示 |

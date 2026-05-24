@@ -1171,6 +1171,7 @@ class OrderCompleteScreen extends StatelessWidget {
     super.key,
     required this.draft,
     required this.onOpenOrderLookup,
+    required this.onContactSupport,
     required this.onBackToDesign,
     this.status,
     this.createdOrder,
@@ -1180,6 +1181,7 @@ class OrderCompleteScreen extends StatelessWidget {
   final OrderStatus? status;
   final CreatedOrder? createdOrder;
   final VoidCallback onOpenOrderLookup;
+  final VoidCallback onContactSupport;
   final VoidCallback onBackToDesign;
 
   @override
@@ -1238,6 +1240,8 @@ class OrderCompleteScreen extends StatelessWidget {
           orderNo: orderNo,
           email: email,
         ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderEmailMissingGuide(onContactSupport: onContactSupport),
         if (seal != null && stone != null) ...[
           const SizedBox(height: HankoSpacing.md),
           _CheckoutSectionCard(
@@ -2406,6 +2410,94 @@ class _OrderNotice extends StatelessWidget {
           Expanded(child: Text(message, style: HankoTextStyles.body)),
         ],
       ),
+    );
+  }
+}
+
+class _OrderEmailMissingGuide extends StatelessWidget {
+  const _OrderEmailMissingGuide({required this.onContactSupport});
+
+  final VoidCallback onContactSupport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final checks = [
+      _EmailMissingCheck(
+        icon: Icons.security_outlined,
+        message: l10n.orderEmailMissingSpamCheck,
+      ),
+      _EmailMissingCheck(
+        icon: Icons.alternate_email,
+        message: l10n.orderEmailMissingAddressCheck,
+      ),
+      _EmailMissingCheck(
+        icon: Icons.schedule_outlined,
+        message: l10n.orderEmailMissingDeliveryWait,
+      ),
+      _EmailMissingCheck(
+        icon: Icons.support_agent_outlined,
+        message: l10n.orderEmailMissingContactSupport,
+      ),
+    ];
+
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.orderEmailMissingGuideTitle,
+            style: HankoTextStyles.cardTitle,
+          ),
+          const SizedBox(height: HankoSpacing.xs),
+          Text(l10n.orderEmailMissingGuideMessage, style: HankoTextStyles.body),
+          const SizedBox(height: HankoSpacing.md),
+          for (var index = 0; index < checks.length; index++) ...[
+            _EmailMissingGuideRow(index: index + 1, check: checks[index]),
+            if (index < checks.length - 1)
+              const Divider(height: 18, color: HankoColors.surfaceBorder),
+          ],
+          const SizedBox(height: HankoSpacing.md),
+          _SecondaryOrderAction(
+            label: l10n.orderEmailMissingContactAction,
+            icon: Icons.support_agent_outlined,
+            onPressed: onContactSupport,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmailMissingCheck {
+  const _EmailMissingCheck({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+}
+
+class _EmailMissingGuideRow extends StatelessWidget {
+  const _EmailMissingGuideRow({required this.index, required this.check});
+
+  final int index;
+  final _EmailMissingCheck check;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(check.icon, color: HankoColors.gold, size: 22),
+        const SizedBox(width: HankoSpacing.sm),
+        Text(
+          '$index.',
+          style: HankoTextStyles.label.copyWith(color: HankoColors.gold),
+        ),
+        const SizedBox(width: HankoSpacing.sm),
+        Expanded(child: Text(check.message, style: HankoTextStyles.body)),
+      ],
     );
   }
 }
