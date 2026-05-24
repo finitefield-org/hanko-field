@@ -3567,6 +3567,131 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('M13-T02 renders DES-006 fixed style selection controls', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SealStyleSelection? generatedSelection;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: Scaffold(
+          body: SealStyleSelectionScreen(
+            candidate: const KanjiCandidate(
+              kanji: '美空',
+              reading: 'Misora',
+              meaning: 'Beautiful sky',
+              reason: 'A graceful two-character option.',
+            ),
+            onBack: () {},
+            onGenerate: (selection) {
+              generatedSelection = selection;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
+    expect(find.text('Seal Style'), findsOneWidget);
+    expect(find.text('Selected kanji'), findsOneWidget);
+    expect(find.text('Shape'), findsWidgets);
+    expect(find.text('Square'), findsWidgets);
+    expect(find.text('Round'), findsOneWidget);
+    expect(find.text('Style'), findsWidgets);
+    expect(find.text('Traditional'), findsOneWidget);
+    expect(find.text('Elegant'), findsWidgets);
+    expect(find.text('Soft'), findsOneWidget);
+    expect(find.text('Stroke Weight'), findsWidgets);
+    expect(find.text('Standard'), findsWidgets);
+    expect(find.text('Balance'), findsWidgets);
+    expect(find.text('Balanced'), findsWidgets);
+
+    await tester.tap(find.text('Round'));
+    await tester.pump();
+    await tester.tap(find.text('Traditional'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Airy'));
+    await tester.pump();
+    await tester.tap(find.text('Airy'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Confirm Style'));
+    await tester.pump();
+    await tester.tap(find.text('Confirm Style'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Style selected'), findsOneWidget);
+    expect(find.text('Generate Seal'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Generate Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Generate Seal'));
+    await tester.pump();
+
+    expect(generatedSelection?.shape, SealShape.round);
+    expect(generatedSelection?.style, SealStyleName.traditional);
+    expect(generatedSelection?.strokeWeight, SealStrokeWeight.standard);
+    expect(generatedSelection?.balance, SealBalance.airy);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M13-T02 renders required common error states', (tester) async {
+    var retryCount = 0;
+
+    Future<void> pumpErrorState(Object error) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: HankoLocalizations.supportedLocales,
+          localizationsDelegates: HankoLocalizations.localizationsDelegates,
+          theme: HankoTheme.light(),
+          home: Scaffold(
+            body: HankoErrorStateView(
+              error: error,
+              actionLabel: 'Try Again',
+              onAction: () {
+                retryCount += 1;
+              },
+            ),
+          ),
+        ),
+      );
+    }
+
+    await pumpErrorState(const SocketException('offline'));
+
+    expect(find.text('Network Error'), findsOneWidget);
+    expect(
+      find.text(
+        "We're unable to connect to the server. Please check your internet connection and try again.",
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Try Again'));
+    expect(retryCount, 1);
+
+    await pumpErrorState(StateError('unexpected'));
+
+    expect(find.text('Something Went Wrong'), findsOneWidget);
+    expect(
+      find.text(
+        'An unexpected error occurred. Please try again in a few moments.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Try Again'));
+    expect(retryCount, 2);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<KanjiCandidatesResult> _successfulKanjiGenerator(

@@ -991,7 +991,7 @@ MVPで後回し可能:
 | Task ID | 領域 | タスク | 主要ファイル/コマンド | 完了条件 |
 | --- | --- | --- | --- | --- |
 | M13-T01 | Flutter unit | [x] ViewModel/Repository単体テスト | `app/test/**` | 漢字候補、印影生成、保存、注文下書き、Checkout状態をテスト |
-| M13-T02 | Flutter widget | 必須画面Widget test | `app/test/**` | MVP必須画面の主要状態を描画確認 |
+| M13-T02 | Flutter widget | [x] 必須画面Widget test | `app/test/**` | MVP必須画面の主要状態を描画確認 |
 | M13-T03 | API tests | app注文Request拡張テスト | `api/src/main.rs` tests | app channel必須項目、web channel互換を確認 |
 | M13-T04 | API tests | 注文状態/照会APIテスト | `api/src/main.rs` tests | paid/pending/failed/not found/email不一致を確認 |
 | M13-T05 | Stripe | Checkout/webhook結合テスト | Stripe test mode | success/cancel/failure/webhook反映を確認 |
