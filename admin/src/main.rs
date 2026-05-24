@@ -85,6 +85,8 @@ struct Order {
     contact_email: String,
     seal_line1: String,
     seal_line2: String,
+    engraving_text: String,
+    ai_variant_id: String,
     listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
@@ -590,6 +592,12 @@ struct OrderListItemView {
     id: String,
     order_no: String,
     created_at: String,
+    channel_label: String,
+    is_app_order: bool,
+    engraving_text: String,
+    has_engraving_text: bool,
+    ai_variant_id: String,
+    has_ai_variant_id: bool,
     status_label: String,
     payment_status_label: String,
     fulfillment_status_label: String,
@@ -3978,6 +3986,12 @@ impl ServerState {
                 id: order.id.clone(),
                 order_no: order.order_no.clone(),
                 created_at: format_datetime(order.created_at),
+                channel_label: order_channel_label(&order.channel),
+                is_app_order: order.channel.eq_ignore_ascii_case("app"),
+                engraving_text: order.engraving_text.clone(),
+                has_engraving_text: !order.engraving_text.is_empty(),
+                ai_variant_id: order.ai_variant_id.clone(),
+                has_ai_variant_id: !order.ai_variant_id.is_empty(),
                 status_label: order_status_label(&order.status).to_owned(),
                 payment_status_label: payment_status_label(&order.payment_status).to_owned(),
                 fulfillment_status_label: fulfillment_status_label(&order.fulfillment_status)
@@ -5903,6 +5917,7 @@ impl FirestoreAdminSource {
         let shipping = read_map_field(data, "shipping");
         let contact = read_map_field(data, "contact");
         let seal = read_map_field(data, "seal");
+        let customer_confirmation = read_map_field(data, "customer_confirmation");
         let pricing = read_map_field(data, "pricing");
         let raw_locale = read_string_field(data, "locale");
         let locale = if raw_locale.is_empty() {
@@ -5914,6 +5929,10 @@ impl FirestoreAdminSource {
         let total = resolve_order_total(data, &pricing);
         let (listing_key, listing_label_ja) =
             Self::resolve_order_listing_fields(data, &listing, &material);
+        let seal_line1 = read_string_field(&seal, "line1");
+        let seal_line2 = read_string_field(&seal, "line2");
+        let engraving_text =
+            resolve_order_engraving_text(&customer_confirmation, &seal_line1, &seal_line2);
 
         let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
         let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
@@ -5935,8 +5954,10 @@ impl FirestoreAdminSource {
             carrier: read_string_field(&fulfillment, "carrier"),
             country_code: read_string_field(&shipping, "country_code").to_uppercase(),
             contact_email: read_string_field(&contact, "email"),
-            seal_line1: read_string_field(&seal, "line1"),
-            seal_line2: read_string_field(&seal, "line2"),
+            seal_line1,
+            seal_line2,
+            engraving_text,
+            ai_variant_id: read_string_field(&seal, "ai_variant_id"),
             listing_label_ja,
             total,
             created_at,
@@ -8856,6 +8877,28 @@ fn order_status_label(status: &str) -> &str {
     }
 }
 
+fn order_channel_label(channel: &str) -> String {
+    match channel.trim().to_ascii_lowercase().as_str() {
+        "app" => "App".to_owned(),
+        "web" => "Web".to_owned(),
+        "" => "不明".to_owned(),
+        _ => channel.trim().to_owned(),
+    }
+}
+
+fn resolve_order_engraving_text(
+    customer_confirmation: &BTreeMap<String, JsonValue>,
+    seal_line1: &str,
+    seal_line2: &str,
+) -> String {
+    let confirmed_seal_text = read_string_field(customer_confirmation, "confirmed_seal_text");
+    if !confirmed_seal_text.is_empty() {
+        return confirmed_seal_text;
+    }
+
+    format!("{}{}", seal_line1.trim(), seal_line2.trim())
+}
+
 fn payment_status_label(status: &str) -> &str {
     match status {
         "unpaid" => "未払い",
@@ -9729,6 +9772,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "ito@example.com".to_owned(),
                 seal_line1: "伊".to_owned(),
                 seal_line2: "藤".to_owned(),
+                engraving_text: "伊藤".to_owned(),
+                ai_variant_id: String::new(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
@@ -9783,6 +9828,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "jane.smith@example.com".to_owned(),
                 seal_line1: "JA".to_owned(),
                 seal_line2: "NE".to_owned(),
+                engraving_text: "JANE".to_owned(),
+                ai_variant_id: "seal_variant_006".to_owned(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
@@ -9828,6 +9875,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "tanaka@example.com".to_owned(),
                 seal_line1: "田".to_owned(),
                 seal_line2: "中".to_owned(),
+                engraving_text: "田中".to_owned(),
+                ai_variant_id: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
@@ -9900,6 +9949,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "kato@example.com".to_owned(),
                 seal_line1: "加".to_owned(),
                 seal_line2: "藤".to_owned(),
+                engraving_text: "加藤".to_owned(),
+                ai_variant_id: "seal_variant_004".to_owned(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
@@ -9945,6 +9996,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "chris@example.com".to_owned(),
                 seal_line1: "CH".to_owned(),
                 seal_line2: "RI".to_owned(),
+                engraving_text: "CHRI".to_owned(),
+                ai_variant_id: String::new(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
@@ -9979,6 +10032,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "suzuki@example.com".to_owned(),
                 seal_line1: "鈴".to_owned(),
                 seal_line2: "木".to_owned(),
+                engraving_text: "鈴木".to_owned(),
+                ai_variant_id: "seal_variant_002".to_owned(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
@@ -10024,6 +10079,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "yamada@example.com".to_owned(),
                 seal_line1: "山".to_owned(),
                 seal_line2: "田".to_owned(),
+                engraving_text: "山田".to_owned(),
+                ai_variant_id: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
@@ -10822,6 +10879,61 @@ mod tests {
             .await;
 
         assert!(!orders.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_orders_exposes_app_metadata_for_list() {
+        let state = mock_server_state();
+        let orders = state
+            .filter_orders(&OrderFilter {
+                status: "paid".to_owned(),
+                country: String::new(),
+                email: String::new(),
+            })
+            .await;
+
+        let app_order = orders
+            .iter()
+            .find(|order| order.id == "ord_1006")
+            .expect("paid app order should be listed");
+
+        assert!(app_order.is_app_order);
+        assert_eq!(app_order.channel_label, "App");
+        assert_eq!(app_order.engraving_text, "JANE");
+        assert!(app_order.has_engraving_text);
+        assert_eq!(app_order.ai_variant_id, "seal_variant_006");
+        assert!(app_order.has_ai_variant_id);
+        assert_eq!(app_order.payment_status_label, "支払い済み");
+        assert_eq!(app_order.fulfillment_status_label, "未着手");
+    }
+
+    #[tokio::test]
+    async fn render_orders_list_includes_engraving_and_ai_variant() {
+        let state = mock_server_state();
+        let orders = state
+            .filter_orders(&OrderFilter {
+                status: "paid".to_owned(),
+                country: String::new(),
+                email: String::new(),
+            })
+            .await;
+
+        let html = render_orders_list(&orders).expect("orders list should render");
+
+        assert!(html.contains("彫刻 / AI"));
+        assert!(html.contains("JANE"));
+        assert!(html.contains("AI Variant: seal_variant_006"));
+        assert!(html.contains(">App</span>"));
+    }
+
+    #[test]
+    fn resolve_order_engraving_text_prefers_customer_confirmation() {
+        let customer_confirmation =
+            btree_from_pairs(vec![("confirmed_seal_text", fs_string(" confirmed text "))]);
+
+        let engraving_text = resolve_order_engraving_text(&customer_confirmation, "AA", "BB");
+
+        assert_eq!(engraving_text, "confirmed text");
     }
 
     #[tokio::test]

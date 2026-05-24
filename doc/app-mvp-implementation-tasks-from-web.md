@@ -968,7 +968,7 @@ MVPで後回し可能:
 
 | Task ID | 領域 | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M11-T01 | admin一覧 | 彫刻文字、AI Variant ID、決済/発送状態の表示改善 | `admin/templates/orders_list.html`, `admin/src/main.rs` | app注文を一覧で識別できる |
+| M11-T01 | admin一覧 | [x] 彫刻文字、AI Variant ID、決済/発送状態の表示改善 | `admin/templates/orders_list.html`, `admin/src/main.rs` | app注文を一覧で識別できる |
 | M11-T02 | admin詳細 | AI印影画像表示 | `admin/templates/order_detail.html`, `admin/src/main.rs` | `seal.preview_image.storage_path` から画像を表示 |
 | M11-T03 | admin詳細 | AI Generation/Variant/Style表示 | `admin/templates/order_detail.html`, `admin/src/main.rs` | `seal.ai_generation_id`, `seal.ai_variant_id`, `seal.style.*` を表示 |
 | M11-T04 | admin詳細 | 顧客確認チェック表示 | `admin/templates/order_detail.html`, `admin/src/main.rs` | `customer_confirmation.*` と確認時刻を表示 |
