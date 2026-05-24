@@ -327,6 +327,7 @@ void main() {
         body: jsonEncode({
           'order_id': 'ord_001',
           'order_no': 'HF-20260521-0001',
+          'created_at': '2026-05-21T11:00:00Z',
           'status': 'paid',
           'payment': {
             'status': 'paid',
@@ -337,8 +338,17 @@ void main() {
             'status': 'pending',
             'carrier': null,
             'tracking_no': 'TRACK123',
+            'shipped_at': '2026-05-22T03:00:00Z',
           },
           'pricing': {'total': 18600, 'currency': 'JPY'},
+          'seal': {
+            'confirmed_seal_text': '美空',
+            'preview_image_url': 'https://example.test/seal.png',
+          },
+          'listing': {
+            'id': 'stone_listing_001',
+            'title': 'Soft Pink Rose Quartz Seal Stone',
+          },
           'updated_at': '2026-05-21T11:15:00Z',
         }),
       ),
@@ -350,11 +360,27 @@ void main() {
     expect(transport.singleRequest.method, 'GET');
     expect(transport.singleRequest.uri.path, '/v1/orders/ord_001/status');
     expect(status.orderStatus, 'paid');
+    expect(
+      status.createdAt?.toUtc().toIso8601String(),
+      '2026-05-21T11:00:00.000Z',
+    );
     expect(status.paymentStatus, 'paid');
     expect(status.fulfillmentStatus, 'pending');
     expect(status.trackingNumber, 'TRACK123');
+    expect(
+      status.shippedAt?.toUtc().toIso8601String(),
+      '2026-05-22T03:00:00.000Z',
+    );
+    expect(status.sealText, '美空');
+    expect(status.sealPreviewImageUrl, 'https://example.test/seal.png');
+    expect(status.listingId, 'stone_listing_001');
+    expect(status.listingTitle, 'Soft Pink Rose Quartz Seal Stone');
     expect(status.pricing.amount, 18600);
     expect(status.pricing.currency, 'JPY');
+    expect(
+      status.updatedAt?.toUtc().toIso8601String(),
+      '2026-05-21T11:15:00.000Z',
+    );
   });
 
   test('PublicConfigDto maps public config response', () {

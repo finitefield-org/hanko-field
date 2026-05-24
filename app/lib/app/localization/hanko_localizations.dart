@@ -410,6 +410,29 @@ class HankoLocalizations {
   String get orderLookupNotFoundMessage => _strings.orderLookupNotFoundMessage;
   String get orderLookupErrorTitle => _strings.orderLookupErrorTitle;
   String get orderLookupErrorMessage => _strings.orderLookupErrorMessage;
+  String get orderLookupResultTitle => _strings.orderLookupResultTitle;
+  String get orderLookupResultMessage => _strings.orderLookupResultMessage;
+  String get orderLookupOrderStatusLabel =>
+      _strings.orderLookupOrderStatusLabel;
+  String get orderLookupProgressTitle => _strings.orderLookupProgressTitle;
+  String get orderLookupProductionStatusLabel =>
+      _strings.orderLookupProductionStatusLabel;
+  String get orderLookupShippingStatusLabel =>
+      _strings.orderLookupShippingStatusLabel;
+  String get orderLookupFulfillmentStatusLabel =>
+      _strings.orderLookupFulfillmentStatusLabel;
+  String get orderLookupTrackingNumberLabel =>
+      _strings.orderLookupTrackingNumberLabel;
+  String get orderLookupCarrierLabel => _strings.orderLookupCarrierLabel;
+  String get orderLookupShippedAtLabel => _strings.orderLookupShippedAtLabel;
+  String get orderLookupNoTrackingValue => _strings.orderLookupNoTrackingValue;
+  String get orderLookupOrderDateLabel => _strings.orderLookupOrderDateLabel;
+  String get orderLookupContentTitle => _strings.orderLookupContentTitle;
+  String get orderLookupSelectedSealLabel =>
+      _strings.orderLookupSelectedSealLabel;
+  String get orderLookupGemstoneLabel => _strings.orderLookupGemstoneLabel;
+  String get orderLookupLookupAnotherAction =>
+      _strings.orderLookupLookupAnotherAction;
   String get language => _strings.language;
   String get about => _strings.about;
   String get howItWorks => _strings.howItWorks;
@@ -789,6 +812,22 @@ class _HankoStrings {
     required this.orderLookupNotFoundMessage,
     required this.orderLookupErrorTitle,
     required this.orderLookupErrorMessage,
+    required this.orderLookupResultTitle,
+    required this.orderLookupResultMessage,
+    required this.orderLookupOrderStatusLabel,
+    required this.orderLookupProgressTitle,
+    required this.orderLookupProductionStatusLabel,
+    required this.orderLookupShippingStatusLabel,
+    required this.orderLookupFulfillmentStatusLabel,
+    required this.orderLookupTrackingNumberLabel,
+    required this.orderLookupCarrierLabel,
+    required this.orderLookupShippedAtLabel,
+    required this.orderLookupNoTrackingValue,
+    required this.orderLookupOrderDateLabel,
+    required this.orderLookupContentTitle,
+    required this.orderLookupSelectedSealLabel,
+    required this.orderLookupGemstoneLabel,
+    required this.orderLookupLookupAnotherAction,
     required this.language,
     required this.about,
     required this.howItWorks,
@@ -1137,6 +1176,22 @@ class _HankoStrings {
   final String orderLookupNotFoundMessage;
   final String orderLookupErrorTitle;
   final String orderLookupErrorMessage;
+  final String orderLookupResultTitle;
+  final String orderLookupResultMessage;
+  final String orderLookupOrderStatusLabel;
+  final String orderLookupProgressTitle;
+  final String orderLookupProductionStatusLabel;
+  final String orderLookupShippingStatusLabel;
+  final String orderLookupFulfillmentStatusLabel;
+  final String orderLookupTrackingNumberLabel;
+  final String orderLookupCarrierLabel;
+  final String orderLookupShippedAtLabel;
+  final String orderLookupNoTrackingValue;
+  final String orderLookupOrderDateLabel;
+  final String orderLookupContentTitle;
+  final String orderLookupSelectedSealLabel;
+  final String orderLookupGemstoneLabel;
+  final String orderLookupLookupAnotherAction;
   final String language;
   final String about;
   final String howItWorks;
@@ -1557,6 +1612,22 @@ const _localizedValues = {
       orderLookupErrorTitle: "Couldn't load order",
       orderLookupErrorMessage:
           'Order Lookup could not be completed. Please try again.',
+      orderLookupResultTitle: 'Order Status',
+      orderLookupResultMessage: "Here's the latest update on your order.",
+      orderLookupOrderStatusLabel: 'Order status',
+      orderLookupProgressTitle: 'Order progress',
+      orderLookupProductionStatusLabel: 'Production status',
+      orderLookupShippingStatusLabel: 'Shipping status',
+      orderLookupFulfillmentStatusLabel: 'Fulfillment status',
+      orderLookupTrackingNumberLabel: 'Tracking number',
+      orderLookupCarrierLabel: 'Carrier',
+      orderLookupShippedAtLabel: 'Shipped at',
+      orderLookupNoTrackingValue: 'Not available yet',
+      orderLookupOrderDateLabel: 'Order date',
+      orderLookupContentTitle: 'Order content',
+      orderLookupSelectedSealLabel: 'Selected seal',
+      orderLookupGemstoneLabel: 'Gemstone',
+      orderLookupLookupAnotherAction: 'Lookup another order',
       language: 'Language',
       about: 'About',
       howItWorks: 'How It Works',
@@ -1917,6 +1988,22 @@ const _localizedValues = {
       orderLookupNotFoundMessage: '入力された注文番号とメールアドレスに一致する注文が見つかりませんでした。',
       orderLookupErrorTitle: '注文照会に失敗しました',
       orderLookupErrorMessage: '注文照会を完了できませんでした。もう一度お試しください。',
+      orderLookupResultTitle: '注文状況',
+      orderLookupResultMessage: 'ご注文の最新状況です。',
+      orderLookupOrderStatusLabel: '注文ステータス',
+      orderLookupProgressTitle: '進行状況',
+      orderLookupProductionStatusLabel: '制作ステータス',
+      orderLookupShippingStatusLabel: '発送ステータス',
+      orderLookupFulfillmentStatusLabel: '配送手配ステータス',
+      orderLookupTrackingNumberLabel: '追跡番号',
+      orderLookupCarrierLabel: '配送会社',
+      orderLookupShippedAtLabel: '発送日時',
+      orderLookupNoTrackingValue: '未登録',
+      orderLookupOrderDateLabel: '注文日',
+      orderLookupContentTitle: '注文内容',
+      orderLookupSelectedSealLabel: '印影',
+      orderLookupGemstoneLabel: '宝石材',
+      orderLookupLookupAnotherAction: '別の注文を照会',
       language: '言語',
       about: 'このアプリについて',
       howItWorks: '使い方',

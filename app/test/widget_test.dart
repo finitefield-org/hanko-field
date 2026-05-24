@@ -2858,6 +2858,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M10-T05 shows order lookup result details', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(lookupOrder: _successfulLookupOrder),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-20260521-0001',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'customer@example.test',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Status'), findsOneWidget);
+    expect(
+      find.text("Here's the latest update on your order."),
+      findsOneWidget,
+    );
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(find.text('2026-05-21 20:00'), findsOneWidget);
+    expect(find.text('Paid'), findsNWidgets(2));
+    expect(find.text('In production'), findsOneWidget);
+    expect(find.text('Preparing shipment'), findsOneWidget);
+    expect(find.text('美空'), findsOneWidget);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('¥18,600'), findsOneWidget);
+    expect(find.text('Yamato'), findsOneWidget);
+    expect(find.text('TRACK123'), findsOneWidget);
+    expect(find.text('Lookup another order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {
@@ -3306,9 +3348,18 @@ Future<OrderStatus> _successfulLookupOrder(OrderLookupRequest request) async {
     orderStatus: 'paid',
     paymentStatus: 'paid',
     fulfillmentStatus: 'pending',
-    productionStatus: 'not_started',
-    shippingStatus: 'not_shipped',
+    productionStatus: 'in_production',
+    shippingStatus: 'preparing_shipment',
     pricing: const Money(amount: 18600, currency: 'JPY'),
+    createdAt: DateTime(2026, 5, 21, 20),
+    updatedAt: DateTime(2026, 5, 21, 20, 15),
+    trackingNumber: 'TRACK123',
+    fulfillmentCarrier: 'Yamato',
+    shippedAt: DateTime(2026, 5, 22, 12),
+    sealText: '美空',
+    sealPreviewImageUrl: 'https://example.test/seal.png',
+    listingId: 'stone_listing_001',
+    listingTitle: 'Soft Pink Rose Quartz Seal Stone',
   );
 }
 
