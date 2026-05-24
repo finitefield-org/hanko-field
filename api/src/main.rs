@@ -7159,6 +7159,15 @@ mod tests {
         }
     }
 
+    fn assert_create_order_error_contains(request: CreateOrderRequest, expected: &str) {
+        let error = validate_create_order_request(request).expect_err("request should be invalid");
+        let message = error.to_string();
+        assert!(
+            message.contains(expected),
+            "expected error to contain {expected:?}, got {message:?}"
+        );
+    }
+
     #[test]
     fn validate_create_order_request_accepts_valid_payload() {
         let request = CreateOrderRequest {
@@ -7242,6 +7251,51 @@ mod tests {
     }
 
     #[test]
+    fn m13_t03_accepts_legacy_web_payload_without_app_order_fields() {
+        let request = serde_json::from_value::<CreateOrderRequest>(json!({
+            "channel": "web",
+            "locale": "ja",
+            "idempotency_key": "legacy_web_key_123",
+            "terms_agreed": true,
+            "seal": {
+                "line1": "佐藤",
+                "line2": "",
+                "shape": "round",
+                "font_key": "zen_maru_gothic"
+            },
+            "listing_id": "rose_quartz_01",
+            "shipping": {
+                "country_code": "jp",
+                "recipient_name": "佐藤 花子",
+                "phone": "09000001111",
+                "postal_code": "1000001",
+                "state": "東京都",
+                "city": "千代田区",
+                "address_line1": "1-1-1",
+                "address_line2": ""
+            },
+            "contact": {
+                "email": "hanako@example.com",
+                "preferred_locale": "ja"
+            }
+        }))
+        .expect("legacy web payload should deserialize without app fields");
+
+        let input =
+            validate_create_order_request(request).expect("legacy web payload must stay valid");
+
+        assert_eq!(input.channel, "web");
+        assert_eq!(input.seal.line1, "佐藤");
+        assert_eq!(input.seal.line2, "");
+        assert_eq!(input.seal.shape, "round");
+        assert!(input.seal.ai_generation_id.is_none());
+        assert!(input.seal.ai_variant_id.is_none());
+        assert!(input.seal.preview_image.is_none());
+        assert!(input.seal.style.is_none());
+        assert!(input.customer_confirmation.is_none());
+    }
+
+    #[test]
     fn validate_create_order_request_accepts_app_payload_with_ai_metadata() {
         let input =
             validate_create_order_request(valid_app_create_order_request()).expect("request valid");
@@ -7273,6 +7327,41 @@ mod tests {
             Some("美空")
         );
         assert_eq!(input.order_note.as_deref(), Some("Optional note"));
+    }
+
+    #[test]
+    fn m13_t03_rejects_app_payload_missing_each_app_required_field() {
+        let mut missing_ai_generation_id = valid_app_create_order_request();
+        missing_ai_generation_id.seal.ai_generation_id = None;
+        assert_create_order_error_contains(
+            missing_ai_generation_id,
+            "seal.ai_generation_id is required for app channel",
+        );
+
+        let mut missing_ai_variant_id = valid_app_create_order_request();
+        missing_ai_variant_id.seal.ai_variant_id = None;
+        assert_create_order_error_contains(
+            missing_ai_variant_id,
+            "seal.ai_variant_id is required for app channel",
+        );
+
+        let mut missing_preview_image = valid_app_create_order_request();
+        missing_preview_image.seal.preview_image = None;
+        assert_create_order_error_contains(
+            missing_preview_image,
+            "seal.preview_image is required for app channel",
+        );
+
+        let mut missing_style = valid_app_create_order_request();
+        missing_style.seal.style = None;
+        assert_create_order_error_contains(missing_style, "seal.style is required for app channel");
+
+        let mut missing_customer_confirmation = valid_app_create_order_request();
+        missing_customer_confirmation.customer_confirmation = None;
+        assert_create_order_error_contains(
+            missing_customer_confirmation,
+            "customer_confirmation is required for app channel",
+        );
     }
 
     #[test]
