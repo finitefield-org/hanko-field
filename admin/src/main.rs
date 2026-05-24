@@ -87,6 +87,7 @@ struct Order {
     seal_line2: String,
     engraving_text: String,
     ai_variant_id: String,
+    seal_preview_image_storage_path: String,
     listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
@@ -639,6 +640,10 @@ struct OrderDetailView {
     seal_line1: String,
     seal_line2: String,
     has_seal_line2: bool,
+    seal_preview_image_storage_path: String,
+    seal_preview_image_url: String,
+    has_seal_preview_image: bool,
+    has_seal_preview_image_url: bool,
     listing_label_ja: String,
     total: String,
     next_statuses: Vec<StatusOptionView>,
@@ -4039,6 +4044,10 @@ impl ServerState {
 
         let next_statuses = next_status_options(&order.status);
         let shipping_transitions = shipping_transition_options(&order.status);
+        let seal_preview_image_url = build_storage_media_url(
+            &self.storage_assets_bucket,
+            &order.seal_preview_image_storage_path,
+        );
 
         Some(OrderDetailView {
             id: order.id.clone(),
@@ -4060,6 +4069,10 @@ impl ServerState {
             seal_line1: order.seal_line1.clone(),
             seal_line2: order.seal_line2.clone(),
             has_seal_line2: !order.seal_line2.is_empty(),
+            seal_preview_image_storage_path: order.seal_preview_image_storage_path.clone(),
+            seal_preview_image_url: seal_preview_image_url.clone(),
+            has_seal_preview_image: !order.seal_preview_image_storage_path.is_empty(),
+            has_seal_preview_image_url: !seal_preview_image_url.is_empty(),
             listing_label_ja: order.listing_label_ja.clone(),
             total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
@@ -5958,6 +5971,7 @@ impl FirestoreAdminSource {
             seal_line2,
             engraving_text,
             ai_variant_id: read_string_field(&seal, "ai_variant_id"),
+            seal_preview_image_storage_path: read_seal_preview_image_storage_path(&seal),
             listing_label_ja,
             total,
             created_at,
@@ -8899,6 +8913,11 @@ fn resolve_order_engraving_text(
     format!("{}{}", seal_line1.trim(), seal_line2.trim())
 }
 
+fn read_seal_preview_image_storage_path(seal: &BTreeMap<String, JsonValue>) -> String {
+    let preview_image = read_map_field(seal, "preview_image");
+    normalize_storage_path(&read_string_field(&preview_image, "storage_path"))
+}
+
 fn payment_status_label(status: &str) -> &str {
     match status {
         "unpaid" => "未払い",
@@ -9774,6 +9793,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "藤".to_owned(),
                 engraving_text: "伊藤".to_owned(),
                 ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
@@ -9830,6 +9850,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "NE".to_owned(),
                 engraving_text: "JANE".to_owned(),
                 ai_variant_id: "seal_variant_006".to_owned(),
+                seal_preview_image_storage_path:
+                    "seal_designs/seal_request_006/seal_variant_006.png".to_owned(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
@@ -9877,6 +9899,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "中".to_owned(),
                 engraving_text: "田中".to_owned(),
                 ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
@@ -9951,6 +9974,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "藤".to_owned(),
                 engraving_text: "加藤".to_owned(),
                 ai_variant_id: "seal_variant_004".to_owned(),
+                seal_preview_image_storage_path:
+                    "seal_designs/seal_request_004/seal_variant_004.png".to_owned(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
@@ -9998,6 +10023,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "RI".to_owned(),
                 engraving_text: "CHRI".to_owned(),
                 ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
@@ -10034,6 +10060,8 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "木".to_owned(),
                 engraving_text: "鈴木".to_owned(),
                 ai_variant_id: "seal_variant_002".to_owned(),
+                seal_preview_image_storage_path:
+                    "seal_designs/seal_request_002/seal_variant_002.png".to_owned(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
@@ -10081,6 +10109,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line2: "田".to_owned(),
                 engraving_text: "山田".to_owned(),
                 ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
@@ -10926,6 +10955,42 @@ mod tests {
         assert!(html.contains(">App</span>"));
     }
 
+    #[tokio::test]
+    async fn get_order_detail_exposes_ai_seal_preview_image() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        assert!(detail.has_seal_preview_image);
+        assert!(detail.has_seal_preview_image_url);
+        assert_eq!(
+            detail.seal_preview_image_storage_path,
+            "seal_designs/seal_request_006/seal_variant_006.png"
+        );
+        assert_eq!(
+            detail.seal_preview_image_url,
+            "https://storage.googleapis.com/hanko-field-dev/seal_designs/seal_request_006/seal_variant_006.png"
+        );
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_includes_ai_seal_preview_image() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        let html = render_order_detail(&detail).expect("order detail should render");
+
+        assert!(html.contains("AI印影プレビュー"));
+        assert!(html.contains("seal_designs/seal_request_006/seal_variant_006.png"));
+        assert!(html.contains("https://storage.googleapis.com/hanko-field-dev/seal_designs/seal_request_006/seal_variant_006.png"));
+        assert!(html.contains("HF-20260209-1006 のAI印影プレビュー"));
+    }
+
     #[test]
     fn resolve_order_engraving_text_prefers_customer_confirmation() {
         let customer_confirmation =
@@ -10934,6 +10999,24 @@ mod tests {
         let engraving_text = resolve_order_engraving_text(&customer_confirmation, "AA", "BB");
 
         assert_eq!(engraving_text, "confirmed text");
+    }
+
+    #[test]
+    fn read_seal_preview_image_storage_path_reads_nested_storage_path() {
+        let seal = btree_from_pairs(vec![(
+            "preview_image",
+            fs_map(btree_from_pairs(vec![(
+                "storage_path",
+                fs_string(" /seal_designs/seal_request_001/seal_variant_001.png "),
+            )])),
+        )]);
+
+        let storage_path = read_seal_preview_image_storage_path(&seal);
+
+        assert_eq!(
+            storage_path,
+            "seal_designs/seal_request_001/seal_variant_001.png"
+        );
     }
 
     #[tokio::test]

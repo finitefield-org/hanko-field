@@ -62,6 +62,30 @@
     </div>
   </dl>
 
+  {% if detail.has_seal_preview_image %}
+  <section class="rounded-xl border border-admin-line/70 bg-white p-4">
+    <h4 class="text-base font-bold">AI印影プレビュー</h4>
+    <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
+      {% if detail.has_seal_preview_image_url %}
+      <img
+        src="{{ detail.seal_preview_image_url }}"
+        alt="{{ detail.order_no }} のAI印影プレビュー"
+        class="h-40 w-40 shrink-0 rounded-xl border border-admin-line/60 bg-admin-bg/40 object-contain p-2"
+        loading="lazy"
+      >
+      {% else %}
+      <div class="flex h-40 w-40 shrink-0 items-center justify-center rounded-xl border border-admin-line/60 bg-admin-bg/40 p-3 text-center text-xs font-semibold text-admin-muted">
+        画像URLを生成できません
+      </div>
+      {% endif %}
+      <div class="min-w-0 text-sm">
+        <p class="font-semibold text-admin-ink">Storage パス</p>
+        <p class="mt-1 break-all text-admin-muted">{{ detail.seal_preview_image_storage_path }}</p>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <section class="rounded-xl border border-admin-line/70 bg-white p-4">
     <h4 class="text-base font-bold">ステータス更新</h4>
     {% if detail.has_next_statuses %}
