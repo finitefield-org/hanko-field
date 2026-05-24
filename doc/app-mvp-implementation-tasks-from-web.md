@@ -993,7 +993,7 @@ MVPで後回し可能:
 | M13-T01 | Flutter unit | [x] ViewModel/Repository単体テスト | `app/test/**` | 漢字候補、印影生成、保存、注文下書き、Checkout状態をテスト |
 | M13-T02 | Flutter widget | [x] 必須画面Widget test | `app/test/**` | MVP必須画面の主要状態を描画確認 |
 | M13-T03 | API tests | [x] app注文Request拡張テスト | `api/src/main.rs` tests | app channel必須項目、web channel互換を確認 |
-| M13-T04 | API tests | 注文状態/照会APIテスト | `api/src/main.rs` tests | paid/pending/failed/not found/email不一致を確認 |
+| M13-T04 | API tests | [x] 注文状態/照会APIテスト | `api/src/main.rs` tests | paid/pending/failed/not found/email不一致を確認 |
 | M13-T05 | Stripe | Checkout/webhook結合テスト | Stripe test mode | success/cancel/failure/webhook反映を確認 |
 | M13-T06 | Inventory | 二重販売防止テスト | API integration | 同一listingを同時注文できない |
 | M13-T07 | AI品質 | 生成品質テスト | API integration/manual | 1から2文字、可読性、線の太さ、背景なし、余白を確認 |

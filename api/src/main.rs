@@ -7695,6 +7695,30 @@ mod tests {
         }
     }
 
+    fn order_status_result_fixture(
+        order_id: &str,
+        order_no: &str,
+        status: &str,
+        payment_status: &str,
+    ) -> OrderStatusResult {
+        OrderStatusResult {
+            order_id: order_id.to_owned(),
+            order_no: order_no.to_owned(),
+            status: status.to_owned(),
+            payment_status: payment_status.to_owned(),
+            checkout_session_id: "cs_test_xxx".to_owned(),
+            payment_intent_id: "pi_xxx".to_owned(),
+            fulfillment_status: "pending".to_owned(),
+            fulfillment_carrier: String::new(),
+            fulfillment_tracking_no: String::new(),
+            production_status: "not_started".to_owned(),
+            shipping_status: "not_shipped".to_owned(),
+            total: 18600,
+            currency: "JPY".to_owned(),
+            updated_at: None,
+        }
+    }
+
     #[test]
     fn order_lookup_result_matches_email_and_builds_limited_response() {
         let document = lookup_order_document();
@@ -7731,6 +7755,49 @@ mod tests {
         );
         assert_eq!(response["pricing"]["total"], 18600);
         assert_eq!(response["updated_at"], "2026-05-21T11:15:00Z");
+    }
+
+    #[test]
+    fn m13_t04_order_lookup_covers_statuses_and_email_boundaries() {
+        let document = lookup_order_document();
+
+        assert!(order_lookup_result_from_document(&document, "other@example.com").is_none());
+
+        let mut missing_id_document = lookup_order_document();
+        missing_id_document.name = None;
+        assert!(
+            order_lookup_result_from_document(&missing_id_document, "customer@example.com")
+                .is_none()
+        );
+
+        for (status, payment_status) in [
+            ("paid", "paid"),
+            ("pending_payment", "unpaid"),
+            ("canceled", "failed"),
+        ] {
+            let result = OrderLookupResult {
+                status: order_status_result_fixture(
+                    "order_001",
+                    "HF-20260521-0001",
+                    status,
+                    payment_status,
+                ),
+                created_at: None,
+                seal_confirmed_text: "美空".to_owned(),
+                seal_preview_image_url: String::new(),
+                listing_id: "stone_listing_001".to_owned(),
+                listing_title: "Soft Pink Rose Quartz Seal Stone".to_owned(),
+                shipped_at: None,
+            };
+            let response = order_lookup_response_json(&result);
+
+            assert_eq!(response["status"], status);
+            assert_eq!(response["order_status"], status);
+            assert_eq!(response["payment_status"], payment_status);
+            assert_eq!(response["payment"]["status"], payment_status);
+            assert_eq!(response["seal"]["confirmed_seal_text"], "美空");
+            assert_eq!(response["listing"]["id"], "stone_listing_001");
+        }
     }
 
     #[test]
@@ -7800,6 +7867,45 @@ mod tests {
         assert!(response["payment"]["payment_intent_id"].is_null());
         assert_eq!(response["fulfillment"]["status"], "pending");
         assert!(response["updated_at"].is_null());
+    }
+
+    #[test]
+    fn m13_t04_order_status_response_covers_paid_pending_and_failed() {
+        for (status, payment_status) in [
+            ("paid", "paid"),
+            ("pending_payment", "unpaid"),
+            ("canceled", "failed"),
+        ] {
+            let response = order_status_response_json(&order_status_result_fixture(
+                "order_001",
+                "HF-20260521-0001",
+                status,
+                payment_status,
+            ));
+
+            assert_eq!(response["status"], status);
+            assert_eq!(response["order_status"], status);
+            assert_eq!(response["payment"]["status"], payment_status);
+            assert_eq!(response["payment_status"], payment_status);
+            assert_eq!(response["fulfillment"]["status"], "pending");
+            assert_eq!(response["pricing"]["total"], 18600);
+        }
+    }
+
+    #[tokio::test]
+    async fn m13_t04_order_not_found_response_uses_public_error_shape() {
+        let response = error_response(StatusCode::NOT_FOUND, "order_not_found", "order not found");
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let body = axum::body::to_bytes(response.into_body(), MAX_REQUEST_BODY_BYTES)
+            .await
+            .expect("response body");
+        let payload =
+            serde_json::from_slice::<JsonValue>(&body).expect("response body should be JSON");
+
+        assert_eq!(payload["error"]["code"], "order_not_found");
+        assert_eq!(payload["error"]["message"], "order not found");
     }
 
     #[test]
