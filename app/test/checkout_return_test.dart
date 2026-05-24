@@ -22,6 +22,17 @@ void main() {
     expect(result?.orderId, 'ord_002');
   });
 
+  test('parses universal link checkout success returns', () {
+    final result = parseCheckoutReturnRoute(
+      'https://www.finitefield.org/en/payment/success?checkout=success&order_id=ord_005&session_id=cs_test_005&lang=en',
+    );
+
+    expect(result?.outcome, CheckoutReturnOutcome.success);
+    expect(result?.orderId, 'ord_005');
+    expect(result?.sessionId, 'cs_test_005');
+    expect(result?.locale, 'en');
+  });
+
   test('uses checkout query to distinguish Stripe cancel from failure path', () {
     final result = parseCheckoutReturnRoute(
       'https://finitefield.org/payment/failure?checkout=cancel&order_id=ord_004',
