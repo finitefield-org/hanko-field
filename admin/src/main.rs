@@ -86,8 +86,13 @@ struct Order {
     seal_line1: String,
     seal_line2: String,
     engraving_text: String,
+    ai_generation_id: String,
     ai_variant_id: String,
     seal_preview_image_storage_path: String,
+    seal_style_name: String,
+    seal_style_stroke_weight: String,
+    seal_style_balance: String,
+    seal_style_prompt_summary: String,
     listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
@@ -644,6 +649,19 @@ struct OrderDetailView {
     seal_preview_image_url: String,
     has_seal_preview_image: bool,
     has_seal_preview_image_url: bool,
+    ai_generation_id: String,
+    has_ai_generation_id: bool,
+    ai_variant_id: String,
+    has_ai_variant_id: bool,
+    seal_style_name: String,
+    seal_style_stroke_weight: String,
+    seal_style_balance: String,
+    seal_style_prompt_summary: String,
+    has_seal_style_name: bool,
+    has_seal_style_stroke_weight: bool,
+    has_seal_style_balance: bool,
+    has_seal_style_prompt_summary: bool,
+    has_ai_seal_metadata: bool,
     listing_label_ja: String,
     total: String,
     next_statuses: Vec<StatusOptionView>,
@@ -4048,6 +4066,18 @@ impl ServerState {
             &self.storage_assets_bucket,
             &order.seal_preview_image_storage_path,
         );
+        let has_ai_generation_id = !order.ai_generation_id.is_empty();
+        let has_ai_variant_id = !order.ai_variant_id.is_empty();
+        let has_seal_style_name = !order.seal_style_name.is_empty();
+        let has_seal_style_stroke_weight = !order.seal_style_stroke_weight.is_empty();
+        let has_seal_style_balance = !order.seal_style_balance.is_empty();
+        let has_seal_style_prompt_summary = !order.seal_style_prompt_summary.is_empty();
+        let has_ai_seal_metadata = has_ai_generation_id
+            || has_ai_variant_id
+            || has_seal_style_name
+            || has_seal_style_stroke_weight
+            || has_seal_style_balance
+            || has_seal_style_prompt_summary;
 
         Some(OrderDetailView {
             id: order.id.clone(),
@@ -4073,6 +4103,19 @@ impl ServerState {
             seal_preview_image_url: seal_preview_image_url.clone(),
             has_seal_preview_image: !order.seal_preview_image_storage_path.is_empty(),
             has_seal_preview_image_url: !seal_preview_image_url.is_empty(),
+            ai_generation_id: order.ai_generation_id.clone(),
+            has_ai_generation_id,
+            ai_variant_id: order.ai_variant_id.clone(),
+            has_ai_variant_id,
+            seal_style_name: order.seal_style_name.clone(),
+            seal_style_stroke_weight: order.seal_style_stroke_weight.clone(),
+            seal_style_balance: order.seal_style_balance.clone(),
+            seal_style_prompt_summary: order.seal_style_prompt_summary.clone(),
+            has_seal_style_name,
+            has_seal_style_stroke_weight,
+            has_seal_style_balance,
+            has_seal_style_prompt_summary,
+            has_ai_seal_metadata,
             listing_label_ja: order.listing_label_ja.clone(),
             total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
@@ -5930,6 +5973,7 @@ impl FirestoreAdminSource {
         let shipping = read_map_field(data, "shipping");
         let contact = read_map_field(data, "contact");
         let seal = read_map_field(data, "seal");
+        let seal_style = read_map_field(&seal, "style");
         let customer_confirmation = read_map_field(data, "customer_confirmation");
         let pricing = read_map_field(data, "pricing");
         let raw_locale = read_string_field(data, "locale");
@@ -5970,8 +6014,13 @@ impl FirestoreAdminSource {
             seal_line1,
             seal_line2,
             engraving_text,
+            ai_generation_id: read_string_field(&seal, "ai_generation_id"),
             ai_variant_id: read_string_field(&seal, "ai_variant_id"),
             seal_preview_image_storage_path: read_seal_preview_image_storage_path(&seal),
+            seal_style_name: read_string_field(&seal_style, "name"),
+            seal_style_stroke_weight: read_string_field(&seal_style, "stroke_weight"),
+            seal_style_balance: read_string_field(&seal_style, "balance"),
+            seal_style_prompt_summary: read_string_field(&seal_style, "prompt_summary"),
             listing_label_ja,
             total,
             created_at,
@@ -9792,8 +9841,13 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "伊".to_owned(),
                 seal_line2: "藤".to_owned(),
                 engraving_text: "伊藤".to_owned(),
+                ai_generation_id: String::new(),
                 ai_variant_id: String::new(),
                 seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
@@ -9849,9 +9903,14 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "JA".to_owned(),
                 seal_line2: "NE".to_owned(),
                 engraving_text: "JANE".to_owned(),
+                ai_generation_id: "seal_request_006".to_owned(),
                 ai_variant_id: "seal_variant_006".to_owned(),
                 seal_preview_image_storage_path:
                     "seal_designs/seal_request_006/seal_variant_006.png".to_owned(),
+                seal_style_name: "elegant".to_owned(),
+                seal_style_stroke_weight: "standard".to_owned(),
+                seal_style_balance: "balanced".to_owned(),
+                seal_style_prompt_summary: "Latin initials with refined spacing".to_owned(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
@@ -9898,8 +9957,13 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "田".to_owned(),
                 seal_line2: "中".to_owned(),
                 engraving_text: "田中".to_owned(),
+                ai_generation_id: String::new(),
                 ai_variant_id: String::new(),
                 seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
@@ -9973,9 +10037,14 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "加".to_owned(),
                 seal_line2: "藤".to_owned(),
                 engraving_text: "加藤".to_owned(),
+                ai_generation_id: "seal_request_004".to_owned(),
                 ai_variant_id: "seal_variant_004".to_owned(),
                 seal_preview_image_storage_path:
                     "seal_designs/seal_request_004/seal_variant_004.png".to_owned(),
+                seal_style_name: "traditional".to_owned(),
+                seal_style_stroke_weight: "bold".to_owned(),
+                seal_style_balance: "dense".to_owned(),
+                seal_style_prompt_summary: "Classic kanji seal with dense balance".to_owned(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
@@ -10022,8 +10091,13 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "CH".to_owned(),
                 seal_line2: "RI".to_owned(),
                 engraving_text: "CHRI".to_owned(),
+                ai_generation_id: String::new(),
                 ai_variant_id: String::new(),
                 seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
@@ -10059,9 +10133,14 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "鈴".to_owned(),
                 seal_line2: "木".to_owned(),
                 engraving_text: "鈴木".to_owned(),
+                ai_generation_id: "seal_request_002".to_owned(),
                 ai_variant_id: "seal_variant_002".to_owned(),
                 seal_preview_image_storage_path:
                     "seal_designs/seal_request_002/seal_variant_002.png".to_owned(),
+                seal_style_name: "soft".to_owned(),
+                seal_style_stroke_weight: "standard".to_owned(),
+                seal_style_balance: "airy".to_owned(),
+                seal_style_prompt_summary: "Soft kanji seal with open spacing".to_owned(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
@@ -10108,8 +10187,13 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "山".to_owned(),
                 seal_line2: "田".to_owned(),
                 engraving_text: "山田".to_owned(),
+                ai_generation_id: String::new(),
                 ai_variant_id: String::new(),
                 seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
@@ -10976,6 +11060,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn get_order_detail_exposes_ai_seal_metadata() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        assert!(detail.has_ai_seal_metadata);
+        assert!(detail.has_ai_generation_id);
+        assert!(detail.has_ai_variant_id);
+        assert_eq!(detail.ai_generation_id, "seal_request_006");
+        assert_eq!(detail.ai_variant_id, "seal_variant_006");
+        assert_eq!(detail.seal_style_name, "elegant");
+        assert_eq!(detail.seal_style_stroke_weight, "standard");
+        assert_eq!(detail.seal_style_balance, "balanced");
+        assert_eq!(
+            detail.seal_style_prompt_summary,
+            "Latin initials with refined spacing"
+        );
+        assert!(detail.has_seal_style_name);
+        assert!(detail.has_seal_style_stroke_weight);
+        assert!(detail.has_seal_style_balance);
+        assert!(detail.has_seal_style_prompt_summary);
+    }
+
+    #[tokio::test]
     async fn render_order_detail_includes_ai_seal_preview_image() {
         let state = mock_server_state();
         let detail = state
@@ -10989,6 +11099,29 @@ mod tests {
         assert!(html.contains("seal_designs/seal_request_006/seal_variant_006.png"));
         assert!(html.contains("https://storage.googleapis.com/hanko-field-dev/seal_designs/seal_request_006/seal_variant_006.png"));
         assert!(html.contains("HF-20260209-1006 のAI印影プレビュー"));
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_includes_ai_seal_metadata() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        let html = render_order_detail(&detail).expect("order detail should render");
+
+        assert!(html.contains("AI印影メタデータ"));
+        assert!(html.contains("AI Generation ID"));
+        assert!(html.contains("seal_request_006"));
+        assert!(html.contains("seal_variant_006"));
+        assert!(html.contains("Style name"));
+        assert!(html.contains("elegant"));
+        assert!(html.contains("Stroke weight"));
+        assert!(html.contains("standard"));
+        assert!(html.contains("Balance"));
+        assert!(html.contains("balanced"));
+        assert!(html.contains("Latin initials with refined spacing"));
     }
 
     #[test]
