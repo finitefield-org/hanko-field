@@ -372,8 +372,12 @@ class OrderLookupResultScreen extends StatelessWidget {
         const SizedBox(height: HankoSpacing.md),
         _LookupSectionCard(
           icon: Icons.local_shipping_outlined,
-          title: l10n.orderLookupTrackingNumberLabel,
+          title: l10n.orderLookupTrackingDetailsTitle,
           children: [
+            _LookupDetailLine(
+              label: l10n.orderLookupShippingStatusLabel,
+              value: _statusLabel(l10n, status.shippingStatus),
+            ),
             if (carrier != null)
               _LookupDetailLine(
                 label: l10n.orderLookupCarrierLabel,
@@ -387,6 +391,11 @@ class OrderLookupResultScreen extends StatelessWidget {
               _LookupDetailLine(
                 label: l10n.orderLookupShippedAtLabel,
                 value: _formatDateTime(status.shippedAt!),
+              ),
+            if (status.updatedAt != null)
+              _LookupDetailLine(
+                label: l10n.orderLookupUpdatedAtLabel,
+                value: _formatDateTime(status.updatedAt!),
               ),
           ],
         ),

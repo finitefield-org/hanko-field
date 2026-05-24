@@ -962,7 +962,7 @@ MVPで後回し可能:
 | M10-T03 | `LKP-001` | [x] 照会入力 | `features/order_lookup/presentation/` | 注文番号とメールを入力 |
 | M10-T04 | `LKP-002` `LKP-004` `LKP-005` | [x] Loading/Not found/Error | `features/order_lookup/presentation/` | 状態を区別して表示 |
 | M10-T05 | `LKP-003` | [x] 照会結果 | `features/order_lookup/presentation/` | 注文、決済、制作、発送、追跡を表示 |
-| M10-T06 | `LKP-006` | 追跡詳細 | `features/order_lookup/presentation/` | 後回し可能 |
+| M10-T06 | `LKP-006` | [x] 追跡詳細 | `features/order_lookup/presentation/` | 後回し可能 |
 
 ### M11: admin連携
 

@@ -423,8 +423,11 @@ class HankoLocalizations {
       _strings.orderLookupFulfillmentStatusLabel;
   String get orderLookupTrackingNumberLabel =>
       _strings.orderLookupTrackingNumberLabel;
+  String get orderLookupTrackingDetailsTitle =>
+      _strings.orderLookupTrackingDetailsTitle;
   String get orderLookupCarrierLabel => _strings.orderLookupCarrierLabel;
   String get orderLookupShippedAtLabel => _strings.orderLookupShippedAtLabel;
+  String get orderLookupUpdatedAtLabel => _strings.orderLookupUpdatedAtLabel;
   String get orderLookupNoTrackingValue => _strings.orderLookupNoTrackingValue;
   String get orderLookupOrderDateLabel => _strings.orderLookupOrderDateLabel;
   String get orderLookupContentTitle => _strings.orderLookupContentTitle;
@@ -820,8 +823,10 @@ class _HankoStrings {
     required this.orderLookupShippingStatusLabel,
     required this.orderLookupFulfillmentStatusLabel,
     required this.orderLookupTrackingNumberLabel,
+    required this.orderLookupTrackingDetailsTitle,
     required this.orderLookupCarrierLabel,
     required this.orderLookupShippedAtLabel,
+    required this.orderLookupUpdatedAtLabel,
     required this.orderLookupNoTrackingValue,
     required this.orderLookupOrderDateLabel,
     required this.orderLookupContentTitle,
@@ -1184,8 +1189,10 @@ class _HankoStrings {
   final String orderLookupShippingStatusLabel;
   final String orderLookupFulfillmentStatusLabel;
   final String orderLookupTrackingNumberLabel;
+  final String orderLookupTrackingDetailsTitle;
   final String orderLookupCarrierLabel;
   final String orderLookupShippedAtLabel;
+  final String orderLookupUpdatedAtLabel;
   final String orderLookupNoTrackingValue;
   final String orderLookupOrderDateLabel;
   final String orderLookupContentTitle;
@@ -1620,8 +1627,10 @@ const _localizedValues = {
       orderLookupShippingStatusLabel: 'Shipping status',
       orderLookupFulfillmentStatusLabel: 'Fulfillment status',
       orderLookupTrackingNumberLabel: 'Tracking number',
+      orderLookupTrackingDetailsTitle: 'Tracking details',
       orderLookupCarrierLabel: 'Carrier',
       orderLookupShippedAtLabel: 'Shipped at',
+      orderLookupUpdatedAtLabel: 'Last updated',
       orderLookupNoTrackingValue: 'Not available yet',
       orderLookupOrderDateLabel: 'Order date',
       orderLookupContentTitle: 'Order content',
@@ -1996,8 +2005,10 @@ const _localizedValues = {
       orderLookupShippingStatusLabel: '発送ステータス',
       orderLookupFulfillmentStatusLabel: '配送手配ステータス',
       orderLookupTrackingNumberLabel: '追跡番号',
+      orderLookupTrackingDetailsTitle: '追跡詳細',
       orderLookupCarrierLabel: '配送会社',
       orderLookupShippedAtLabel: '発送日時',
+      orderLookupUpdatedAtLabel: '最終更新',
       orderLookupNoTrackingValue: '未登録',
       orderLookupOrderDateLabel: '注文日',
       orderLookupContentTitle: '注文内容',

@@ -2890,13 +2890,51 @@ void main() {
     expect(find.text('2026-05-21 20:00'), findsOneWidget);
     expect(find.text('Paid'), findsNWidgets(2));
     expect(find.text('In production'), findsOneWidget);
-    expect(find.text('Preparing shipment'), findsOneWidget);
+    expect(find.text('Preparing shipment'), findsWidgets);
     expect(find.text('美空'), findsOneWidget);
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
     expect(find.text('¥18,600'), findsOneWidget);
     expect(find.text('Yamato'), findsOneWidget);
     expect(find.text('TRACK123'), findsOneWidget);
     expect(find.text('Lookup another order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M10-T06 shows tracking details in the lookup result', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(lookupOrder: _successfulLookupOrder),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-20260521-0001',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'customer@example.test',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tracking details'), findsOneWidget);
+    expect(find.text('Shipping status'), findsNWidgets(2));
+    expect(find.text('Carrier'), findsOneWidget);
+    expect(find.text('Yamato'), findsOneWidget);
+    expect(find.text('Tracking number'), findsOneWidget);
+    expect(find.text('TRACK123'), findsOneWidget);
+    expect(find.text('Shipped at'), findsOneWidget);
+    expect(find.text('2026-05-22 12:00'), findsOneWidget);
+    expect(find.text('Last updated'), findsOneWidget);
+    expect(find.text('2026-05-21 20:15'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
