@@ -18,24 +18,34 @@ class HankoFeaturePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: HankoColors.background,
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            topPadding,
-            horizontalPadding,
-            HankoSpacing.xl,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title, style: HankoTextStyles.pageTitle),
-              if (children.isNotEmpty) const SizedBox(height: HankoSpacing.lg),
-              ...children,
-            ],
+    return Semantics(
+      scopesRoute: true,
+      namesRoute: true,
+      label: title,
+      explicitChildNodes: true,
+      child: Material(
+        color: HankoColors.background,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              topPadding,
+              horizontalPadding,
+              HankoSpacing.xl,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(title, style: HankoTextStyles.pageTitle),
+                ),
+                if (children.isNotEmpty)
+                  const SizedBox(height: HankoSpacing.lg),
+                ...children,
+              ],
+            ),
           ),
         ),
       ),

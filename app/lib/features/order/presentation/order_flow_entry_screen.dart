@@ -263,6 +263,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
   final _fieldKeys = {
     for (final field in _CheckoutInputField.values) field: GlobalKey(),
   };
+  final _focusNodes = {
+    for (final field in _CheckoutInputField.values) field: FocusNode(),
+  };
+  final _addressLine2FocusNode = FocusNode();
+  final _orderNoteFocusNode = FocusNode();
   late final TextEditingController _emailController;
   late final TextEditingController _fullNameController;
   late final TextEditingController _phoneController;
@@ -302,6 +307,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
 
   @override
   void dispose() {
+    for (final focusNode in _focusNodes.values) {
+      focusNode.dispose();
+    }
+    _addressLine2FocusNode.dispose();
+    _orderNoteFocusNode.dispose();
     _emailController.dispose();
     _fullNameController.dispose();
     _phoneController.dispose();
@@ -402,6 +412,7 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
     if (fieldContext == null) {
       return;
     }
+    _focusNodes[field]?.requestFocus();
     Scrollable.ensureVisible(
       fieldContext,
       duration: const Duration(milliseconds: 260),
@@ -417,6 +428,10 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
       }
     }
     return null;
+  }
+
+  void _focusCheckoutField(_CheckoutInputField field) {
+    _focusNodes[field]?.requestFocus();
   }
 
   @override
@@ -449,8 +464,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.email,
                 hintText: l10n.emailHint,
                 controller: _emailController,
+                focusNode: _focusNodes[_CheckoutInputField.email],
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    _focusCheckoutField(_CheckoutInputField.fullName),
                 errorText: _errorTextFor(_CheckoutInputField.email),
               ),
             ),
@@ -462,8 +480,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.checkoutFullNameLabel,
                 hintText: l10n.checkoutFullNameHint,
                 controller: _fullNameController,
+                focusNode: _focusNodes[_CheckoutInputField.fullName],
                 keyboardType: TextInputType.name,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    _focusCheckoutField(_CheckoutInputField.phone),
                 errorText: _errorTextFor(_CheckoutInputField.fullName),
               ),
             ),
@@ -475,8 +496,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.checkoutPhoneLabel,
                 hintText: l10n.checkoutPhoneHint,
                 controller: _phoneController,
+                focusNode: _focusNodes[_CheckoutInputField.phone],
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    _focusCheckoutField(_CheckoutInputField.country),
                 errorText: _errorTextFor(_CheckoutInputField.phone),
               ),
             ),
@@ -492,6 +516,7 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
               child: DropdownButtonFormField<String>(
                 key: const Key('checkout-country-field'),
                 initialValue: _countryCode,
+                focusNode: _focusNodes[_CheckoutInputField.country],
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: l10n.checkoutCountryLabel,
@@ -520,8 +545,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.checkoutPostalCodeLabel,
                 hintText: l10n.checkoutPostalCodeHint,
                 controller: _postalCodeController,
+                focusNode: _focusNodes[_CheckoutInputField.postalCode],
                 keyboardType: TextInputType.streetAddress,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    _focusCheckoutField(_CheckoutInputField.addressLine1),
                 errorText: _errorTextFor(_CheckoutInputField.postalCode),
               ),
             ),
@@ -533,8 +561,10 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.checkoutAddressLine1Label,
                 hintText: l10n.checkoutAddressLine1Hint,
                 controller: _addressLine1Controller,
+                focusNode: _focusNodes[_CheckoutInputField.addressLine1],
                 keyboardType: TextInputType.streetAddress,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => _addressLine2FocusNode.requestFocus(),
                 errorText: _errorTextFor(_CheckoutInputField.addressLine1),
               ),
             ),
@@ -544,8 +574,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
               label: l10n.checkoutAddressLine2Label,
               hintText: l10n.checkoutAddressLine2Hint,
               controller: _addressLine2Controller,
+              focusNode: _addressLine2FocusNode,
               keyboardType: TextInputType.streetAddress,
               textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) =>
+                  _focusCheckoutField(_CheckoutInputField.city),
             ),
             const SizedBox(height: HankoSpacing.md),
             _CheckoutFieldAnchor(
@@ -555,8 +588,11 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.checkoutCityLabel,
                 hintText: l10n.checkoutCityHint,
                 controller: _cityController,
+                focusNode: _focusNodes[_CheckoutInputField.city],
                 keyboardType: TextInputType.streetAddress,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    _focusCheckoutField(_CheckoutInputField.state),
                 errorText: _errorTextFor(_CheckoutInputField.city),
               ),
             ),
@@ -568,8 +604,10 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
                 label: l10n.checkoutStateLabel,
                 hintText: l10n.checkoutStateHint,
                 controller: _stateController,
+                focusNode: _focusNodes[_CheckoutInputField.state],
                 keyboardType: TextInputType.streetAddress,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => _orderNoteFocusNode.requestFocus(),
                 errorText: _errorTextFor(_CheckoutInputField.state),
               ),
             ),
@@ -583,6 +621,7 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
             TextFormField(
               key: const Key('checkout-order-note-field'),
               controller: _orderNoteController,
+              focusNode: _orderNoteFocusNode,
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
               minLines: 3,
@@ -1753,21 +1792,27 @@ class _OrderScreenFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: HankoColors.background,
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 36, 18, HankoSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _OrderHeader(title: title, onBack: onBack),
-              const SizedBox(height: HankoSpacing.md),
-              const _OrderTitleDivider(),
-              const SizedBox(height: HankoSpacing.lg),
-              ...children,
-            ],
+    return Semantics(
+      scopesRoute: true,
+      namesRoute: true,
+      label: title,
+      explicitChildNodes: true,
+      child: Material(
+        color: HankoColors.background,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 36, 18, HankoSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _OrderHeader(title: title, onBack: onBack),
+                const SizedBox(height: HankoSpacing.md),
+                const _OrderTitleDivider(),
+                const SizedBox(height: HankoSpacing.lg),
+                ...children,
+              ],
+            ),
           ),
         ),
       ),
@@ -1802,13 +1847,16 @@ class _OrderHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 52),
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                style: HankoTextStyles.pageTitle.copyWith(
-                  color: HankoColors.ink,
-                  fontSize: 31,
+              child: Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: HankoTextStyles.pageTitle.copyWith(
+                    color: HankoColors.ink,
+                    fontSize: 31,
+                  ),
                 ),
               ),
             ),

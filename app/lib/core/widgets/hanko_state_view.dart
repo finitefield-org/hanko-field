@@ -48,28 +48,39 @@ class HankoStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HankoSurfaceCard(
-      padding: const EdgeInsets.all(HankoSpacing.lg),
-      radius: HankoRadii.md,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _StateMarker(kind: kind),
-          const SizedBox(height: HankoSpacing.md),
-          Text(title, style: HankoTextStyles.sectionTitle),
-          const SizedBox(height: HankoSpacing.sm),
-          Text(message, style: HankoTextStyles.body),
-          if (actionLabel != null) ...[
-            const SizedBox(height: HankoSpacing.lg),
-            SizedBox(
-              width: 172,
-              child: HankoPrimaryButton(
-                label: actionLabel!,
-                onPressed: onAction,
-              ),
+    return Semantics(
+      container: true,
+      liveRegion:
+          kind == HankoStateKind.loading ||
+          kind == HankoStateKind.error ||
+          kind == HankoStateKind.success,
+      explicitChildNodes: true,
+      child: HankoSurfaceCard(
+        padding: const EdgeInsets.all(HankoSpacing.lg),
+        radius: HankoRadii.md,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StateMarker(kind: kind),
+            const SizedBox(height: HankoSpacing.md),
+            Semantics(
+              header: true,
+              child: Text(title, style: HankoTextStyles.sectionTitle),
             ),
+            const SizedBox(height: HankoSpacing.sm),
+            Text(message, style: HankoTextStyles.body),
+            if (actionLabel != null) ...[
+              const SizedBox(height: HankoSpacing.lg),
+              SizedBox(
+                width: 172,
+                child: HankoPrimaryButton(
+                  label: actionLabel!,
+                  onPressed: onAction,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

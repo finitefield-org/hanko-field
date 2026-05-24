@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
@@ -3692,6 +3693,156 @@ void main() {
     expect(retryCount, 2);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('M13-T08 exposes navigation and state semantics', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    void expectSemanticsWidget({
+      required String label,
+      bool? button,
+      bool? selected,
+      bool? scopesRoute,
+      bool? namesRoute,
+    }) {
+      expect(
+        find.byWidgetPredicate((widget) {
+          if (widget is! Semantics) {
+            return false;
+          }
+          final properties = widget.properties;
+          return properties.label == label &&
+              (button == null || properties.button == button) &&
+              (selected == null || properties.selected == selected) &&
+              (scopesRoute == null || properties.scopesRoute == scopesRoute) &&
+              (namesRoute == null || properties.namesRoute == namesRoute);
+        }),
+        findsAtLeastNWidgets(1),
+      );
+    }
+
+    void expectHeaderSemantics(String label) {
+      expect(
+        find.byWidgetPredicate((widget) {
+          if (widget is! Semantics || widget.properties.header != true) {
+            return false;
+          }
+          final child = widget.child;
+          return child is Text && child.data == label;
+        }),
+        findsAtLeastNWidgets(1),
+      );
+    }
+
+    await pumpLaunchedApp(tester);
+    await tester.pumpAndSettle();
+
+    expectSemanticsWidget(label: 'Design', scopesRoute: true, namesRoute: true);
+    expectSemanticsWidget(label: 'Design', button: true, selected: true);
+    expectSemanticsWidget(label: 'My Seals', button: true);
+    expectSemanticsWidget(label: 'Stones', button: true);
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+
+    expectSemanticsWidget(
+      label: 'My Seals',
+      scopesRoute: true,
+      namesRoute: true,
+    );
+    expectHeaderSemantics('No saved seals');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: const Scaffold(
+          body: HankoStateView.loading(
+            title: 'Loading stones',
+            message: 'We are loading available seal stones.',
+          ),
+        ),
+      ),
+    );
+
+    expectHeaderSemantics('Loading stones');
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.liveRegion == true,
+      ),
+      findsAtLeastNWidgets(1),
+    );
+  });
+
+  testWidgets(
+    'M13-T08 checkout form moves focus from keyboard and error summary',
+    (tester) async {
+      tester.view.physicalSize = const Size(432, 912);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final semanticsHandle = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: HankoLocalizations.supportedLocales,
+            localizationsDelegates: HankoLocalizations.localizationsDelegates,
+            theme: HankoTheme.light(),
+            home: Scaffold(body: CheckoutInputScreen(onSave: (_) async {})),
+          ),
+        );
+        await tester.pump();
+
+        Finder editableFor(String key) => find.descendant(
+          of: find.byKey(Key(key)),
+          matching: find.byType(EditableText),
+        );
+
+        bool isFocused(String key) {
+          final editable = tester.widget<EditableText>(editableFor(key));
+          return editable.focusNode.hasFocus;
+        }
+
+        await tester.tap(editableFor('checkout-email-field'));
+        await tester.pump();
+        expect(isFocused('checkout-email-field'), isTrue);
+
+        await tester.testTextInput.receiveAction(TextInputAction.next);
+        await tester.pump();
+        expect(isFocused('checkout-full-name-field'), isTrue);
+
+        await tester.testTextInput.receiveAction(TextInputAction.next);
+        await tester.pump();
+        expect(isFocused('checkout-phone-field'), isTrue);
+
+        await tester.ensureVisible(find.text('Save Checkout Information'));
+        await tester.pump();
+        await tester.tap(find.text('Save Checkout Information'));
+        await tester.pumpAndSettle();
+
+        final emailErrorNode = tester.getSemantics(
+          find.text('Email: Please enter a valid email address.'),
+        );
+        expect(
+          emailErrorNode.getSemanticsData().hasAction(SemanticsAction.tap),
+          isTrue,
+        );
+
+        await tester.tap(
+          find.text('Email: Please enter a valid email address.'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(isFocused('checkout-email-field'), isTrue);
+      } finally {
+        semanticsHandle.dispose();
+      }
+    },
+  );
 }
 
 Future<KanjiCandidatesResult> _successfulKanjiGenerator(

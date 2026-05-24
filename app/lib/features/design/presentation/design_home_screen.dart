@@ -42,57 +42,63 @@ class DesignStartScreen extends StatelessWidget {
         final heroHeight = width < 410 ? 372.0 : 386.0;
         final featureCardHeight = width < 410 ? 252.0 : 260.0;
 
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                48,
-                horizontalPadding,
-                31,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _DesignHeader(onOpenSettings: onOpenSettings),
-                  const SizedBox(height: 17),
-                  _HeroDesignCard(
-                    height: heroHeight,
-                    onStartDesign: onStartDesign,
-                  ),
-                  const SizedBox(height: 23),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _FeatureCard(
-                          title: l10n.savedSeals,
-                          body: l10n.savedSealsDescription,
-                          assetPath: 'assets/design/com003_saved_seal.png',
-                          icon: _FeatureIcon.saved,
-                          imageTop: 31,
-                          imageRight: -2,
-                          imageWidth: 108,
-                          height: featureCardHeight,
+        return Semantics(
+          scopesRoute: true,
+          namesRoute: true,
+          label: l10n.design,
+          explicitChildNodes: true,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  48,
+                  horizontalPadding,
+                  31,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _DesignHeader(onOpenSettings: onOpenSettings),
+                    const SizedBox(height: 17),
+                    _HeroDesignCard(
+                      height: heroHeight,
+                      onStartDesign: onStartDesign,
+                    ),
+                    const SizedBox(height: 23),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FeatureCard(
+                            title: l10n.savedSeals,
+                            body: l10n.savedSealsDescription,
+                            assetPath: 'assets/design/com003_saved_seal.png',
+                            icon: _FeatureIcon.saved,
+                            imageTop: 31,
+                            imageRight: -2,
+                            imageWidth: 108,
+                            height: featureCardHeight,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: cardGap),
-                      Expanded(
-                        child: _FeatureCard(
-                          title: l10n.browseStones,
-                          body: l10n.browseStonesDescription,
-                          assetPath: 'assets/design/com003_gemstones.png',
-                          icon: _FeatureIcon.diamond,
-                          imageTop: 26,
-                          imageRight: 0,
-                          imageWidth: 123,
-                          height: featureCardHeight,
+                        SizedBox(width: cardGap),
+                        Expanded(
+                          child: _FeatureCard(
+                            title: l10n.browseStones,
+                            body: l10n.browseStonesDescription,
+                            assetPath: 'assets/design/com003_gemstones.png',
+                            icon: _FeatureIcon.diamond,
+                            imageTop: 26,
+                            imageRight: 0,
+                            imageWidth: 123,
+                            height: featureCardHeight,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

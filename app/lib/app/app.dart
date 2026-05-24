@@ -2045,33 +2045,41 @@ class _BottomTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isSelected ? HankoColors.red : HankoColors.ink;
-    return InkResponse(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: item.label,
       onTap: onTap,
-      containedInkWell: true,
-      highlightShape: BoxShape.rectangle,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 21, bottom: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CustomPaint(
-              size: const Size.square(31),
-              painter: _TabIconPainter(item.icon, color),
+      child: ExcludeSemantics(
+        child: InkResponse(
+          onTap: onTap,
+          containedInkWell: true,
+          highlightShape: BoxShape.rectangle,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 21, bottom: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomPaint(
+                  size: const Size.square(31),
+                  painter: _TabIconPainter(item.icon, color),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    height: 1,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 7),
-            Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                height: 1,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

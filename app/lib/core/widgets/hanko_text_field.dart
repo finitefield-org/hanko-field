@@ -6,6 +6,7 @@ class HankoTextField extends StatelessWidget {
     required this.label,
     this.hintText,
     this.controller,
+    this.focusNode,
     this.keyboardType,
     this.enabled = true,
     this.errorText,
@@ -16,6 +17,7 @@ class HankoTextField extends StatelessWidget {
   final String label;
   final String? hintText;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final TextInputType? keyboardType;
   final bool enabled;
   final String? errorText;
@@ -26,6 +28,7 @@ class HankoTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       enabled: enabled,
       keyboardType: keyboardType,
       textInputAction: textInputAction,

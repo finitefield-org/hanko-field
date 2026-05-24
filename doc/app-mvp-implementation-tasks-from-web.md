@@ -997,7 +997,7 @@ MVPで後回し可能:
 | M13-T05 | Stripe | [x] Checkout/webhook結合テスト | Stripe test mode | success/cancel/failure/webhook反映を確認 |
 | M13-T06 | Inventory | [x] 二重販売防止テスト | API integration | 同一listingを同時注文できない |
 | M13-T07 | AI品質 | [x] 生成品質テスト | API integration/manual | 1から2文字、可読性、線の太さ、背景なし、余白を確認 |
-| M13-T08 | Accessibility | アクセシビリティ確認 | Flutter semantics/manual | 主要状態が読み上げとフォーカス移動に対応 |
+| M13-T08 | Accessibility | [x] アクセシビリティ確認 | Flutter semantics/manual | 主要状態が読み上げとフォーカス移動に対応 |
 | M13-T09 | Release | Deep Link/Universal Links/環境設定確認 | app platform config | Stripeからアプリへ復帰できる |
 
 ## 10. 受け入れ基準
