@@ -99,6 +99,11 @@ class HankoLocalizations {
   String get storageErrorMessage => _strings.storageErrorMessage;
   String get deepLinkErrorTitle => _strings.deepLinkErrorTitle;
   String get deepLinkErrorMessage => _strings.deepLinkErrorMessage;
+  String get maintenanceTitle => _strings.maintenanceTitle;
+  String get maintenanceMessage => _strings.maintenanceMessage;
+  String get appUpdateRequiredTitle => _strings.appUpdateRequiredTitle;
+  String get appUpdateRequiredMessage => _strings.appUpdateRequiredMessage;
+  String get appUpdateRequiredAction => _strings.appUpdateRequiredAction;
   String get commonGenericErrorTitle => _strings.commonGenericErrorTitle;
   String get commonGenericErrorMessage => _strings.commonGenericErrorMessage;
   String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
@@ -579,6 +584,11 @@ class _HankoStrings {
     required this.storageErrorMessage,
     required this.deepLinkErrorTitle,
     required this.deepLinkErrorMessage,
+    required this.maintenanceTitle,
+    required this.maintenanceMessage,
+    required this.appUpdateRequiredTitle,
+    required this.appUpdateRequiredMessage,
+    required this.appUpdateRequiredAction,
     required this.commonGenericErrorTitle,
     required this.commonGenericErrorMessage,
     required this.kanjiSuggestionsTitle,
@@ -966,6 +976,11 @@ class _HankoStrings {
   final String storageErrorMessage;
   final String deepLinkErrorTitle;
   final String deepLinkErrorMessage;
+  final String maintenanceTitle;
+  final String maintenanceMessage;
+  final String appUpdateRequiredTitle;
+  final String appUpdateRequiredMessage;
+  final String appUpdateRequiredAction;
   final String commonGenericErrorTitle;
   final String commonGenericErrorMessage;
   final String kanjiSuggestionsTitle;
@@ -1373,6 +1388,13 @@ const _localizedValues = {
       deepLinkErrorTitle: 'Checkout Return Link Error',
       deepLinkErrorMessage:
           "The Stripe Checkout return link couldn't be processed. Please open Checkout again or contact support if payment may have completed.",
+      maintenanceTitle: 'Temporarily Unavailable',
+      maintenanceMessage:
+          'Stone Signature is currently undergoing maintenance. Please check back in a little while.',
+      appUpdateRequiredTitle: 'Update Required',
+      appUpdateRequiredMessage:
+          'A newer app version is required to continue. Please update the app, then open Stone Signature again.',
+      appUpdateRequiredAction: 'Update App',
       commonGenericErrorTitle: 'Something Went Wrong',
       commonGenericErrorMessage:
           'An unexpected error occurred. Please try again in a few moments.',
@@ -1829,6 +1851,13 @@ const _localizedValues = {
       deepLinkErrorTitle: 'Checkout戻りURLを処理できませんでした',
       deepLinkErrorMessage:
           'Stripe Checkoutからの戻りURLを処理できませんでした。もう一度Checkoutを開くか、決済済みの可能性がある場合はお問い合わせください。',
+      maintenanceTitle: 'ただいまご利用いただけません',
+      maintenanceMessage:
+          'Stone Signatureは現在メンテナンス中です。しばらく時間をおいてからもう一度お試しください。',
+      appUpdateRequiredTitle: 'アプリの更新が必要です',
+      appUpdateRequiredMessage:
+          '続けるには新しいバージョンのアプリが必要です。アプリを更新してから、もう一度Stone Signatureを開いてください。',
+      appUpdateRequiredAction: 'アプリを更新',
       commonGenericErrorTitle: '問題が発生しました',
       commonGenericErrorMessage: '予期しないエラーが発生しました。時間をおいてもう一度お試しください。',
       kanjiSuggestionsTitle: '漢字候補',

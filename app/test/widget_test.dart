@@ -3420,6 +3420,54 @@ void main() {
     );
   });
 
+  testWidgets('M12-T06 renders maintenance and app update screens', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var updateCount = 0;
+
+    Future<void> pumpAvailabilityScreen(Widget screen) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: HankoLocalizations.supportedLocales,
+          localizationsDelegates: HankoLocalizations.localizationsDelegates,
+          theme: HankoTheme.light(),
+          home: screen,
+        ),
+      );
+      await tester.pump();
+    }
+
+    await pumpAvailabilityScreen(const MaintenanceScreen());
+    expect(find.text('Temporarily Unavailable'), findsOneWidget);
+    expect(
+      find.text(
+        'Stone Signature is currently undergoing maintenance. Please check back in a little while.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(HankoSurfaceCard), findsOneWidget);
+
+    await pumpAvailabilityScreen(
+      AppUpdateRequiredScreen(onUpdate: () => updateCount += 1),
+    );
+    expect(find.text('Update Required'), findsOneWidget);
+    expect(
+      find.text(
+        'A newer app version is required to continue. Please update the app, then open Stone Signature again.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Update App'));
+    expect(updateCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('COM-004 settings rows navigate to destination screens', (
     tester,
   ) async {

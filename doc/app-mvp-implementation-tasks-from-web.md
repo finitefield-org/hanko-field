@@ -984,7 +984,7 @@ MVPで後回し可能:
 | M12-T03 | `NTC-003` | [x] 問い合わせ導線 | `features/settings/`, `core/widgets/` | 困った時にContactへ遷移 |
 | M12-T04 | `ERR-001` `ERR-002` `ERR-007` | [x] 共通エラー | `core/errors/`, `core/widgets/` | API失敗を統一表示 |
 | M12-T05 | `ERR-005` `ERR-006` | [x] Storage/Deep Linkエラー | `features/design/`, `features/order/` | 保存失敗/戻りURL失敗を表示 |
-| M12-T06 | `ERR-003` `ERR-004` | Maintenance/App Update | `features/common/` | 後回し可能。公開設定で将来制御 |
+| M12-T06 | `ERR-003` `ERR-004` | [x] Maintenance/App Update | `features/common/` | 後回し可能。公開設定で将来制御 |
 
 ### M13: QA・テスト・リリース準備
 
