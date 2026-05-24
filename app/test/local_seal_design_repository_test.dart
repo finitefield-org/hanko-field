@@ -93,6 +93,34 @@ void main() {
   });
 
   test(
+    'stores seal image files safely within the app document directory',
+    () async {
+      final imagePath = await imageStore.saveSealImage(
+        localSealId: '../../local seal:001',
+        bytes: [4, 5, 6],
+        fileExtension: '.PNG',
+      );
+      final imageDirectory = p.join(tempDirectory.path, 'seal_designs');
+      final image = File(imagePath);
+
+      expect(p.isWithin(imageDirectory, imagePath), isTrue);
+      expect(p.basename(imagePath), isNot(contains('..')));
+      expect(p.extension(imagePath), '.png');
+      expect(await image.exists(), isTrue);
+      expect(await image.readAsBytes(), [4, 5, 6]);
+
+      final outsideImage = File(p.join(tempDirectory.path, 'outside.png'));
+      await outsideImage.writeAsBytes([9, 9, 9], flush: true);
+
+      await imageStore.deleteSealImage(outsideImage.path);
+      expect(await outsideImage.exists(), isTrue);
+
+      await imageStore.deleteSealImage(imagePath);
+      expect(await image.exists(), isFalse);
+    },
+  );
+
+  test(
     'skips corrupted local seal rows instead of failing list reads',
     () async {
       await repository.saveLocalSealDesign(_localSealDesign());

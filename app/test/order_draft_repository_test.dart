@@ -28,6 +28,54 @@ void main() {
     }
   });
 
+  test('OrderDraft domain transitions keep independent checkout state', () {
+    final startedAt = DateTime.parse('2026-05-22T10:00:00+09:00');
+    final sealSelectedAt = DateTime.parse('2026-05-22T10:05:00+09:00');
+    final stoneSelectedAt = DateTime.parse('2026-05-22T10:10:00+09:00');
+    final confirmedAt = DateTime.parse('2026-05-22T10:15:00+09:00');
+
+    final empty = OrderDraft.empty(updatedAt: startedAt);
+    final withSeal = empty.withSealSelection(
+      _sealSelection(),
+      updatedAt: sealSelectedAt,
+    );
+    final withCombination = withSeal.withStoneSelection(
+      _stoneSelection(),
+      updatedAt: stoneSelectedAt,
+    );
+    final confirmed = withCombination.withInput(
+      const OrderDraftInput.empty().copyWith(
+        termsAgreed: true,
+        customerConfirmation: OrderDraftCustomerConfirmationInput(
+          kanjiAndDesign: true,
+          customMadePolicy: true,
+        ),
+      ),
+      updatedAt: confirmedAt,
+    );
+
+    expect(empty.hasCombinationSelections, isFalse);
+    expect(withSeal.hasSealSelection, isTrue);
+    expect(withSeal.hasStoneSelection, isFalse);
+    expect(withSeal.updatedAt, sealSelectedAt);
+    expect(withCombination.hasCombinationSelections, isTrue);
+    expect(withCombination.updatedAt, stoneSelectedAt);
+    expect(confirmed.input.termsAgreed, isTrue);
+    expect(confirmed.input.customerConfirmation.isComplete, isTrue);
+    expect(confirmed.updatedAt, confirmedAt);
+
+    final withoutSeal = confirmed.withoutSealSelection(updatedAt: confirmedAt);
+    expect(withoutSeal.hasSealSelection, isFalse);
+    expect(withoutSeal.hasStoneSelection, isTrue);
+    expect(withoutSeal.input.customerConfirmation.isComplete, isTrue);
+
+    final withoutStone = confirmed.withoutStoneSelection(
+      updatedAt: confirmedAt,
+    );
+    expect(withoutStone.hasSealSelection, isTrue);
+    expect(withoutStone.hasStoneSelection, isFalse);
+  });
+
   test('saves and reloads order draft selections and checkout input', () async {
     final draft =
         OrderDraft.empty(updatedAt: DateTime.parse('2026-05-22T10:00:00+09:00'))

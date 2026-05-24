@@ -57,6 +57,41 @@ void main() {
     },
   );
 
+  test(
+    'KanjiCandidatesRepository propagates API validation failures',
+    () async {
+      final transport = FakeTransport([
+        HankoApiResponse(
+          statusCode: 422,
+          body: jsonEncode({
+            'error': {
+              'code': 'unsupported_name',
+              'message': 'real_name cannot be converted to kanji',
+            },
+          }),
+        ),
+      ]);
+      final repo = KanjiCandidatesRepository(_client(transport));
+
+      await expectLater(
+        repo.generateCandidates(
+          const KanjiCandidatesRequest(realName: '???', reasonLanguage: 'en'),
+        ),
+        throwsA(
+          isA<HankoApiException>()
+              .having((error) => error.statusCode, 'statusCode', 422)
+              .having((error) => error.code, 'code', 'unsupported_name')
+              .having(
+                (error) => error.message,
+                'message',
+                'real_name cannot be converted to kanji',
+              ),
+        ),
+      );
+      expect(transport.singleRequest.uri.path, '/v1/kanji-candidates');
+    },
+  );
+
   test('SealGenerationRepository posts style and maps variants', () async {
     final transport = FakeTransport([
       HankoApiResponse(
@@ -129,6 +164,50 @@ void main() {
     expect(result.variants[1].id, 'seal_variant_002');
     expect(result.variants[1].storagePath, contains('seal_variant_002.png'));
     expect(result.variants[1].width, 1024);
+  });
+
+  test('SealGenerationRepository propagates storage save failures', () async {
+    final transport = FakeTransport([
+      HankoApiResponse(
+        statusCode: 500,
+        body: jsonEncode({
+          'error': {
+            'code': 'storage_save_failed',
+            'message': 'failed to persist generated seal image',
+          },
+        }),
+      ),
+    ]);
+    final repo = SealGenerationRepository(_client(transport));
+
+    await expectLater(
+      repo.generateSealDesigns(
+        const SealGenerationRequest(
+          inputName: 'Michael',
+          candidate: KanjiCandidate(
+            kanji: '美空',
+            reading: 'Misora',
+            reason: 'A graceful two-character option.',
+          ),
+          style: SealStyleSelection(
+            shape: SealShape.round,
+            style: SealStyleName.bold,
+            strokeWeight: SealStrokeWeight.bold,
+            balance: SealBalance.dense,
+          ),
+        ),
+      ),
+      throwsA(
+        isA<HankoApiException>()
+            .having((error) => error.statusCode, 'statusCode', 500)
+            .having((error) => error.code, 'code', 'storage_save_failed'),
+      ),
+    );
+    expect(transport.singleRequest.uri.path, '/v1/seal-designs/generate');
+    expect(transport.singleRequest.body?['shape'], 'round');
+    expect(transport.singleRequest.body?['style'], 'bold');
+    expect(transport.singleRequest.body?['stroke_weight'], 'bold');
+    expect(transport.singleRequest.body?['balance'], 'dense');
   });
 
   test(
@@ -383,6 +462,72 @@ void main() {
       status.updatedAt?.toUtc().toIso8601String(),
       '2026-05-21T11:15:00.000Z',
     );
+  });
+
+  test(
+    'OrderLookupRepository encodes checkout status ids and maps failures',
+    () async {
+      final transport = FakeTransport([
+        HankoApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'order_id': 'ord/needs encoding',
+            'order_no': 'HF-FAILED-0001',
+            'status': 'payment_failed',
+            'payment': {'status': 'failed'},
+            'fulfillment': {'status': 'canceled'},
+            'pricing': {'total': 18600, 'currency': 'JPY'},
+            'production_status': 'not_started',
+            'shipping_status': 'not_shipped',
+          }),
+        ),
+      ]);
+      final repo = OrderLookupRepository(_client(transport));
+
+      final status = await repo.fetchOrderStatus('ord/needs encoding');
+
+      expect(
+        transport.singleRequest.uri.toString(),
+        'https://api.example.test/v1/orders/ord%2Fneeds%20encoding/status',
+      );
+      expect(status.orderStatus, 'payment_failed');
+      expect(status.paymentStatus, 'failed');
+      expect(status.fulfillmentStatus, 'canceled');
+      expect(status.productionStatus, 'not_started');
+      expect(status.shippingStatus, 'not_shipped');
+      expect(status.pricing.amount, 18600);
+    },
+  );
+
+  test('OrderLookupRepository posts lookup request body', () async {
+    final transport = FakeTransport([
+      HankoApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'order_id': 'ord_lookup_001',
+          'order_no': 'HF-20260521-0001',
+          'status': 'paid',
+          'payment_status': 'paid',
+          'fulfillment_status': 'pending',
+          'pricing': {'total': 18600, 'currency': 'JPY'},
+        }),
+      ),
+    ]);
+    final repo = OrderLookupRepository(_client(transport));
+
+    final status = await repo.lookupOrder(
+      const OrderLookupRequest(
+        orderNo: 'HF-20260521-0001',
+        email: 'customer@example.test',
+      ),
+    );
+
+    expect(transport.singleRequest.method, 'POST');
+    expect(transport.singleRequest.uri.path, '/v1/orders/lookup');
+    expect(transport.singleRequest.body?['order_no'], 'HF-20260521-0001');
+    expect(transport.singleRequest.body?['email'], 'customer@example.test');
+    expect(status.orderId, 'ord_lookup_001');
+    expect(status.paymentStatus, 'paid');
   });
 
   test('PublicConfigDto maps public config response', () {
