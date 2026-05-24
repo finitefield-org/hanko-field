@@ -63,9 +63,8 @@ class _StonesHomeScreenState extends State<StonesHomeScreen> {
             message: l10n.stonesLoadingMessage,
           )
         else if (widget.loadError != null)
-          HankoStateView.error(
-            title: l10n.stonesLoadErrorTitle,
-            message: l10n.stonesLoadErrorMessage,
+          HankoErrorStateView(
+            error: widget.loadError,
             actionLabel: l10n.tryAgain,
             onAction: widget.onRetry,
           )

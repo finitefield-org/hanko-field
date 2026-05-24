@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hankofield/core/api/core_api.dart';
+import 'package:hankofield/core/errors/core_errors.dart';
 import 'package:hankofield/features/design/design.dart';
 import 'package:hankofield/features/order/order.dart';
 import 'package:hankofield/features/order_lookup/order_lookup.dart';
@@ -417,6 +419,35 @@ void main() {
             .having((error) => error.statusCode, 'statusCode', 400)
             .having((error) => error.code, 'code', 'validation_error'),
       ),
+    );
+  });
+
+  test('HankoAppError classifies network server and generic errors', () {
+    expect(
+      HankoAppError.fromObject(const SocketException('offline')).kind,
+      HankoAppErrorKind.network,
+    );
+    expect(
+      HankoAppError.fromObject(
+        const HankoApiException(
+          statusCode: 503,
+          code: 'internal',
+          message: 'temporary failure',
+          payload: {},
+        ),
+      ).kind,
+      HankoAppErrorKind.server,
+    );
+    expect(
+      HankoAppError.fromObject(
+        const HankoApiException(
+          statusCode: 409,
+          code: 'idempotency_conflict',
+          message: 'conflict',
+          payload: {},
+        ),
+      ).kind,
+      HankoAppErrorKind.generic,
     );
   });
 }

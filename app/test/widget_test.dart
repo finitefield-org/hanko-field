@@ -1012,15 +1012,22 @@ void main() {
         localizationsDelegates: HankoLocalizations.localizationsDelegates,
         theme: HankoTheme.light(),
         home: StonesHomeScreen(
-          loadError: StateError('offline'),
+          loadError: const HankoApiException(
+            statusCode: 503,
+            code: 'internal',
+            message: 'temporary failure',
+            payload: {},
+          ),
           onRetry: () => retryCount += 1,
         ),
       ),
     );
 
-    expect(find.text("Couldn't load stones"), findsOneWidget);
+    expect(find.text('Server Error'), findsOneWidget);
     expect(
-      find.text('Try again to refresh the available stone listings.'),
+      find.text(
+        "We're experiencing a temporary issue on our end. Please wait a moment and try again.",
+      ),
       findsOneWidget,
     );
 
@@ -2920,9 +2927,56 @@ void main() {
     await tester.tap(find.text('Lookup Order'));
     await tester.pumpAndSettle();
 
-    expect(find.text("Couldn't load order"), findsOneWidget);
+    expect(find.text('Something Went Wrong'), findsOneWidget);
     expect(
-      find.text('Order Lookup could not be completed. Please try again.'),
+      find.text(
+        'An unexpected error occurred. Please try again in a few moments.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M12-T04 maps server API errors to common error state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(
+          lookupOrder: (request) async {
+            throw const HankoApiException(
+              statusCode: 500,
+              code: 'internal',
+              message: 'internal server error',
+              payload: {},
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-500',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'customer@example.test',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Server Error'), findsOneWidget);
+    expect(
+      find.text(
+        "We're experiencing a temporary issue on our end. Please wait a moment and try again.",
+      ),
       findsOneWidget,
     );
     expect(find.text('Try Again'), findsOneWidget);

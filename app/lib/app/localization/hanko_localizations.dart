@@ -91,6 +91,12 @@ class HankoLocalizations {
   String get designNoKanjiTip => _strings.designNoKanjiTip;
   String get tryAgain => _strings.tryAgain;
   String get back => _strings.back;
+  String get commonNetworkErrorTitle => _strings.commonNetworkErrorTitle;
+  String get commonNetworkErrorMessage => _strings.commonNetworkErrorMessage;
+  String get commonServerErrorTitle => _strings.commonServerErrorTitle;
+  String get commonServerErrorMessage => _strings.commonServerErrorMessage;
+  String get commonGenericErrorTitle => _strings.commonGenericErrorTitle;
+  String get commonGenericErrorMessage => _strings.commonGenericErrorMessage;
   String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
   String get kanjiSuggestionsMessage => _strings.kanjiSuggestionsMessage;
   String get kanjiCandidateDetailTitle => _strings.kanjiCandidateDetailTitle;
@@ -561,6 +567,12 @@ class _HankoStrings {
     required this.designNoKanjiTip,
     required this.tryAgain,
     required this.back,
+    required this.commonNetworkErrorTitle,
+    required this.commonNetworkErrorMessage,
+    required this.commonServerErrorTitle,
+    required this.commonServerErrorMessage,
+    required this.commonGenericErrorTitle,
+    required this.commonGenericErrorMessage,
     required this.kanjiSuggestionsTitle,
     required this.kanjiSuggestionsMessage,
     required this.kanjiCandidateDetailTitle,
@@ -938,6 +950,12 @@ class _HankoStrings {
   final String designNoKanjiTip;
   final String tryAgain;
   final String back;
+  final String commonNetworkErrorTitle;
+  final String commonNetworkErrorMessage;
+  final String commonServerErrorTitle;
+  final String commonServerErrorMessage;
+  final String commonGenericErrorTitle;
+  final String commonGenericErrorMessage;
   final String kanjiSuggestionsTitle;
   final String kanjiSuggestionsMessage;
   final String kanjiCandidateDetailTitle;
@@ -1331,6 +1349,15 @@ const _localizedValues = {
       designNoKanjiTip: 'Try a shorter name or nickname.',
       tryAgain: 'Try Again',
       back: 'Back',
+      commonNetworkErrorTitle: 'Network Error',
+      commonNetworkErrorMessage:
+          "We're unable to connect to the server. Please check your internet connection and try again.",
+      commonServerErrorTitle: 'Server Error',
+      commonServerErrorMessage:
+          "We're experiencing a temporary issue on our end. Please wait a moment and try again.",
+      commonGenericErrorTitle: 'Something Went Wrong',
+      commonGenericErrorMessage:
+          'An unexpected error occurred. Please try again in a few moments.',
       kanjiSuggestionsTitle: 'Kanji Suggestions',
       kanjiSuggestionsMessage: 'Choose the kanji that best fits your seal.',
       kanjiCandidateDetailTitle: 'Kanji Detail',
@@ -1774,6 +1801,12 @@ const _localizedValues = {
       designNoKanjiTip: 'より短い名前やニックネームをお試しください。',
       tryAgain: 'もう一度試す',
       back: '戻る',
+      commonNetworkErrorTitle: '通信エラー',
+      commonNetworkErrorMessage: 'サーバーに接続できません。通信環境を確認して、もう一度お試しください。',
+      commonServerErrorTitle: 'サーバーエラー',
+      commonServerErrorMessage: '一時的な問題が発生しています。しばらく待ってからもう一度お試しください。',
+      commonGenericErrorTitle: '問題が発生しました',
+      commonGenericErrorMessage: '予期しないエラーが発生しました。時間をおいてもう一度お試しください。',
       kanjiSuggestionsTitle: '漢字候補',
       kanjiSuggestionsMessage: '印鑑に使う漢字を選んでください。',
       kanjiCandidateDetailTitle: '漢字の詳細',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../core/errors/core_errors.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../data/kanji_candidates_repository.dart';
 import '../domain/kanji_candidate.dart';
@@ -1103,15 +1104,18 @@ class SealGenerationErrorScreen extends StatelessWidget {
     required this.request,
     required this.onRetry,
     required this.onBack,
+    this.error,
   });
 
   final SealGenerationRequest request;
+  final Object? error;
   final VoidCallback onRetry;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final appError = error == null ? null : HankoAppError.fromObject(error);
 
     return _DesignStepScaffold(
       title: l10n.design,
@@ -1119,8 +1123,8 @@ class SealGenerationErrorScreen extends StatelessWidget {
       children: [
         _DesignStateCard(
           icon: Icons.broken_image_outlined,
-          title: l10n.sealGenerationErrorTitle,
-          message: l10n.sealGenerationErrorMessage,
+          title: appError?.title(l10n) ?? l10n.sealGenerationErrorTitle,
+          message: appError?.message(l10n) ?? l10n.sealGenerationErrorMessage,
           primaryLabel: l10n.tryAgain,
           onPrimary: onRetry,
           secondaryLabel: l10n.back,
@@ -1177,15 +1181,18 @@ class KanjiSuggestionErrorScreen extends StatelessWidget {
     required this.onRetry,
     required this.onBack,
     this.request,
+    this.error,
   });
 
   final KanjiCandidatesRequest? request;
+  final Object? error;
   final VoidCallback onRetry;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final appError = error == null ? null : HankoAppError.fromObject(error);
 
     return _DesignStepScaffold(
       title: l10n.design,
@@ -1193,8 +1200,8 @@ class KanjiSuggestionErrorScreen extends StatelessWidget {
       children: [
         _DesignStateCard(
           icon: Icons.error_outline,
-          title: l10n.designSuggestionErrorTitle,
-          message: l10n.designSuggestionErrorMessage,
+          title: appError?.title(l10n) ?? l10n.designSuggestionErrorTitle,
+          message: appError?.message(l10n) ?? l10n.designSuggestionErrorMessage,
           primaryLabel: l10n.tryAgain,
           onPrimary: onRetry,
           secondaryLabel: l10n.back,

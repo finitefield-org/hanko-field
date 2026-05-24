@@ -275,9 +275,10 @@ class BottomNavigationShell extends StatefulWidget {
 }
 
 class _KanjiSuggestionFailure {
-  const _KanjiSuggestionFailure({required this.request});
+  const _KanjiSuggestionFailure({required this.request, required this.error});
 
   final KanjiCandidatesRequest request;
+  final Object error;
 }
 
 class _KanjiCandidateSelection {
@@ -291,9 +292,10 @@ class _KanjiCandidateSelection {
 }
 
 class _SealGenerationFailure {
-  const _SealGenerationFailure({required this.request});
+  const _SealGenerationFailure({required this.request, required this.error});
 
   final SealGenerationRequest request;
+  final Object error;
 }
 
 class _SealPreviewSelection {
@@ -858,7 +860,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
           stack.replaceTop(_kanjiSuggestionsPage(result));
         },
         onError: (error) {
-          stack.replaceTop(_kanjiSuggestionErrorPage(pageData));
+          stack.replaceTop(_kanjiSuggestionErrorPage(pageData, error));
         },
         onBack: stack.pop,
       );
@@ -918,7 +920,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             stack.replaceTop(_sealGenerationLimitPage(pageData));
             return;
           }
-          stack.replaceTop(_sealGenerationErrorPage(pageData));
+          stack.replaceTop(_sealGenerationErrorPage(pageData, error));
         },
         onBack: stack.pop,
       );
@@ -970,6 +972,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         pageData is _KanjiSuggestionFailure) {
       return KanjiSuggestionErrorScreen(
         request: pageData.request,
+        error: pageData.error,
         onRetry: () => stack.replaceTop(_kanjiLoadingPage(pageData.request)),
         onBack: stack.pop,
       );
@@ -979,6 +982,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         pageData is _SealGenerationFailure) {
       return SealGenerationErrorScreen(
         request: pageData.request,
+        error: pageData.error,
         onRetry: () {
           stack.replaceTop(
             _sealGenerationLoadingPage(pageData.request.nextAttempt()),
@@ -1287,19 +1291,25 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     );
   }
 
-  PageEntry _kanjiSuggestionErrorPage(KanjiCandidatesRequest request) {
+  PageEntry _kanjiSuggestionErrorPage(
+    KanjiCandidatesRequest request,
+    Object error,
+  ) {
     return PageEntry(
       key: _designKanjiErrorPageKey,
       name: '/design/kanji/error',
-      data: _KanjiSuggestionFailure(request: request),
+      data: _KanjiSuggestionFailure(request: request, error: error),
     );
   }
 
-  PageEntry _sealGenerationErrorPage(SealGenerationRequest request) {
+  PageEntry _sealGenerationErrorPage(
+    SealGenerationRequest request,
+    Object error,
+  ) {
     return PageEntry(
       key: _designSealGenerationErrorPageKey,
       name: '/design/seal/error',
-      data: _SealGenerationFailure(request: request),
+      data: _SealGenerationFailure(request: request, error: error),
     );
   }
 

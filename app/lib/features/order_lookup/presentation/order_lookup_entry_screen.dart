@@ -39,6 +39,7 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
   OrderLookupRequest? _lastRequest;
   OrderStatus? _lookupResult;
   String? _lookupEmail;
+  Object? _lookupError;
 
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
       _lookupRequestId++;
       _lookupResult = null;
       _lookupEmail = null;
+      _lookupError = null;
       _step = _OrderLookupStep.input;
     }
     _orderNoController.addListener(_handleInputChanged);
@@ -102,6 +104,9 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
       _lookupResult = null;
       _lookupEmail = null;
     }
+    if (_lookupError != null) {
+      _lookupError = null;
+    }
     if (_step != _OrderLookupStep.input) {
       _step = _OrderLookupStep.input;
     }
@@ -129,6 +134,7 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
     setState(() {
       _lookupResult = null;
       _lookupEmail = null;
+      _lookupError = null;
       _step = _OrderLookupStep.loading;
     });
     try {
@@ -143,6 +149,7 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
       setState(() {
         _lookupResult = result;
         _lookupEmail = request.email;
+        _lookupError = null;
         _step = _OrderLookupStep.input;
       });
     } on HankoApiException catch (error) {
@@ -152,17 +159,22 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
       setState(() {
         _lookupResult = null;
         _lookupEmail = null;
-        _step = _isLookupNotFoundError(error)
-            ? _OrderLookupStep.notFound
-            : _OrderLookupStep.error;
+        if (_isLookupNotFoundError(error)) {
+          _lookupError = null;
+          _step = _OrderLookupStep.notFound;
+        } else {
+          _lookupError = error;
+          _step = _OrderLookupStep.error;
+        }
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted || requestId != _lookupRequestId) {
         return;
       }
       setState(() {
         _lookupResult = null;
         _lookupEmail = null;
+        _lookupError = error;
         _step = _OrderLookupStep.error;
       });
     }
@@ -183,6 +195,7 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
     setState(() {
       _lookupResult = null;
       _lookupEmail = null;
+      _lookupError = null;
       _step = _OrderLookupStep.input;
     });
   }
@@ -247,7 +260,11 @@ class _OrderLookupEntryScreenState extends State<OrderLookupEntryScreen> {
         ),
         if (_step != _OrderLookupStep.input) ...[
           const SizedBox(height: 16),
-          _OrderLookupStateCard(step: _step, onRetry: _retryLookup),
+          _OrderLookupStateCard(
+            step: _step,
+            error: _lookupError,
+            onRetry: _retryLookup,
+          ),
         ],
       ],
     );
@@ -486,9 +503,14 @@ class _LookupDetailLine extends StatelessWidget {
 }
 
 class _OrderLookupStateCard extends StatelessWidget {
-  const _OrderLookupStateCard({required this.step, required this.onRetry});
+  const _OrderLookupStateCard({
+    required this.step,
+    required this.error,
+    required this.onRetry,
+  });
 
   final _OrderLookupStep step;
+  final Object? error;
   final VoidCallback onRetry;
 
   @override
@@ -505,9 +527,8 @@ class _OrderLookupStateCard extends StatelessWidget {
         actionLabel: l10n.tryAgain,
         onAction: onRetry,
       ),
-      _OrderLookupStep.error => HankoStateView.error(
-        title: l10n.orderLookupErrorTitle,
-        message: l10n.orderLookupErrorMessage,
+      _OrderLookupStep.error => HankoErrorStateView(
+        error: error,
         actionLabel: l10n.tryAgain,
         onAction: onRetry,
       ),
