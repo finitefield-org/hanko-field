@@ -398,6 +398,8 @@ class HankoLocalizations {
   String get orderCompleteLookupAction => _strings.orderCompleteLookupAction;
   String get orderCompleteBackToDesignAction =>
       _strings.orderCompleteBackToDesignAction;
+  String get emailSentNoticeTitle => _strings.emailSentNoticeTitle;
+  String get emailSentNoticeMessage => _strings.emailSentNoticeMessage;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -803,6 +805,8 @@ class _HankoStrings {
     required this.orderCompleteSummaryTitle,
     required this.orderCompleteLookupAction,
     required this.orderCompleteBackToDesignAction,
+    required this.emailSentNoticeTitle,
+    required this.emailSentNoticeMessage,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -1169,6 +1173,8 @@ class _HankoStrings {
   final String orderCompleteSummaryTitle;
   final String orderCompleteLookupAction;
   final String orderCompleteBackToDesignAction;
+  final String emailSentNoticeTitle;
+  final String emailSentNoticeMessage;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1605,6 +1611,9 @@ const _localizedValues = {
       orderCompleteSummaryTitle: 'Order summary',
       orderCompleteLookupAction: 'Open Order Lookup',
       orderCompleteBackToDesignAction: 'Back to Design',
+      emailSentNoticeTitle: 'Confirmation email sent',
+      emailSentNoticeMessage:
+          'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1985,6 +1994,9 @@ const _localizedValues = {
       orderCompleteSummaryTitle: '注文概要',
       orderCompleteLookupAction: '注文照会を開く',
       orderCompleteBackToDesignAction: 'Designへ戻る',
+      emailSentNoticeTitle: '確認メールを送信しました',
+      emailSentNoticeMessage:
+          '注文確認メールを注文時のメールアドレスへ送信しました。受信箱と迷惑メールフォルダをご確認ください。',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

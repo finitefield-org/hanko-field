@@ -1220,30 +1220,24 @@ class OrderCompleteScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: HankoTextStyles.body,
               ),
-              if (orderNo != null && orderNo.isNotEmpty) ...[
-                const SizedBox(height: HankoSpacing.md),
-                _OrderDetailLine(
-                  label: l10n.orderNo,
-                  value: orderNo,
-                  hasDivider: true,
-                ),
-              ],
+              const SizedBox(height: HankoSpacing.md),
               _OrderDetailLine(
                 label: l10n.orderCompleteStatusLabel,
                 value: l10n.orderCompleteStatusValue,
-                hasDivider: email.isNotEmpty,
+                hasDivider: false,
               ),
-              if (email.isNotEmpty)
-                _OrderDetailLine(
-                  label: l10n.email,
-                  value: email,
-                  hasDivider: false,
-                ),
             ],
           ),
         ),
         const SizedBox(height: HankoSpacing.md),
-        _OrderNotice(message: l10n.orderCompleteEmailMessage),
+        HankoEmailSentNotice(
+          title: l10n.emailSentNoticeTitle,
+          message: l10n.emailSentNoticeMessage,
+          orderNoLabel: l10n.orderNo,
+          emailLabel: l10n.email,
+          orderNo: orderNo,
+          email: email,
+        ),
         if (seal != null && stone != null) ...[
           const SizedBox(height: HankoSpacing.md),
           _CheckoutSectionCard(

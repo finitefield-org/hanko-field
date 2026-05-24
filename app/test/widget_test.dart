@@ -2498,9 +2498,10 @@ void main() {
     expect(find.text('HF-20260521-0001'), findsOneWidget);
     expect(find.text('Payment received'), findsOneWidget);
     expect(find.text('Order summary'), findsOneWidget);
+    expect(find.text('Confirmation email sent'), findsOneWidget);
     expect(
       find.text(
-        'Please check your confirmation email. Keep the order number for support and order lookup.',
+        'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
       ),
       findsOneWidget,
     );
@@ -2884,6 +2885,13 @@ void main() {
     expect(find.text('Order Status'), findsOneWidget);
     expect(
       find.text("Here's the latest update on your order."),
+      findsOneWidget,
+    );
+    expect(find.text('Confirmation email sent'), findsOneWidget);
+    expect(
+      find.text(
+        'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
+      ),
       findsOneWidget,
     );
     expect(find.text('HF-20260521-0001'), findsOneWidget);

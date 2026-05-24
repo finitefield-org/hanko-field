@@ -328,6 +328,13 @@ class OrderLookupResultScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: HankoSpacing.md),
+        HankoEmailSentNotice(
+          title: l10n.emailSentNoticeTitle,
+          message: l10n.emailSentNoticeMessage,
+          orderNoLabel: l10n.orderNo,
+          emailLabel: l10n.email,
+        ),
+        const SizedBox(height: HankoSpacing.md),
         _LookupSectionCard(
           icon: Icons.timeline_outlined,
           title: l10n.orderLookupProgressTitle,
