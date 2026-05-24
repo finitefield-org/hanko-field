@@ -2676,22 +2676,12 @@ impl FirestoreStore {
                 &self.parent,
                 &CommitRequest {
                     writes: vec![
-                        json!({
-                            "update": {
-                                "name": listing_doc_name,
-                                "fields": {
-                                    "status": fs_string("reserved"),
-                                    "version": fs_int(listing_snapshot.version + 1),
-                                    "updated_at": fs_timestamp(now),
-                                }
-                            },
-                            "updateMask": {
-                                "fieldPaths": ["status", "version", "updated_at"]
-                            },
-                            "currentDocument": {
-                                "updateTime": listing_update_time
-                            }
-                        }),
+                        reserve_stone_listing_write(
+                            &listing_doc_name,
+                            listing_snapshot.version + 1,
+                            &listing_update_time,
+                            now,
+                        ),
                         json!({
                             "update": {
                                 "name": format!("{}/orders/{}", self.parent, order_id),
@@ -2726,7 +2716,7 @@ impl FirestoreStore {
             .await;
 
         if let Err(err) = commit_result {
-            if is_conflict(&err) || is_precondition_failed(&err) {
+            if create_order_commit_conflicted(&err) {
                 if let Some(result) = self
                     .try_idempotent_replay(&client, &idempotency_doc_name, &request_hash)
                     .await?
@@ -6376,6 +6366,34 @@ fn is_precondition_failed(error: &FirebaseFirestoreError) -> bool {
     )
 }
 
+fn create_order_commit_conflicted(error: &FirebaseFirestoreError) -> bool {
+    is_conflict(error) || is_precondition_failed(error)
+}
+
+fn reserve_stone_listing_write(
+    listing_doc_name: &str,
+    next_version: i64,
+    listing_update_time: &str,
+    now: DateTime<Utc>,
+) -> JsonValue {
+    json!({
+        "update": {
+            "name": listing_doc_name,
+            "fields": {
+                "status": fs_string("reserved"),
+                "version": fs_int(next_version),
+                "updated_at": fs_timestamp(now),
+            }
+        },
+        "updateMask": {
+            "fieldPaths": ["status", "version", "updated_at"]
+        },
+        "currentDocument": {
+            "updateTime": listing_update_time
+        }
+    })
+}
+
 fn document_id(document: &Document) -> Option<String> {
     document
         .name
@@ -6726,6 +6744,59 @@ mod tests {
         assert!(stone_listing_is_orderable(true, " Published "));
         assert!(!stone_listing_is_orderable(true, "draft"));
         assert!(!stone_listing_is_orderable(false, "published"));
+    }
+
+    #[test]
+    fn m13_t06_reserved_and_sold_listings_are_not_orderable() {
+        assert!(!stone_listing_is_orderable(true, "reserved"));
+        assert!(!stone_listing_is_orderable(true, "sold"));
+    }
+
+    #[test]
+    fn m13_t06_reserve_listing_write_requires_update_time_precondition() {
+        let now = DateTime::parse_from_rfc3339("2026-05-21T12:34:56Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let listing_doc_name =
+            "projects/demo/databases/(default)/documents/stone_listings/stone_listing_001";
+
+        let write = reserve_stone_listing_write(listing_doc_name, 8, "2026-05-21T11:14:00Z", now);
+
+        assert_eq!(write["update"]["name"], listing_doc_name);
+        assert_eq!(
+            write["update"]["fields"]["status"]["stringValue"],
+            "reserved"
+        );
+        assert_eq!(write["update"]["fields"]["version"]["integerValue"], "8");
+        assert_eq!(write["update"]["fields"]["updated_at"], fs_timestamp(now));
+        assert_eq!(
+            write["updateMask"]["fieldPaths"],
+            json!(["status", "version", "updated_at"])
+        );
+        assert_eq!(
+            write["currentDocument"]["updateTime"],
+            "2026-05-21T11:14:00Z"
+        );
+    }
+
+    #[test]
+    fn m13_t06_create_order_conflict_statuses_are_inventory_races() {
+        let conflict = FirebaseFirestoreError::UnexpectedStatus {
+            status: StatusCode::CONFLICT,
+            body: "already exists".to_owned(),
+        };
+        let precondition_failed = FirebaseFirestoreError::UnexpectedStatus {
+            status: StatusCode::PRECONDITION_FAILED,
+            body: "stale update_time".to_owned(),
+        };
+        let server_error = FirebaseFirestoreError::UnexpectedStatus {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            body: "internal".to_owned(),
+        };
+
+        assert!(create_order_commit_conflicted(&conflict));
+        assert!(create_order_commit_conflicted(&precondition_failed));
+        assert!(!create_order_commit_conflicted(&server_error));
     }
 
     #[test]
