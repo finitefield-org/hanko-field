@@ -93,6 +93,10 @@ struct Order {
     seal_style_stroke_weight: String,
     seal_style_balance: String,
     seal_style_prompt_summary: String,
+    customer_confirmation_kanji_and_design: Option<bool>,
+    customer_confirmation_custom_made_policy: Option<bool>,
+    customer_confirmation_confirmed_at: Option<DateTime<Utc>>,
+    customer_confirmation_confirmed_seal_text: String,
     listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
@@ -662,6 +666,15 @@ struct OrderDetailView {
     has_seal_style_balance: bool,
     has_seal_style_prompt_summary: bool,
     has_ai_seal_metadata: bool,
+    customer_confirmation_kanji_and_design_label: String,
+    customer_confirmation_custom_made_policy_label: String,
+    customer_confirmation_confirmed_at: String,
+    customer_confirmation_confirmed_seal_text: String,
+    has_customer_confirmation_kanji_and_design: bool,
+    has_customer_confirmation_custom_made_policy: bool,
+    has_customer_confirmation_confirmed_at: bool,
+    has_customer_confirmation_confirmed_seal_text: bool,
+    has_customer_confirmation: bool,
     listing_label_ja: String,
     total: String,
     next_statuses: Vec<StatusOptionView>,
@@ -4078,6 +4091,23 @@ impl ServerState {
             || has_seal_style_stroke_weight
             || has_seal_style_balance
             || has_seal_style_prompt_summary;
+        let has_customer_confirmation_kanji_and_design =
+            order.customer_confirmation_kanji_and_design.is_some();
+        let has_customer_confirmation_custom_made_policy =
+            order.customer_confirmation_custom_made_policy.is_some();
+        let has_customer_confirmation_confirmed_at =
+            order.customer_confirmation_confirmed_at.is_some();
+        let customer_confirmation_confirmed_at = order
+            .customer_confirmation_confirmed_at
+            .as_ref()
+            .map(|value| format_datetime(value.to_owned()))
+            .unwrap_or_default();
+        let has_customer_confirmation_confirmed_seal_text =
+            !order.customer_confirmation_confirmed_seal_text.is_empty();
+        let has_customer_confirmation = has_customer_confirmation_kanji_and_design
+            || has_customer_confirmation_custom_made_policy
+            || has_customer_confirmation_confirmed_at
+            || has_customer_confirmation_confirmed_seal_text;
 
         Some(OrderDetailView {
             id: order.id.clone(),
@@ -4116,6 +4146,27 @@ impl ServerState {
             has_seal_style_balance,
             has_seal_style_prompt_summary,
             has_ai_seal_metadata,
+            customer_confirmation_kanji_and_design_label: confirmation_bool_label(
+                order
+                    .customer_confirmation_kanji_and_design
+                    .unwrap_or_default(),
+            )
+            .to_owned(),
+            customer_confirmation_custom_made_policy_label: confirmation_bool_label(
+                order
+                    .customer_confirmation_custom_made_policy
+                    .unwrap_or_default(),
+            )
+            .to_owned(),
+            customer_confirmation_confirmed_at,
+            customer_confirmation_confirmed_seal_text: order
+                .customer_confirmation_confirmed_seal_text
+                .clone(),
+            has_customer_confirmation_kanji_and_design,
+            has_customer_confirmation_custom_made_policy,
+            has_customer_confirmation_confirmed_at,
+            has_customer_confirmation_confirmed_seal_text,
+            has_customer_confirmation,
             listing_label_ja: order.listing_label_ja.clone(),
             total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
@@ -6021,6 +6072,22 @@ impl FirestoreAdminSource {
             seal_style_stroke_weight: read_string_field(&seal_style, "stroke_weight"),
             seal_style_balance: read_string_field(&seal_style, "balance"),
             seal_style_prompt_summary: read_string_field(&seal_style, "prompt_summary"),
+            customer_confirmation_kanji_and_design: read_bool_field(
+                &customer_confirmation,
+                "kanji_and_design",
+            ),
+            customer_confirmation_custom_made_policy: read_bool_field(
+                &customer_confirmation,
+                "custom_made_policy",
+            ),
+            customer_confirmation_confirmed_at: read_timestamp_field(
+                &customer_confirmation,
+                "confirmed_at",
+            ),
+            customer_confirmation_confirmed_seal_text: read_string_field(
+                &customer_confirmation,
+                "confirmed_seal_text",
+            ),
             listing_label_ja,
             total,
             created_at,
@@ -8967,6 +9034,10 @@ fn read_seal_preview_image_storage_path(seal: &BTreeMap<String, JsonValue>) -> S
     normalize_storage_path(&read_string_field(&preview_image, "storage_path"))
 }
 
+fn confirmation_bool_label(value: bool) -> &'static str {
+    if value { "確認済み" } else { "未確認" }
+}
+
 fn payment_status_label(status: &str) -> &str {
     match status {
         "unpaid" => "未払い",
@@ -9848,6 +9919,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: String::new(),
                 seal_style_balance: String::new(),
                 seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
@@ -9911,6 +9986,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: "standard".to_owned(),
                 seal_style_balance: "balanced".to_owned(),
                 seal_style_prompt_summary: "Latin initials with refined spacing".to_owned(),
+                customer_confirmation_kanji_and_design: Some(true),
+                customer_confirmation_custom_made_policy: Some(true),
+                customer_confirmation_confirmed_at: Some(now - chrono::Duration::hours(13)),
+                customer_confirmation_confirmed_seal_text: "JANE".to_owned(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
@@ -9964,6 +10043,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: String::new(),
                 seal_style_balance: String::new(),
                 seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
@@ -10045,6 +10128,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: "bold".to_owned(),
                 seal_style_balance: "dense".to_owned(),
                 seal_style_prompt_summary: "Classic kanji seal with dense balance".to_owned(),
+                customer_confirmation_kanji_and_design: Some(true),
+                customer_confirmation_custom_made_policy: Some(true),
+                customer_confirmation_confirmed_at: Some(now - chrono::Duration::hours(98)),
+                customer_confirmation_confirmed_seal_text: "加藤".to_owned(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
@@ -10098,6 +10185,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: String::new(),
                 seal_style_balance: String::new(),
                 seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
@@ -10141,6 +10232,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: "standard".to_owned(),
                 seal_style_balance: "airy".to_owned(),
                 seal_style_prompt_summary: "Soft kanji seal with open spacing".to_owned(),
+                customer_confirmation_kanji_and_design: Some(true),
+                customer_confirmation_custom_made_policy: Some(true),
+                customer_confirmation_confirmed_at: Some(now - chrono::Duration::hours(152)),
+                customer_confirmation_confirmed_seal_text: "鈴木".to_owned(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
@@ -10194,6 +10289,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_style_stroke_weight: String::new(),
                 seal_style_balance: String::new(),
                 seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
@@ -11122,6 +11221,50 @@ mod tests {
         assert!(html.contains("Balance"));
         assert!(html.contains("balanced"));
         assert!(html.contains("Latin initials with refined spacing"));
+    }
+
+    #[tokio::test]
+    async fn get_order_detail_exposes_customer_confirmation() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        assert!(detail.has_customer_confirmation);
+        assert!(detail.has_customer_confirmation_kanji_and_design);
+        assert!(detail.has_customer_confirmation_custom_made_policy);
+        assert!(detail.has_customer_confirmation_confirmed_at);
+        assert!(detail.has_customer_confirmation_confirmed_seal_text);
+        assert_eq!(
+            detail.customer_confirmation_kanji_and_design_label,
+            "確認済み"
+        );
+        assert_eq!(
+            detail.customer_confirmation_custom_made_policy_label,
+            "確認済み"
+        );
+        assert!(!detail.customer_confirmation_confirmed_at.is_empty());
+        assert_eq!(detail.customer_confirmation_confirmed_seal_text, "JANE");
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_includes_customer_confirmation() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        let html = render_order_detail(&detail).expect("order detail should render");
+
+        assert!(html.contains("顧客確認"));
+        assert!(html.contains("漢字/印影確認"));
+        assert!(html.contains("カスタムメイド規約"));
+        assert!(html.contains("確認時刻"));
+        assert!(html.contains("確認時彫刻文字"));
+        assert!(html.contains("確認済み"));
+        assert!(html.contains("JANE"));
     }
 
     #[test]
