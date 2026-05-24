@@ -409,6 +409,12 @@ struct StripeWebhookEvent {
     order_id: String,
 }
 
+#[derive(Debug)]
+struct StripeOrderWebhookMutation {
+    event_fields: BTreeMap<String, JsonValue>,
+    listing_status: Option<&'static str>,
+}
+
 type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Debug, thiserror::Error)]
@@ -3384,44 +3390,8 @@ impl FirestoreStore {
             Err(err) => return Err(StoreError::Internal(anyhow!(err))),
         };
 
-        let order_status = read_string_field(&order_doc.fields, "status");
-        let (payment_status, next_status, audit_event_type) =
-            stripe_transition(&normalized.event_type);
-
-        let mut payment = read_map_field(&order_doc.fields, "payment");
-        payment.insert(
-            "last_event_id".to_owned(),
-            fs_string(normalized.provider_event_id.clone()),
-        );
-        if !normalized.payment_intent_id.is_empty() {
-            payment.insert(
-                "intent_id".to_owned(),
-                fs_string(normalized.payment_intent_id.clone()),
-            );
-        }
-        if !payment_status.is_empty() {
-            payment.insert("status".to_owned(), fs_string(payment_status));
-        }
-        order_doc
-            .fields
-            .insert("payment".to_owned(), fs_map(payment));
-        order_doc
-            .fields
-            .insert("updated_at".to_owned(), fs_timestamp(now));
-
-        let mut after_status = order_status.clone();
-        if !next_status.is_empty()
-            && next_status != order_status
-            && can_transition(&order_status, next_status)
-        {
-            order_doc
-                .fields
-                .insert("status".to_owned(), fs_string(next_status));
-            order_doc
-                .fields
-                .insert("status_updated_at".to_owned(), fs_timestamp(now));
-            after_status = next_status.to_owned();
-        }
+        let mutation =
+            apply_stripe_webhook_to_order_fields(&mut order_doc.fields, &normalized, now);
 
         client
             .patch_document(
@@ -3432,33 +3402,7 @@ impl FirestoreStore {
             .await
             .map_err(|err| StoreError::Internal(anyhow!(err)))?;
 
-        let mut payload = btree_from_pairs(vec![
-            (
-                "provider_event_id",
-                fs_string(normalized.provider_event_id.clone()),
-            ),
-            ("event_type", fs_string(normalized.event_type.clone())),
-        ]);
-        if !normalized.payment_intent_id.is_empty() {
-            payload.insert(
-                "payment_intent_id".to_owned(),
-                fs_string(normalized.payment_intent_id.clone()),
-            );
-        }
-
-        let mut event_fields = btree_from_pairs(vec![
-            ("type", fs_string(audit_event_type)),
-            ("actor_type", fs_string("webhook")),
-            ("actor_id", fs_string("stripe")),
-            ("payload", fs_map(payload)),
-            ("created_at", fs_timestamp(now)),
-        ]);
-        if after_status != order_status {
-            event_fields.insert("before_status".to_owned(), fs_string(order_status));
-            event_fields.insert("after_status".to_owned(), fs_string(&after_status));
-        }
-
-        if let Some(listing_status) = stone_listing_status_after_order_status(&after_status) {
+        if let Some(listing_status) = mutation.listing_status {
             let listing = read_map_field(&order_doc.fields, "listing");
             let listing_key = read_string_field(&listing, "key");
             if !listing_key.is_empty() {
@@ -3473,7 +3417,7 @@ impl FirestoreStore {
                 "events",
                 &Document {
                     name: None,
-                    fields: event_fields,
+                    fields: mutation.event_fields,
                     ..Document::default()
                 },
                 &CreateDocumentOptions::default(),
@@ -5309,57 +5253,7 @@ async fn create_stripe_checkout_session(
         bail!("stripe client is not configured");
     }
 
-    let product_name = build_checkout_product_name(order);
-    let checkout_currency = stripe_checkout_currency(&order.currency);
-    let success_url = append_query_params(
-        &state.stripe_checkout.success_url,
-        &[
-            ("order_id", order.order_id.as_str()),
-            ("lang", order.order_locale.as_str()),
-        ],
-    );
-    let cancel_url = append_query_params(
-        &state.stripe_checkout.cancel_url,
-        &[
-            ("order_id", order.order_id.as_str()),
-            ("lang", order.order_locale.as_str()),
-        ],
-    );
-
-    let mut form = vec![
-        ("mode".to_owned(), "payment".to_owned()),
-        ("success_url".to_owned(), success_url),
-        ("cancel_url".to_owned(), cancel_url),
-        ("line_items[0][quantity]".to_owned(), "1".to_owned()),
-        (
-            "line_items[0][price_data][currency]".to_owned(),
-            checkout_currency,
-        ),
-        (
-            "line_items[0][price_data][unit_amount]".to_owned(),
-            order.total.to_string(),
-        ),
-        (
-            "line_items[0][price_data][product_data][name]".to_owned(),
-            product_name,
-        ),
-        ("metadata[order_id]".to_owned(), order.order_id.clone()),
-        (
-            "payment_intent_data[metadata][order_id]".to_owned(),
-            order.order_id.clone(),
-        ),
-        ("expand[0]".to_owned(), "payment_intent".to_owned()),
-    ];
-
-    if !customer_email.trim().is_empty() {
-        form.push((
-            "customer_email".to_owned(),
-            customer_email.trim().to_owned(),
-        ));
-    }
-    if let Some(shipping) = build_payment_intent_shipping(order) {
-        push_stripe_shipping_form_fields(&mut form, &shipping);
-    }
+    let form = build_stripe_checkout_session_form(&state.stripe_checkout, order, customer_email);
 
     let response = state
         .http_client
@@ -5419,6 +5313,68 @@ async fn create_stripe_checkout_session(
         checkout_url,
         payment_intent_id,
     })
+}
+
+fn build_stripe_checkout_session_form(
+    stripe_checkout: &StripeCheckoutConfig,
+    order: &OrderCheckoutContext,
+    customer_email: &str,
+) -> Vec<(String, String)> {
+    let product_name = build_checkout_product_name(order);
+    let checkout_currency = stripe_checkout_currency(&order.currency);
+    let success_url = append_query_params(
+        &stripe_checkout.success_url,
+        &[
+            ("checkout", "success"),
+            ("order_id", order.order_id.as_str()),
+            ("lang", order.order_locale.as_str()),
+        ],
+    );
+    let cancel_url = append_query_params(
+        &stripe_checkout.cancel_url,
+        &[
+            ("checkout", "cancel"),
+            ("order_id", order.order_id.as_str()),
+            ("lang", order.order_locale.as_str()),
+        ],
+    );
+
+    let mut form = vec![
+        ("mode".to_owned(), "payment".to_owned()),
+        ("success_url".to_owned(), success_url),
+        ("cancel_url".to_owned(), cancel_url),
+        ("line_items[0][quantity]".to_owned(), "1".to_owned()),
+        (
+            "line_items[0][price_data][currency]".to_owned(),
+            checkout_currency,
+        ),
+        (
+            "line_items[0][price_data][unit_amount]".to_owned(),
+            order.total.to_string(),
+        ),
+        (
+            "line_items[0][price_data][product_data][name]".to_owned(),
+            product_name,
+        ),
+        ("metadata[order_id]".to_owned(), order.order_id.clone()),
+        (
+            "payment_intent_data[metadata][order_id]".to_owned(),
+            order.order_id.clone(),
+        ),
+        ("expand[0]".to_owned(), "payment_intent".to_owned()),
+    ];
+
+    if !customer_email.trim().is_empty() {
+        form.push((
+            "customer_email".to_owned(),
+            customer_email.trim().to_owned(),
+        ));
+    }
+    if let Some(shipping) = build_payment_intent_shipping(order) {
+        push_stripe_shipping_form_fields(&mut form, &shipping);
+    }
+
+    form
 }
 
 fn push_stripe_shipping_form_fields(form: &mut Vec<(String, String)>, shipping: &JsonValue) {
@@ -6145,6 +6101,73 @@ fn normalize_webhook_event(event: StripeWebhookEvent) -> StripeWebhookEvent {
         event_type: event.event_type.trim().to_owned(),
         payment_intent_id: event.payment_intent_id.trim().to_owned(),
         order_id: event.order_id.trim().to_owned(),
+    }
+}
+
+fn apply_stripe_webhook_to_order_fields(
+    order_fields: &mut BTreeMap<String, JsonValue>,
+    normalized: &StripeWebhookEvent,
+    now: DateTime<Utc>,
+) -> StripeOrderWebhookMutation {
+    let order_status = read_string_field(order_fields, "status");
+    let (payment_status, next_status, audit_event_type) = stripe_transition(&normalized.event_type);
+
+    let mut payment = read_map_field(order_fields, "payment");
+    payment.insert(
+        "last_event_id".to_owned(),
+        fs_string(normalized.provider_event_id.clone()),
+    );
+    if !normalized.payment_intent_id.is_empty() {
+        payment.insert(
+            "intent_id".to_owned(),
+            fs_string(normalized.payment_intent_id.clone()),
+        );
+    }
+    if !payment_status.is_empty() {
+        payment.insert("status".to_owned(), fs_string(payment_status));
+    }
+    order_fields.insert("payment".to_owned(), fs_map(payment));
+    order_fields.insert("updated_at".to_owned(), fs_timestamp(now));
+
+    let mut after_status = order_status.clone();
+    if !next_status.is_empty()
+        && next_status != order_status
+        && can_transition(&order_status, next_status)
+    {
+        order_fields.insert("status".to_owned(), fs_string(next_status));
+        order_fields.insert("status_updated_at".to_owned(), fs_timestamp(now));
+        after_status = next_status.to_owned();
+    }
+
+    let mut payload = btree_from_pairs(vec![
+        (
+            "provider_event_id",
+            fs_string(normalized.provider_event_id.clone()),
+        ),
+        ("event_type", fs_string(normalized.event_type.clone())),
+    ]);
+    if !normalized.payment_intent_id.is_empty() {
+        payload.insert(
+            "payment_intent_id".to_owned(),
+            fs_string(normalized.payment_intent_id.clone()),
+        );
+    }
+
+    let mut event_fields = btree_from_pairs(vec![
+        ("type", fs_string(audit_event_type)),
+        ("actor_type", fs_string("webhook")),
+        ("actor_id", fs_string("stripe")),
+        ("payload", fs_map(payload)),
+        ("created_at", fs_timestamp(now)),
+    ]);
+    if after_status != order_status {
+        event_fields.insert("before_status".to_owned(), fs_string(order_status));
+        event_fields.insert("after_status".to_owned(), fs_string(&after_status));
+    }
+
+    StripeOrderWebhookMutation {
+        event_fields,
+        listing_status: stone_listing_status_after_order_status(&after_status),
     }
 }
 
@@ -6945,6 +6968,82 @@ mod tests {
 
         assert_eq!(listing_key, "jade");
         assert_eq!(listing_label, "翡翠");
+    }
+
+    fn order_checkout_context_fixture() -> OrderCheckoutContext {
+        OrderCheckoutContext {
+            order_id: "order_1".to_owned(),
+            order_locale: "en".to_owned(),
+            status: "pending_payment".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            listing_key: "stone_listing_001".to_owned(),
+            listing_label: "Rose Quartz".to_owned(),
+            seal_shape: "round".to_owned(),
+            shipping_country_code: "US".to_owned(),
+            shipping_recipient_name: "Michael Smith".to_owned(),
+            shipping_phone: "+1-000-000-0000".to_owned(),
+            shipping_postal_code: "10001".to_owned(),
+            shipping_state: "NY".to_owned(),
+            shipping_city: "New York".to_owned(),
+            shipping_address_line1: "123 Example Street".to_owned(),
+            shipping_address_line2: "Apt 1".to_owned(),
+            total: 18600,
+            currency: "JPY".to_owned(),
+            contact_email: "customer@example.com".to_owned(),
+        }
+    }
+
+    fn stripe_form_value<'a>(form: &'a [(String, String)], key: &str) -> &'a str {
+        form.iter()
+            .find(|(form_key, _)| form_key == key)
+            .map(|(_, value)| value.as_str())
+            .unwrap_or_else(|| panic!("missing Stripe form key {key}"))
+    }
+
+    #[test]
+    fn m13_t05_checkout_session_form_carries_return_urls_and_order_metadata() {
+        let order = order_checkout_context_fixture();
+        let checkout = StripeCheckoutConfig {
+            success_url: DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL.to_owned(),
+            cancel_url: DEFAULT_STRIPE_CHECKOUT_CANCEL_URL.to_owned(),
+        };
+
+        let form = build_stripe_checkout_session_form(&checkout, &order, " customer@example.com ");
+
+        assert_eq!(stripe_form_value(&form, "mode"), "payment");
+        assert_eq!(
+            stripe_form_value(&form, "success_url"),
+            "http://127.0.0.1:3052/payment/success?session_id={CHECKOUT_SESSION_ID}&checkout=success&order_id=order_1&lang=en"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "cancel_url"),
+            "http://127.0.0.1:3052/payment/failure?checkout=cancel&order_id=order_1&lang=en"
+        );
+        assert_eq!(stripe_form_value(&form, "metadata[order_id]"), "order_1");
+        assert_eq!(
+            stripe_form_value(&form, "payment_intent_data[metadata][order_id]"),
+            "order_1"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "customer_email"),
+            "customer@example.com"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "line_items[0][price_data][currency]"),
+            "jpy"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "line_items[0][price_data][unit_amount]"),
+            "18600"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "line_items[0][price_data][product_data][name]"),
+            "Stone seal (Rose Quartz; circle)"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "payment_intent_data[shipping][address][country]"),
+            "US"
+        );
     }
 
     #[test]
@@ -7906,6 +8005,171 @@ mod tests {
 
         assert_eq!(payload["error"]["code"], "order_not_found");
         assert_eq!(payload["error"]["message"], "order not found");
+    }
+
+    fn stripe_webhook_order_fields(
+        status: &str,
+        payment_status: &str,
+    ) -> BTreeMap<String, JsonValue> {
+        btree_from_pairs(vec![
+            ("status", fs_string(status)),
+            (
+                "payment",
+                fs_map(btree_from_pairs(vec![(
+                    "status",
+                    fs_string(payment_status),
+                )])),
+            ),
+            (
+                "listing",
+                fs_map(btree_from_pairs(vec![(
+                    "key",
+                    fs_string("stone_listing_001"),
+                )])),
+            ),
+        ])
+    }
+
+    fn stripe_webhook_event_fixture(event_type: &str) -> StripeWebhookEvent {
+        StripeWebhookEvent {
+            provider_event_id: format!("evt_{}", event_type.replace('.', "_")),
+            event_type: event_type.to_owned(),
+            payment_intent_id: "pi_test_001".to_owned(),
+            order_id: "order_001".to_owned(),
+        }
+    }
+
+    #[test]
+    fn m13_t05_webhook_mutation_reflects_success_cancel_failure_and_refund() {
+        let now = DateTime::parse_from_rfc3339("2026-05-21T11:15:00Z")
+            .expect("fixture timestamp")
+            .with_timezone(&Utc);
+
+        for (
+            event_type,
+            current_status,
+            current_payment_status,
+            expected_status,
+            expected_payment_status,
+            expected_event_type,
+            expected_listing_status,
+        ) in [
+            (
+                "payment_intent.succeeded",
+                "pending_payment",
+                "unpaid",
+                "paid",
+                "paid",
+                "payment_paid",
+                Some("sold"),
+            ),
+            (
+                "payment_intent.canceled",
+                "pending_payment",
+                "unpaid",
+                "canceled",
+                "failed",
+                "payment_failed",
+                Some("published"),
+            ),
+            (
+                "payment_intent.payment_failed",
+                "pending_payment",
+                "unpaid",
+                "canceled",
+                "failed",
+                "payment_failed",
+                Some("published"),
+            ),
+            (
+                "checkout.session.expired",
+                "pending_payment",
+                "unpaid",
+                "canceled",
+                "failed",
+                "payment_failed",
+                Some("published"),
+            ),
+            (
+                "charge.refunded",
+                "paid",
+                "paid",
+                "refunded",
+                "refunded",
+                "payment_refunded",
+                None,
+            ),
+        ] {
+            let mut fields = stripe_webhook_order_fields(current_status, current_payment_status);
+            let event = stripe_webhook_event_fixture(event_type);
+
+            let mutation = apply_stripe_webhook_to_order_fields(&mut fields, &event, now);
+
+            let payment = read_map_field(&fields, "payment");
+            assert_eq!(read_string_field(&fields, "status"), expected_status);
+            assert_eq!(
+                read_string_field(&payment, "status"),
+                expected_payment_status
+            );
+            assert_eq!(read_string_field(&payment, "intent_id"), "pi_test_001");
+            assert_eq!(
+                read_string_field(&payment, "last_event_id"),
+                format!("evt_{}", event_type.replace('.', "_"))
+            );
+            assert_eq!(read_timestamp_field(&fields, "updated_at"), Some(now));
+            assert_eq!(
+                read_timestamp_field(&fields, "status_updated_at"),
+                Some(now)
+            );
+
+            assert_eq!(
+                read_string_field(&mutation.event_fields, "type"),
+                expected_event_type
+            );
+            assert_eq!(
+                read_string_field(&mutation.event_fields, "before_status"),
+                current_status
+            );
+            assert_eq!(
+                read_string_field(&mutation.event_fields, "after_status"),
+                expected_status
+            );
+            let payload = read_map_field(&mutation.event_fields, "payload");
+            assert_eq!(read_string_field(&payload, "event_type"), event_type);
+            assert_eq!(
+                read_string_field(&payload, "payment_intent_id"),
+                "pi_test_001"
+            );
+            assert_eq!(mutation.listing_status, expected_listing_status);
+        }
+    }
+
+    #[test]
+    fn m13_t05_parse_checkout_session_completed_keeps_order_metadata_for_webhook() {
+        let payload = json!({
+            "id": "evt_checkout_completed",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_test_001",
+                    "payment_intent": "pi_test_001",
+                    "metadata": {
+                        "order_id": "order_001"
+                    }
+                }
+            }
+        });
+
+        let event = parse_stripe_event(payload).expect("checkout session event must parse");
+
+        assert_eq!(event.provider_event_id, "evt_checkout_completed");
+        assert_eq!(event.event_type, "checkout.session.completed");
+        assert_eq!(event.payment_intent_id, "pi_test_001");
+        assert_eq!(event.order_id, "order_001");
+        assert_eq!(
+            stripe_transition(&event.event_type),
+            ("", "", "payment_event_recorded")
+        );
     }
 
     #[test]

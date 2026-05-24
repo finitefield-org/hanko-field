@@ -22,6 +22,15 @@ void main() {
     expect(result?.orderId, 'ord_002');
   });
 
+  test('uses checkout query to distinguish Stripe cancel from failure path', () {
+    final result = parseCheckoutReturnRoute(
+      'https://finitefield.org/payment/failure?checkout=cancel&order_id=ord_004',
+    );
+
+    expect(result?.outcome, CheckoutReturnOutcome.canceled);
+    expect(result?.orderId, 'ord_004');
+  });
+
   test('parses checkout failure returns', () {
     final result = parseCheckoutReturnRoute(
       'hankofield://checkout/failed?order_id=ord_003&checkout_session_id=cs_test_003',
