@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/api/core_api.dart';
+import '../core/errors/core_errors.dart';
 import '../features/common/common.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
@@ -93,7 +94,8 @@ class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
   }
 
   bool _publishCheckoutReturnRoute(String route) {
-    if (parseCheckoutReturnRoute(route) == null) {
+    if (parseCheckoutReturnRoute(route) == null &&
+        !isMalformedCheckoutReturnRoute(route)) {
       return false;
     }
     _checkoutRouteNotifier.value = route;
@@ -305,6 +307,18 @@ class _SealPreviewSelection {
   final SealDesignVariant variant;
 }
 
+class _SealSaveFailure {
+  const _SealSaveFailure({
+    required this.result,
+    required this.variant,
+    required this.error,
+  });
+
+  final SealGenerationResult result;
+  final SealDesignVariant variant;
+  final Object error;
+}
+
 class _StoneImageGallerySelection {
   const _StoneImageGallerySelection({
     required this.listing,
@@ -344,6 +358,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   static const _stripeCheckoutTransitionPage = PageEntry(
     key: 'CHK-009-stripe-checkout-transition',
     name: '/checkout/stripe',
+  );
+  static const _checkoutDeepLinkErrorPage = PageEntry(
+    key: 'ERR-006-checkout-deep-link-error',
+    name: '/checkout/deep-link-error',
   );
   static const _stripeCheckoutCanceledPage = PageEntry(
     key: 'CHK-012-payment-canceled',
@@ -417,6 +435,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
   static const _designSealGenerationErrorPageKey =
       'DES-012-seal-generation-error';
+  static const _designSealSaveErrorPageKey = 'ERR-005-seal-save-error';
   static const _designUnsupportedKanjiPageKey =
       'DES-014-unsupported-kanji-result';
   static const _designSealGenerationLimitPageKey =
@@ -448,6 +467,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   var _paymentStatusStep = PaymentStatusStep.checking;
   OrderStatus? _paymentStatus;
   Object? _paymentStatusError;
+  Object? _checkoutDeepLinkError;
   int _paymentStatusRequestId = 0;
   String? _lastHandledCheckoutRoute;
   final _savingLocalSealKeys = <String>{};
@@ -538,6 +558,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             page.key == _stripeCheckoutCanceledPage.key ||
             page.key == _stripeCheckoutFailedPage.key) {
           return _buildStripeCheckoutTransitionPage();
+        }
+        if (page.key == _checkoutDeepLinkErrorPage.key) {
+          return _buildCheckoutDeepLinkErrorPage();
         }
         if (page.key == _checkoutProcessingPage.key) {
           return _buildCheckoutProcessingPage();
@@ -695,6 +718,25 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             returnResult: _checkoutReturnResult,
             error: _stripeCheckoutLaunchError,
             onBack: isOpening ? null : _closeTopPage,
+            onOpenCheckout: canOpenCheckout
+                ? () => unawaited(_openStripeCheckout(_checkoutSession!))
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckoutDeepLinkErrorPage() {
+    final canOpenCheckout = _checkoutSession != null;
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: CheckoutDeepLinkErrorScreen(
+            error: _checkoutDeepLinkError,
+            onBack: _closeTopPage,
             onOpenCheckout: canOpenCheckout
                 ? () => unawaited(_openStripeCheckout(_checkoutSession!))
                 : null,
@@ -968,6 +1010,26 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       );
     }
 
+    if (page.key == _designSealSaveErrorPageKey &&
+        pageData is _SealSaveFailure) {
+      return SealSaveErrorScreen(
+        result: pageData.result,
+        variant: pageData.variant,
+        error: pageData.error,
+        onRetry: () {
+          unawaited(
+            _saveLocalSealDesign(
+              result: pageData.result,
+              variant: pageData.variant,
+              stack: stack,
+              replaceTopOnComplete: true,
+            ),
+          );
+        },
+        onBack: stack.pop,
+      );
+    }
+
     if (page.key == _designKanjiErrorPageKey &&
         pageData is _KanjiSuggestionFailure) {
       return KanjiSuggestionErrorScreen(
@@ -1103,6 +1165,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     required SealGenerationResult result,
     required SealDesignVariant variant,
     required HankoTabStackController stack,
+    bool replaceTopOnComplete = false,
   }) async {
     final saveKey = '${result.requestId}:${variant.id}';
     if (_savingLocalSealKeys.contains(saveKey)) {
@@ -1117,11 +1180,13 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         _savingLocalSealKeys.remove(saveKey);
         return;
       }
-      setState(() {
-        _localSealDesignsLoaded = true;
-        _localSealDesignsLoadError = error;
-      });
       _savingLocalSealKeys.remove(saveKey);
+      final errorPage = _sealSaveErrorPage(result, variant, error);
+      if (replaceTopOnComplete) {
+        stack.replaceTop(errorPage);
+      } else {
+        stack.push(errorPage);
+      }
       return;
     }
     _savingLocalSealKeys.remove(saveKey);
@@ -1137,7 +1202,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _localSealDesignsLoaded = true;
       _localSealDesignsLoadError = null;
     });
-    stack.push(_sealSaveConfirmationPage(result, variant));
+    final confirmationPage = _sealSaveConfirmationPage(result, variant);
+    if (replaceTopOnComplete) {
+      stack.replaceTop(confirmationPage);
+    } else {
+      stack.push(confirmationPage);
+    }
   }
 
   void _chooseLocalSealForOrder(LocalSealDesign design) {
@@ -1291,6 +1361,18 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     );
   }
 
+  PageEntry _sealSaveErrorPage(
+    SealGenerationResult result,
+    SealDesignVariant variant,
+    Object error,
+  ) {
+    return PageEntry(
+      key: _designSealSaveErrorPageKey,
+      name: '/design/seal/save-error',
+      data: _SealSaveFailure(result: result, variant: variant, error: error),
+    );
+  }
+
   PageEntry _kanjiSuggestionErrorPage(
     KanjiCandidatesRequest request,
     Object error,
@@ -1430,6 +1512,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _checkoutSession = null;
       _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
       _stripeCheckoutLaunchError = null;
+      _checkoutDeepLinkError = null;
       _checkoutReturnResult = null;
       _paymentStatusStep = PaymentStatusStep.checking;
       _paymentStatus = null;
@@ -1494,6 +1577,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     setState(() {
       _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
       _stripeCheckoutLaunchError = null;
+      _checkoutDeepLinkError = null;
       _checkoutReturnResult = null;
       _paymentStatusStep = PaymentStatusStep.checking;
       _paymentStatus = null;
@@ -1534,6 +1618,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     }
     final result = parseCheckoutReturnRoute(route);
     if (result == null) {
+      if (isMalformedCheckoutReturnRoute(route)) {
+        _lastHandledCheckoutRoute = route;
+        if (!mounted) {
+          return true;
+        }
+        _showCheckoutDeepLinkError(HankoDeepLinkException(route));
+        return true;
+      }
       return false;
     }
     _lastHandledCheckoutRoute = route;
@@ -1547,6 +1639,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     setState(() {
       _checkoutReturnResult = result;
       _stripeCheckoutLaunchError = null;
+      _checkoutDeepLinkError = null;
       _stripeCheckoutStep = StripeCheckoutExternalStep.returned;
       _paymentStatusRequestId++;
       _pages = [
@@ -1567,6 +1660,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _paymentStatusRequestId = requestId;
       _checkoutReturnResult = result;
       _stripeCheckoutLaunchError = null;
+      _checkoutDeepLinkError = null;
       _stripeCheckoutStep = StripeCheckoutExternalStep.returned;
       _paymentStatusStep = PaymentStatusStep.checking;
       _paymentStatus = null;
@@ -1574,6 +1668,18 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _pages = const [_shellPage, _paymentStatusPage];
     });
     unawaited(_verifyPaymentStatus(result, requestId));
+  }
+
+  void _showCheckoutDeepLinkError(Object error) {
+    setState(() {
+      _checkoutDeepLinkError = error;
+      _checkoutReturnResult = null;
+      _stripeCheckoutLaunchError = null;
+      _paymentStatusRequestId++;
+      _paymentStatusStep = PaymentStatusStep.failed;
+      _paymentStatusError = error;
+      _pages = const [_shellPage, _checkoutDeepLinkErrorPage];
+    });
   }
 
   Future<void> _verifyPaymentStatus(
@@ -1586,10 +1692,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       if (!mounted || _paymentStatusRequestId != requestId) {
         return;
       }
-      setState(() {
-        _paymentStatusStep = PaymentStatusStep.failed;
-        _paymentStatusError = StateError('checkout return is missing order_id');
-      });
+      _showCheckoutDeepLinkError(
+        HankoDeepLinkException(
+          result.sourceUri.toString(),
+          StateError('checkout return is missing order_id'),
+        ),
+      );
       return;
     }
 

@@ -4,7 +4,29 @@ import 'dart:io';
 import '../../app/localization/app_localization.dart';
 import '../api/core_api.dart';
 
-enum HankoAppErrorKind { network, server, generic }
+enum HankoAppErrorKind { network, server, storage, deepLink, generic }
+
+class HankoStorageException implements Exception {
+  const HankoStorageException([this.cause]);
+
+  final Object? cause;
+
+  @override
+  String toString() =>
+      cause == null ? 'HankoStorageException' : 'HankoStorageException: $cause';
+}
+
+class HankoDeepLinkException implements Exception {
+  const HankoDeepLinkException(this.route, [this.cause]);
+
+  final String route;
+  final Object? cause;
+
+  @override
+  String toString() => cause == null
+      ? 'HankoDeepLinkException: $route'
+      : 'HankoDeepLinkException: $route ($cause)';
+}
 
 class HankoAppError {
   const HankoAppError({
@@ -14,9 +36,23 @@ class HankoAppError {
     this.cause,
   });
 
+  const HankoAppError.storage({Object? cause})
+    : this(kind: HankoAppErrorKind.storage, cause: cause);
+
+  const HankoAppError.deepLink({Object? cause})
+    : this(kind: HankoAppErrorKind.deepLink, cause: cause);
+
   factory HankoAppError.fromObject(Object? error) {
     if (error is HankoAppError) {
       return error;
+    }
+
+    if (error is HankoStorageException) {
+      return HankoAppError(kind: HankoAppErrorKind.storage, cause: error);
+    }
+
+    if (error is HankoDeepLinkException) {
+      return HankoAppError(kind: HankoAppErrorKind.deepLink, cause: error);
     }
 
     if (error is HankoApiException) {
@@ -51,6 +87,10 @@ class HankoAppError {
       return HankoAppError(kind: HankoAppErrorKind.network, cause: error);
     }
 
+    if (error is FileSystemException) {
+      return HankoAppError(kind: HankoAppErrorKind.storage, cause: error);
+    }
+
     return HankoAppError(kind: HankoAppErrorKind.generic, cause: error);
   }
 
@@ -63,6 +103,8 @@ class HankoAppError {
     return switch (kind) {
       HankoAppErrorKind.network => l10n.commonNetworkErrorTitle,
       HankoAppErrorKind.server => l10n.commonServerErrorTitle,
+      HankoAppErrorKind.storage => l10n.storageErrorTitle,
+      HankoAppErrorKind.deepLink => l10n.deepLinkErrorTitle,
       HankoAppErrorKind.generic => l10n.commonGenericErrorTitle,
     };
   }
@@ -71,6 +113,8 @@ class HankoAppError {
     return switch (kind) {
       HankoAppErrorKind.network => l10n.commonNetworkErrorMessage,
       HankoAppErrorKind.server => l10n.commonServerErrorMessage,
+      HankoAppErrorKind.storage => l10n.storageErrorMessage,
+      HankoAppErrorKind.deepLink => l10n.deepLinkErrorMessage,
       HankoAppErrorKind.generic => l10n.commonGenericErrorMessage,
     };
   }

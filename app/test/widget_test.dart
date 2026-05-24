@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -430,6 +431,42 @@ void main() {
     expect(find.byType(DesignHomeScreen), findsOneWidget);
     expect(find.text('Start Designing'), findsOneWidget);
 
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M12-T05 shows storage save errors in the design flow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      generateSealDesigns: (request) async =>
+          _sealGenerationResult(request: request),
+      localSealDesignRepository: _FailingSaveLocalSealDesignRepository(),
+    );
+    await tester.pumpAndSettle();
+
+    await _openGeneratedSealPreview(tester);
+    expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Save Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Save Seal'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealSaveErrorScreen), findsOneWidget);
+    expect(find.text("Couldn't Save Seal"), findsOneWidget);
+    expect(
+      find.text(
+        "The seal image couldn't be saved on this device. Check storage permissions and available space, then try again.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Try Again'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -2357,6 +2394,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M12-T05 shows deep link errors for invalid checkout returns', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var didFetchOrderStatus = false;
+
+    await pumpLaunchedApp(
+      tester,
+      initialCheckoutRoute:
+          'hankofield://checkout/success?session_id=cs_test_001&lang=en',
+      fetchOrderStatus: (orderId) async {
+        didFetchOrderStatus = true;
+        return _successfulFetchOrderStatus(orderId);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    expect(didFetchOrderStatus, isFalse);
+    expect(find.byType(CheckoutDeepLinkErrorScreen), findsOneWidget);
+    expect(find.text('Checkout Return Link Error'), findsOneWidget);
+    expect(
+      find.text(
+        "The Stripe Checkout return link couldn't be processed. Please open Checkout again or contact support if payment may have completed.",
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('M09-T09 confirms paid order status after Stripe return', (
     tester,
   ) async {
@@ -3531,6 +3601,58 @@ Future<OrderStatus> _successfulLookupOrder(OrderLookupRequest request) async {
     listingId: 'stone_listing_001',
     listingTitle: 'Soft Pink Rose Quartz Seal Stone',
   );
+}
+
+class _FailingSaveLocalSealDesignRepository
+    implements LocalSealDesignRepository {
+  @override
+  Future<List<LocalSealDesign>> listLocalSealDesigns() async => const [];
+
+  @override
+  Future<LocalSealDesign?> getLocalSealDesign(String id) async => null;
+
+  @override
+  Future<void> saveLocalSealDesign(LocalSealDesign design) async {
+    throw const FileSystemException('permission denied');
+  }
+
+  @override
+  Future<void> deleteLocalSealDesign(String id) async {}
+}
+
+Future<void> _openGeneratedSealPreview(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Start Designing'));
+  await tester.pump();
+  await tester.tap(find.text('Start Designing'));
+  await tester.pumpAndSettle();
+
+  await tester.enterText(find.byType(TextFormField).first, 'Michael Smith');
+  await tester.pump();
+  await tester.ensureVisible(find.text('Suggest Kanji'));
+  await tester.pump();
+  await tester.tap(find.text('Suggest Kanji'));
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.text('美空'));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.text('Select Kanji'));
+  await tester.pump();
+  await tester.tap(find.text('Select Kanji'));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(find.text('Confirm Style'));
+  await tester.pump();
+  await tester.tap(find.text('Confirm Style'));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.text('Generate Seal'));
+  await tester.pump();
+  await tester.tap(find.text('Generate Seal'));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(find.text('Soft spacing'));
+  await tester.pump();
+  await tester.tap(find.text('Soft spacing'));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _completeCheckoutConfirmationFromSavedSeal(

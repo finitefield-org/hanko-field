@@ -429,6 +429,18 @@ void main() {
     );
     expect(
       HankoAppError.fromObject(
+        const FileSystemException('permission denied'),
+      ).kind,
+      HankoAppErrorKind.storage,
+    );
+    expect(
+      HankoAppError.fromObject(
+        const HankoDeepLinkException('hankofield://checkout/success'),
+      ).kind,
+      HankoAppErrorKind.deepLink,
+    );
+    expect(
+      HankoAppError.fromObject(
         const HankoApiException(
           statusCode: 503,
           code: 'internal',

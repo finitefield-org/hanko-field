@@ -95,6 +95,10 @@ class HankoLocalizations {
   String get commonNetworkErrorMessage => _strings.commonNetworkErrorMessage;
   String get commonServerErrorTitle => _strings.commonServerErrorTitle;
   String get commonServerErrorMessage => _strings.commonServerErrorMessage;
+  String get storageErrorTitle => _strings.storageErrorTitle;
+  String get storageErrorMessage => _strings.storageErrorMessage;
+  String get deepLinkErrorTitle => _strings.deepLinkErrorTitle;
+  String get deepLinkErrorMessage => _strings.deepLinkErrorMessage;
   String get commonGenericErrorTitle => _strings.commonGenericErrorTitle;
   String get commonGenericErrorMessage => _strings.commonGenericErrorMessage;
   String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
@@ -571,6 +575,10 @@ class _HankoStrings {
     required this.commonNetworkErrorMessage,
     required this.commonServerErrorTitle,
     required this.commonServerErrorMessage,
+    required this.storageErrorTitle,
+    required this.storageErrorMessage,
+    required this.deepLinkErrorTitle,
+    required this.deepLinkErrorMessage,
     required this.commonGenericErrorTitle,
     required this.commonGenericErrorMessage,
     required this.kanjiSuggestionsTitle,
@@ -954,6 +962,10 @@ class _HankoStrings {
   final String commonNetworkErrorMessage;
   final String commonServerErrorTitle;
   final String commonServerErrorMessage;
+  final String storageErrorTitle;
+  final String storageErrorMessage;
+  final String deepLinkErrorTitle;
+  final String deepLinkErrorMessage;
   final String commonGenericErrorTitle;
   final String commonGenericErrorMessage;
   final String kanjiSuggestionsTitle;
@@ -1355,6 +1367,12 @@ const _localizedValues = {
       commonServerErrorTitle: 'Server Error',
       commonServerErrorMessage:
           "We're experiencing a temporary issue on our end. Please wait a moment and try again.",
+      storageErrorTitle: "Couldn't Save Seal",
+      storageErrorMessage:
+          "The seal image couldn't be saved on this device. Check storage permissions and available space, then try again.",
+      deepLinkErrorTitle: 'Checkout Return Link Error',
+      deepLinkErrorMessage:
+          "The Stripe Checkout return link couldn't be processed. Please open Checkout again or contact support if payment may have completed.",
       commonGenericErrorTitle: 'Something Went Wrong',
       commonGenericErrorMessage:
           'An unexpected error occurred. Please try again in a few moments.',
@@ -1805,6 +1823,12 @@ const _localizedValues = {
       commonNetworkErrorMessage: 'サーバーに接続できません。通信環境を確認して、もう一度お試しください。',
       commonServerErrorTitle: 'サーバーエラー',
       commonServerErrorMessage: '一時的な問題が発生しています。しばらく待ってからもう一度お試しください。',
+      storageErrorTitle: '印影を保存できませんでした',
+      storageErrorMessage:
+          'この端末に印影画像を保存できませんでした。ストレージ権限と空き容量を確認して、もう一度お試しください。',
+      deepLinkErrorTitle: 'Checkout戻りURLを処理できませんでした',
+      deepLinkErrorMessage:
+          'Stripe Checkoutからの戻りURLを処理できませんでした。もう一度Checkoutを開くか、決済済みの可能性がある場合はお問い合わせください。',
       commonGenericErrorTitle: '問題が発生しました',
       commonGenericErrorMessage: '予期しないエラーが発生しました。時間をおいてもう一度お試しください。',
       kanjiSuggestionsTitle: '漢字候補',

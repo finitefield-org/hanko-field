@@ -36,4 +36,14 @@ void main() {
     expect(parseCheckoutReturnRoute('/design'), isNull);
     expect(parseCheckoutReturnRoute('/design?checkout=success'), isNull);
   });
+
+  test('detects malformed checkout return routes', () {
+    expect(
+      isMalformedCheckoutReturnRoute(
+        'hankofield://checkout/unknown?session_id=cs_test_001',
+      ),
+      isTrue,
+    );
+    expect(isMalformedCheckoutReturnRoute('/design?checkout=success'), isFalse);
+  });
 }

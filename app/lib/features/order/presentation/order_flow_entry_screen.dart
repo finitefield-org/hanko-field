@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../core/errors/core_errors.dart';
 import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../../order_lookup/domain/order_lookup_models.dart';
@@ -1060,6 +1061,40 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
           const SizedBox(height: HankoSpacing.md),
           _OrderPricingCard(summary: _OrderPricingSummary.fromDraft(draft)),
         ],
+      ],
+    );
+  }
+}
+
+class CheckoutDeepLinkErrorScreen extends StatelessWidget {
+  const CheckoutDeepLinkErrorScreen({
+    super.key,
+    this.error,
+    this.onBack,
+    this.onOpenCheckout,
+  });
+
+  final Object? error;
+  final VoidCallback? onBack;
+  final VoidCallback? onOpenCheckout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _OrderScreenFrame(
+      title: l10n.stripeCheckoutTitle,
+      onBack: onBack,
+      children: [
+        HankoErrorStateView(
+          appError: HankoAppError.deepLink(cause: error),
+          actionLabel: onOpenCheckout == null
+              ? null
+              : l10n.stripeCheckoutRetryAction,
+          onAction: onOpenCheckout,
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(message: l10n.stripeCheckoutSecureNote),
       ],
     );
   }

@@ -28,6 +28,24 @@ CheckoutReturnResult? parseCheckoutReturnRoute(String route) {
   return parseCheckoutReturnUri(uri);
 }
 
+bool isMalformedCheckoutReturnRoute(String route) {
+  final trimmed = route.trim();
+  if (trimmed.isEmpty || trimmed == '/') {
+    return false;
+  }
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null) {
+    return false;
+  }
+
+  final segments = _checkoutReturnSegments(uri);
+  if (!_hasCheckoutReturnNamespace(segments)) {
+    return false;
+  }
+
+  return _checkoutReturnOutcome(uri) == null;
+}
+
 CheckoutReturnResult? parseCheckoutReturnUri(Uri uri) {
   final outcome = _checkoutReturnOutcome(uri);
   if (outcome == null) {

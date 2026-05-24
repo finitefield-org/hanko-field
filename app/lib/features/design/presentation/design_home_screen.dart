@@ -1098,6 +1098,42 @@ class SealSaveConfirmationScreen extends StatelessWidget {
   }
 }
 
+class SealSaveErrorScreen extends StatelessWidget {
+  const SealSaveErrorScreen({
+    super.key,
+    required this.result,
+    required this.variant,
+    required this.error,
+    required this.onRetry,
+    required this.onBack,
+  });
+
+  final SealGenerationResult result;
+  final SealDesignVariant variant;
+  final Object error;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.design,
+      onBack: onBack,
+      children: [
+        HankoErrorStateView(
+          appError: HankoAppError.storage(cause: error),
+          actionLabel: l10n.tryAgain,
+          onAction: onRetry,
+        ),
+        const SizedBox(height: 18),
+        _SavedSealSummaryCard(result: result, variant: variant),
+      ],
+    );
+  }
+}
+
 class SealGenerationErrorScreen extends StatelessWidget {
   const SealGenerationErrorScreen({
     super.key,
