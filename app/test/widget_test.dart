@@ -30,6 +30,7 @@ void main() {
     CheckoutSessionCreator? createCheckoutSession,
     CheckoutUrlLauncher? openCheckoutUrl,
     OrderStatusFetcher? fetchOrderStatus,
+    OrderLookupFetcher? lookupOrder,
     Duration paymentStatusRetryDelay = Duration.zero,
     String? initialCheckoutRoute,
     LocalSealDesignRepository? localSealDesignRepository,
@@ -54,6 +55,7 @@ void main() {
               createCheckoutSession ?? _successfulCreateCheckoutSession,
           openCheckoutUrl: openCheckoutUrl ?? _successfulOpenCheckoutUrl,
           fetchOrderStatus: fetchOrderStatus ?? _successfulFetchOrderStatus,
+          lookupOrder: lookupOrder ?? _successfulLookupOrder,
           paymentStatusRetryDelay: paymentStatusRetryDelay,
           initialCheckoutRoute: initialCheckoutRoute,
           localSealDesignRepository: localSealDesignRepository,
@@ -2690,6 +2692,172 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M10-T04 shows order lookup loading state', (tester) async {
+    final lookupCompleter = Completer<OrderStatus>();
+    OrderLookupRequest? submittedRequest;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(
+          lookupOrder: (request) {
+            submittedRequest = request;
+            return lookupCompleter.future;
+          },
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-20260521-0001',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'customer@example.test',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pump();
+
+    expect(submittedRequest?.orderNo, 'HF-20260521-0001');
+    expect(submittedRequest?.email, 'customer@example.test');
+    expect(find.text('Looking up your order'), findsOneWidget);
+    expect(
+      find.text('Checking the order number and email address.'),
+      findsOneWidget,
+    );
+
+    lookupCompleter.complete(await _successfulLookupOrder(submittedRequest!));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Looking up your order'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M10-T04 shows order lookup not found state', (tester) async {
+    var lookupCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(
+          lookupOrder: (request) async {
+            lookupCount++;
+            throw const HankoApiException(
+              statusCode: 404,
+              code: 'order_not_found',
+              message: 'Order not found',
+              payload: {},
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-404',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'missing@example.test',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pumpAndSettle();
+
+    expect(lookupCount, 1);
+    expect(find.text('Order not found'), findsOneWidget);
+    expect(
+      find.text(
+        "We couldn't find an order matching that order number and email address.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M10-T04 treats lookup validation as not found', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(
+          lookupOrder: (request) async {
+            throw const HankoApiException(
+              statusCode: 400,
+              code: 'validation_error',
+              message: 'email must be valid',
+              payload: {},
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-20260521-0001',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'invalid-email',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order not found'), findsOneWidget);
+    expect(find.text("Couldn't load order"), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M10-T04 shows order lookup error state', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(
+          lookupOrder: (request) async {
+            throw StateError('Lookup failed');
+          },
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      'HF-500',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'customer@example.test',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load order"), findsOneWidget);
+    expect(
+      find.text('Order Lookup could not be completed. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {
@@ -3122,6 +3290,19 @@ Future<OrderStatus> _successfulFetchOrderStatus(String orderId) async {
   return OrderStatus(
     orderId: orderId,
     orderNo: 'HF-20260521-0001',
+    orderStatus: 'paid',
+    paymentStatus: 'paid',
+    fulfillmentStatus: 'pending',
+    productionStatus: 'not_started',
+    shippingStatus: 'not_shipped',
+    pricing: const Money(amount: 18600, currency: 'JPY'),
+  );
+}
+
+Future<OrderStatus> _successfulLookupOrder(OrderLookupRequest request) async {
+  return OrderStatus(
+    orderId: 'ord_lookup_001',
+    orderNo: request.orderNo,
     orderStatus: 'paid',
     paymentStatus: 'paid',
     fulfillmentStatus: 'pending',

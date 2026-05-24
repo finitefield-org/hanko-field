@@ -31,6 +31,7 @@ class HankoApp extends StatefulWidget {
     this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
     this.openCheckoutUrl = openCheckoutUrlWithDefaultLauncher,
     this.fetchOrderStatus = fetchOrderStatusWithDefaultApi,
+    this.lookupOrder = lookupOrderWithDefaultApi,
     this.paymentStatusRetryDelay = const Duration(seconds: 2),
     this.initialCheckoutRoute,
     this.localSealDesignRepository,
@@ -49,6 +50,7 @@ class HankoApp extends StatefulWidget {
   final CheckoutSessionCreator createCheckoutSession;
   final CheckoutUrlLauncher openCheckoutUrl;
   final OrderStatusFetcher fetchOrderStatus;
+  final OrderLookupFetcher lookupOrder;
   final Duration paymentStatusRetryDelay;
   final String? initialCheckoutRoute;
   final LocalSealDesignRepository? localSealDesignRepository;
@@ -119,6 +121,7 @@ class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
         createCheckoutSession: widget.createCheckoutSession,
         openCheckoutUrl: widget.openCheckoutUrl,
         fetchOrderStatus: widget.fetchOrderStatus,
+        lookupOrder: widget.lookupOrder,
         paymentStatusRetryDelay: widget.paymentStatusRetryDelay,
         initialCheckoutRoute: widget.initialCheckoutRoute,
         checkoutRouteListenable: _checkoutRouteNotifier,
@@ -152,6 +155,7 @@ class _AppLaunchGate extends StatefulWidget {
     required this.createCheckoutSession,
     required this.openCheckoutUrl,
     required this.fetchOrderStatus,
+    required this.lookupOrder,
     required this.paymentStatusRetryDelay,
     required this.initialCheckoutRoute,
     required this.checkoutRouteListenable,
@@ -170,6 +174,7 @@ class _AppLaunchGate extends StatefulWidget {
   final CheckoutSessionCreator createCheckoutSession;
   final CheckoutUrlLauncher openCheckoutUrl;
   final OrderStatusFetcher fetchOrderStatus;
+  final OrderLookupFetcher lookupOrder;
   final Duration paymentStatusRetryDelay;
   final String? initialCheckoutRoute;
   final ValueListenable<String?> checkoutRouteListenable;
@@ -203,6 +208,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         createCheckoutSession: widget.createCheckoutSession,
         openCheckoutUrl: widget.openCheckoutUrl,
         fetchOrderStatus: widget.fetchOrderStatus,
+        lookupOrder: widget.lookupOrder,
         paymentStatusRetryDelay: widget.paymentStatusRetryDelay,
         initialCheckoutRoute: widget.initialCheckoutRoute,
         checkoutRouteListenable: widget.checkoutRouteListenable,
@@ -241,6 +247,7 @@ class BottomNavigationShell extends StatefulWidget {
     this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
     this.openCheckoutUrl = openCheckoutUrlWithDefaultLauncher,
     this.fetchOrderStatus = fetchOrderStatusWithDefaultApi,
+    this.lookupOrder = lookupOrderWithDefaultApi,
     this.paymentStatusRetryDelay = const Duration(seconds: 2),
     this.initialCheckoutRoute,
     this.checkoutRouteListenable,
@@ -256,6 +263,7 @@ class BottomNavigationShell extends StatefulWidget {
   final CheckoutSessionCreator createCheckoutSession;
   final CheckoutUrlLauncher openCheckoutUrl;
   final OrderStatusFetcher fetchOrderStatus;
+  final OrderLookupFetcher lookupOrder;
   final Duration paymentStatusRetryDelay;
   final String? initialCheckoutRoute;
   final ValueListenable<String?>? checkoutRouteListenable;
@@ -736,6 +744,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             initialOrderNo:
                 _paymentStatus?.orderNo ?? _checkoutCreatedOrder?.orderNo,
             initialEmail: _orderDraft.input.contact.email,
+            lookupOrder: widget.lookupOrder,
           ),
         ),
       ),

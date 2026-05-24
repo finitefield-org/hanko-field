@@ -404,6 +404,12 @@ class HankoLocalizations {
   String get email => _strings.email;
   String get emailHint => _strings.emailHint;
   String get lookupOrder => _strings.lookupOrder;
+  String get orderLookupLoadingTitle => _strings.orderLookupLoadingTitle;
+  String get orderLookupLoadingMessage => _strings.orderLookupLoadingMessage;
+  String get orderLookupNotFoundTitle => _strings.orderLookupNotFoundTitle;
+  String get orderLookupNotFoundMessage => _strings.orderLookupNotFoundMessage;
+  String get orderLookupErrorTitle => _strings.orderLookupErrorTitle;
+  String get orderLookupErrorMessage => _strings.orderLookupErrorMessage;
   String get language => _strings.language;
   String get about => _strings.about;
   String get howItWorks => _strings.howItWorks;
@@ -777,6 +783,12 @@ class _HankoStrings {
     required this.email,
     required this.emailHint,
     required this.lookupOrder,
+    required this.orderLookupLoadingTitle,
+    required this.orderLookupLoadingMessage,
+    required this.orderLookupNotFoundTitle,
+    required this.orderLookupNotFoundMessage,
+    required this.orderLookupErrorTitle,
+    required this.orderLookupErrorMessage,
     required this.language,
     required this.about,
     required this.howItWorks,
@@ -1119,6 +1131,12 @@ class _HankoStrings {
   final String email;
   final String emailHint;
   final String lookupOrder;
+  final String orderLookupLoadingTitle;
+  final String orderLookupLoadingMessage;
+  final String orderLookupNotFoundTitle;
+  final String orderLookupNotFoundMessage;
+  final String orderLookupErrorTitle;
+  final String orderLookupErrorMessage;
   final String language;
   final String about;
   final String howItWorks;
@@ -1531,6 +1549,14 @@ const _localizedValues = {
       email: 'Email',
       emailHint: 'name@example.com',
       lookupOrder: 'Lookup Order',
+      orderLookupLoadingTitle: 'Looking up your order',
+      orderLookupLoadingMessage: 'Checking the order number and email address.',
+      orderLookupNotFoundTitle: 'Order not found',
+      orderLookupNotFoundMessage:
+          "We couldn't find an order matching that order number and email address.",
+      orderLookupErrorTitle: "Couldn't load order",
+      orderLookupErrorMessage:
+          'Order Lookup could not be completed. Please try again.',
       language: 'Language',
       about: 'About',
       howItWorks: 'How It Works',
@@ -1885,6 +1911,12 @@ const _localizedValues = {
       email: 'メールアドレス',
       emailHint: 'name@example.com',
       lookupOrder: '注文を照会',
+      orderLookupLoadingTitle: '注文を照会中',
+      orderLookupLoadingMessage: '注文番号とメールアドレスを確認しています。',
+      orderLookupNotFoundTitle: '注文が見つかりません',
+      orderLookupNotFoundMessage: '入力された注文番号とメールアドレスに一致する注文が見つかりませんでした。',
+      orderLookupErrorTitle: '注文照会に失敗しました',
+      orderLookupErrorMessage: '注文照会を完了できませんでした。もう一度お試しください。',
       language: '言語',
       about: 'このアプリについて',
       howItWorks: '使い方',

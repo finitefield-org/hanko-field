@@ -10,6 +10,12 @@ Future<OrderStatus> fetchOrderStatusWithDefaultApi(String orderId) {
   ).fetchOrderStatus(orderId);
 }
 
+Future<OrderStatus> lookupOrderWithDefaultApi(OrderLookupRequest request) {
+  return OrderLookupRepository(
+    HankoApiClient(baseUri: Uri.parse(defaultHankoApiBaseUrl)),
+  ).lookupOrder(request);
+}
+
 class OrderLookupRepository {
   const OrderLookupRepository(this._apiClient);
 

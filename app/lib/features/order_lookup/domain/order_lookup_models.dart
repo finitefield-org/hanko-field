@@ -7,6 +7,9 @@ class OrderLookupRequest {
   final String email;
 }
 
+typedef OrderLookupFetcher =
+    Future<OrderStatus> Function(OrderLookupRequest request);
+
 class OrderStatus {
   const OrderStatus({
     required this.orderId,
