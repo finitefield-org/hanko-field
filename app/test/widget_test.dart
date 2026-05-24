@@ -2522,6 +2522,13 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('Need help?'), findsOneWidget);
+    expect(
+      find.text(
+        'Our support team can help with order, shipping, payment, and email questions. Include your order number for faster support.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Contact Support'), findsOneWidget);
     expect(find.text('Open Order Lookup'), findsOneWidget);
 
@@ -2536,7 +2543,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('M12-T02 opens contact support from missing email guide', (
+  testWidgets('M12-T03 opens contact support prompt to Contact', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(432, 912);
@@ -2566,15 +2573,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(find.text("Can't find your email?"), findsOneWidget);
+    expect(find.text('Need help?'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Contact Support'));
     await tester.pump();
     await tester.tap(find.text('Contact Support'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Contact'), findsOneWidget);
+    expect(
+      find.textContaining('https://finitefield.org/en/contact/'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

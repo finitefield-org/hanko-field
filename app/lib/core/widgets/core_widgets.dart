@@ -1,3 +1,4 @@
+export 'hanko_contact_support_prompt.dart';
 export 'hanko_feature_page.dart';
 export 'hanko_email_sent_notice.dart';
 export 'hanko_primary_button.dart';

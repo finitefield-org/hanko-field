@@ -1241,7 +1241,14 @@ class OrderCompleteScreen extends StatelessWidget {
           email: email,
         ),
         const SizedBox(height: HankoSpacing.md),
-        _OrderEmailMissingGuide(onContactSupport: onContactSupport),
+        const _OrderEmailMissingGuide(),
+        const SizedBox(height: HankoSpacing.md),
+        HankoContactSupportPrompt(
+          title: l10n.contactSupportPromptTitle,
+          message: l10n.contactSupportPromptMessage,
+          actionLabel: l10n.contactSupportPromptAction,
+          onContactSupport: onContactSupport,
+        ),
         if (seal != null && stone != null) ...[
           const SizedBox(height: HankoSpacing.md),
           _CheckoutSectionCard(
@@ -2415,9 +2422,7 @@ class _OrderNotice extends StatelessWidget {
 }
 
 class _OrderEmailMissingGuide extends StatelessWidget {
-  const _OrderEmailMissingGuide({required this.onContactSupport});
-
-  final VoidCallback onContactSupport;
+  const _OrderEmailMissingGuide();
 
   @override
   Widget build(BuildContext context) {
@@ -2459,12 +2464,6 @@ class _OrderEmailMissingGuide extends StatelessWidget {
             if (index < checks.length - 1)
               const Divider(height: 18, color: HankoColors.surfaceBorder),
           ],
-          const SizedBox(height: HankoSpacing.md),
-          _SecondaryOrderAction(
-            label: l10n.orderEmailMissingContactAction,
-            icon: Icons.support_agent_outlined,
-            onPressed: onContactSupport,
-          ),
         ],
       ),
     );

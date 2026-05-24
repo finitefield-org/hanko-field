@@ -411,8 +411,10 @@ class HankoLocalizations {
       _strings.orderEmailMissingDeliveryWait;
   String get orderEmailMissingContactSupport =>
       _strings.orderEmailMissingContactSupport;
-  String get orderEmailMissingContactAction =>
-      _strings.orderEmailMissingContactAction;
+  String get contactSupportPromptTitle => _strings.contactSupportPromptTitle;
+  String get contactSupportPromptMessage =>
+      _strings.contactSupportPromptMessage;
+  String get contactSupportPromptAction => _strings.contactSupportPromptAction;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -826,7 +828,9 @@ class _HankoStrings {
     required this.orderEmailMissingAddressCheck,
     required this.orderEmailMissingDeliveryWait,
     required this.orderEmailMissingContactSupport,
-    required this.orderEmailMissingContactAction,
+    required this.contactSupportPromptTitle,
+    required this.contactSupportPromptMessage,
+    required this.contactSupportPromptAction,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -1201,7 +1205,9 @@ class _HankoStrings {
   final String orderEmailMissingAddressCheck;
   final String orderEmailMissingDeliveryWait;
   final String orderEmailMissingContactSupport;
-  final String orderEmailMissingContactAction;
+  final String contactSupportPromptTitle;
+  final String contactSupportPromptMessage;
+  final String contactSupportPromptAction;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1649,7 +1655,10 @@ const _localizedValues = {
       orderEmailMissingDeliveryWait: 'Please allow a few minutes for delivery.',
       orderEmailMissingContactSupport:
           "If you still can't find it, contact support with your order number.",
-      orderEmailMissingContactAction: 'Contact Support',
+      contactSupportPromptTitle: 'Need help?',
+      contactSupportPromptMessage:
+          'Our support team can help with order, shipping, payment, and email questions. Include your order number for faster support.',
+      contactSupportPromptAction: 'Contact Support',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -2039,7 +2048,10 @@ const _localizedValues = {
       orderEmailMissingAddressCheck: '注文時のメールアドレスに誤りがないか確認してください。',
       orderEmailMissingDeliveryWait: '配信まで数分かかる場合があります。',
       orderEmailMissingContactSupport: 'それでも見つからない場合は、注文番号を添えてお問い合わせください。',
-      orderEmailMissingContactAction: 'お問い合わせ',
+      contactSupportPromptTitle: 'お困りですか？',
+      contactSupportPromptMessage:
+          '注文、配送、決済、メールに関する質問はサポートへお問い合わせください。注文番号を添えると確認がスムーズです。',
+      contactSupportPromptAction: 'お問い合わせ',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

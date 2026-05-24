@@ -15,10 +15,13 @@ class SettingsHomeScreen extends StatelessWidget {
   }
 }
 
+enum SettingsInitialDestination { contact }
+
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, this.onClose});
+  const SettingsScreen({super.key, this.onClose, this.initialDestination});
 
   final VoidCallback? onClose;
+  final SettingsInitialDestination? initialDestination;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -32,16 +35,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   var _pages = const <PageEntry>[_rootPage];
 
+  @override
+  void initState() {
+    super.initState();
+    _pages = _pagesForInitialDestination(widget.initialDestination);
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialDestination != widget.initialDestination) {
+      _pages = _pagesForInitialDestination(widget.initialDestination);
+    }
+  }
+
   void _openDestination(_SettingsDestination destination) {
     setState(() {
-      _pages = [
-        _rootPage,
-        PageEntry(
-          key: destination.pageKey,
-          name: destination.routeName,
-          data: destination,
-        ),
-      ];
+      _pages = [_rootPage, _pageForDestination(destination)];
     });
   }
 
@@ -86,6 +96,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+}
+
+List<PageEntry> _pagesForInitialDestination(
+  SettingsInitialDestination? initialDestination,
+) {
+  final destination = switch (initialDestination) {
+    SettingsInitialDestination.contact => _SettingsDestination.contact,
+    null => null,
+  };
+  if (destination == null) {
+    return const [_SettingsScreenState._rootPage];
+  }
+  return [_SettingsScreenState._rootPage, _pageForDestination(destination)];
+}
+
+PageEntry _pageForDestination(_SettingsDestination destination) {
+  return PageEntry(
+    key: destination.pageKey,
+    name: destination.routeName,
+    data: destination,
+  );
 }
 
 class _SettingsMenuPage extends StatelessWidget {

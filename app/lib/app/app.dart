@@ -550,7 +550,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
           return _buildOrderReviewPage();
         }
         if (page.key == _settingsPage.key) {
-          return _buildSettingsPage();
+          return _buildSettingsPage(page);
         }
         return _buildShellPage(context);
       },
@@ -588,13 +588,20 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     );
   }
 
-  Widget _buildSettingsPage() {
+  Widget _buildSettingsPage(PageEntry page) {
+    final initialDestination = page.data is SettingsInitialDestination
+        ? page.data! as SettingsInitialDestination
+        : null;
+
     return Scaffold(
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 432),
-          child: SettingsScreen(onClose: _closeTopPage),
+          child: SettingsScreen(
+            onClose: _closeTopPage,
+            initialDestination: initialDestination,
+          ),
         ),
       ),
     );
@@ -1648,7 +1655,16 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   }
 
   void _openContactSupport() {
-    setState(() => _pages = const [_shellPage, _settingsPage]);
+    setState(
+      () => _pages = [
+        _shellPage,
+        PageEntry(
+          key: _settingsPage.key,
+          name: '/settings/contact',
+          data: SettingsInitialDestination.contact,
+        ),
+      ],
+    );
   }
 
   void _closeTopPage() {
