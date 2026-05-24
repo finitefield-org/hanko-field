@@ -5840,6 +5840,110 @@ impl ServerState {
     }
 }
 
+fn decode_order_fields(
+    default_locale: &str,
+    order_id: &str,
+    data: &BTreeMap<String, JsonValue>,
+) -> Order {
+    let payment = read_map_field(data, "payment");
+    let listing = read_map_field(data, "listing");
+    let material = read_map_field(data, "material");
+    let fulfillment = read_map_field(data, "fulfillment");
+    let shipping = read_map_field(data, "shipping");
+    let contact = read_map_field(data, "contact");
+    let seal = read_map_field(data, "seal");
+    let seal_style = read_map_field(&seal, "style");
+    let customer_confirmation = read_map_field(data, "customer_confirmation");
+    let pricing = read_map_field(data, "pricing");
+    let raw_locale = read_string_field(data, "locale");
+    let locale = if raw_locale.is_empty() {
+        let contact_locale = read_string_field(&contact, "preferred_locale");
+        if contact_locale.is_empty() {
+            default_locale.trim().to_owned()
+        } else {
+            contact_locale
+        }
+    } else {
+        raw_locale
+    };
+    let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
+    let total = resolve_order_total(data, &pricing);
+    let (listing_key, listing_label_ja) =
+        FirestoreAdminSource::resolve_order_listing_fields(data, &listing, &material);
+    let seal_line1 = read_string_field(&seal, "line1");
+    let seal_line2 = read_string_field(&seal, "line2");
+    let engraving_text =
+        resolve_order_engraving_text(&customer_confirmation, &seal_line1, &seal_line2);
+
+    let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
+    let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
+    let status_updated_at = read_timestamp_field(data, "status_updated_at").unwrap_or(updated_at);
+
+    let mut order = Order {
+        id: order_id.to_owned(),
+        order_no: read_string_field(data, "order_no"),
+        channel: read_string_field(data, "channel"),
+        locale,
+        currency: pricing_currency,
+        listing_key,
+        status: read_string_field(data, "status"),
+        status_updated_at,
+        payment_status: read_string_field(&payment, "status"),
+        fulfillment_status: read_string_field(&fulfillment, "status"),
+        tracking_no: read_string_field(&fulfillment, "tracking_no"),
+        carrier: read_string_field(&fulfillment, "carrier"),
+        country_code: read_string_field(&shipping, "country_code").to_uppercase(),
+        contact_email: read_string_field(&contact, "email"),
+        seal_line1,
+        seal_line2,
+        engraving_text,
+        ai_generation_id: read_string_field(&seal, "ai_generation_id"),
+        ai_variant_id: read_string_field(&seal, "ai_variant_id"),
+        seal_preview_image_storage_path: read_seal_preview_image_storage_path(&seal),
+        seal_style_name: read_string_field(&seal_style, "name"),
+        seal_style_stroke_weight: read_string_field(&seal_style, "stroke_weight"),
+        seal_style_balance: read_string_field(&seal_style, "balance"),
+        seal_style_prompt_summary: read_string_field(&seal_style, "prompt_summary"),
+        customer_confirmation_kanji_and_design: read_bool_field(
+            &customer_confirmation,
+            "kanji_and_design",
+        ),
+        customer_confirmation_custom_made_policy: read_bool_field(
+            &customer_confirmation,
+            "custom_made_policy",
+        ),
+        customer_confirmation_confirmed_at: read_timestamp_field(
+            &customer_confirmation,
+            "confirmed_at",
+        ),
+        customer_confirmation_confirmed_seal_text: read_string_field(
+            &customer_confirmation,
+            "confirmed_seal_text",
+        ),
+        listing_label_ja,
+        total,
+        created_at,
+        updated_at,
+        events: Vec::new(),
+    };
+
+    if order.order_no.is_empty() {
+        order.order_no = order_id.to_owned();
+    }
+    if order.locale.is_empty() {
+        order.locale = default_locale.trim().to_owned();
+    }
+    if order.currency.trim().is_empty() {
+        order.currency = "USD".to_owned();
+    }
+    if order.status.is_empty() {
+        order.status = "pending_payment".to_owned();
+    }
+
+    fill_derived_statuses(&mut order);
+    order
+}
+
 impl FirestoreAdminSource {
     async fn firestore_client(&self) -> Result<FirebaseFirestoreClient> {
         let access_token = self
@@ -6017,99 +6121,7 @@ impl FirestoreAdminSource {
     }
 
     fn decode_order(&self, order_id: &str, data: &BTreeMap<String, JsonValue>) -> Order {
-        let payment = read_map_field(data, "payment");
-        let listing = read_map_field(data, "listing");
-        let material = read_map_field(data, "material");
-        let fulfillment = read_map_field(data, "fulfillment");
-        let shipping = read_map_field(data, "shipping");
-        let contact = read_map_field(data, "contact");
-        let seal = read_map_field(data, "seal");
-        let seal_style = read_map_field(&seal, "style");
-        let customer_confirmation = read_map_field(data, "customer_confirmation");
-        let pricing = read_map_field(data, "pricing");
-        let raw_locale = read_string_field(data, "locale");
-        let locale = if raw_locale.is_empty() {
-            read_string_field(&contact, "preferred_locale")
-        } else {
-            raw_locale
-        };
-        let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
-        let total = resolve_order_total(data, &pricing);
-        let (listing_key, listing_label_ja) =
-            Self::resolve_order_listing_fields(data, &listing, &material);
-        let seal_line1 = read_string_field(&seal, "line1");
-        let seal_line2 = read_string_field(&seal, "line2");
-        let engraving_text =
-            resolve_order_engraving_text(&customer_confirmation, &seal_line1, &seal_line2);
-
-        let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
-        let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
-        let status_updated_at =
-            read_timestamp_field(data, "status_updated_at").unwrap_or(updated_at);
-
-        let mut order = Order {
-            id: order_id.to_owned(),
-            order_no: read_string_field(data, "order_no"),
-            channel: read_string_field(data, "channel"),
-            locale,
-            currency: pricing_currency,
-            listing_key,
-            status: read_string_field(data, "status"),
-            status_updated_at,
-            payment_status: read_string_field(&payment, "status"),
-            fulfillment_status: read_string_field(&fulfillment, "status"),
-            tracking_no: read_string_field(&fulfillment, "tracking_no"),
-            carrier: read_string_field(&fulfillment, "carrier"),
-            country_code: read_string_field(&shipping, "country_code").to_uppercase(),
-            contact_email: read_string_field(&contact, "email"),
-            seal_line1,
-            seal_line2,
-            engraving_text,
-            ai_generation_id: read_string_field(&seal, "ai_generation_id"),
-            ai_variant_id: read_string_field(&seal, "ai_variant_id"),
-            seal_preview_image_storage_path: read_seal_preview_image_storage_path(&seal),
-            seal_style_name: read_string_field(&seal_style, "name"),
-            seal_style_stroke_weight: read_string_field(&seal_style, "stroke_weight"),
-            seal_style_balance: read_string_field(&seal_style, "balance"),
-            seal_style_prompt_summary: read_string_field(&seal_style, "prompt_summary"),
-            customer_confirmation_kanji_and_design: read_bool_field(
-                &customer_confirmation,
-                "kanji_and_design",
-            ),
-            customer_confirmation_custom_made_policy: read_bool_field(
-                &customer_confirmation,
-                "custom_made_policy",
-            ),
-            customer_confirmation_confirmed_at: read_timestamp_field(
-                &customer_confirmation,
-                "confirmed_at",
-            ),
-            customer_confirmation_confirmed_seal_text: read_string_field(
-                &customer_confirmation,
-                "confirmed_seal_text",
-            ),
-            listing_label_ja,
-            total,
-            created_at,
-            updated_at,
-            events: Vec::new(),
-        };
-
-        if order.order_no.is_empty() {
-            order.order_no = order_id.to_owned();
-        }
-        if order.locale.is_empty() {
-            order.locale = self.default_locale.clone();
-        }
-        if order.currency.trim().is_empty() {
-            order.currency = "USD".to_owned();
-        }
-        if order.status.is_empty() {
-            order.status = "pending_payment".to_owned();
-        }
-
-        fill_derived_statuses(&mut order);
-        order
+        decode_order_fields(&self.default_locale, order_id, data)
     }
 
     fn resolve_order_listing_fields(
@@ -11293,6 +11305,113 @@ mod tests {
             storage_path,
             "seal_designs/seal_request_001/seal_variant_001.png"
         );
+    }
+
+    #[test]
+    fn decode_order_fields_defaults_missing_app_fields_for_legacy_web_order() {
+        let now = Utc::now();
+        let data = btree_from_pairs(vec![
+            ("order_no", fs_string("HF-LEGACY-001")),
+            ("channel", fs_string("web")),
+            ("status", fs_string("paid")),
+            ("created_at", fs_timestamp(now)),
+            ("updated_at", fs_timestamp(now)),
+            (
+                "seal",
+                fs_map(btree_from_pairs(vec![
+                    ("line1", fs_string("佐")),
+                    ("line2", fs_string("藤")),
+                ])),
+            ),
+            (
+                "pricing",
+                fs_map(btree_from_pairs(vec![("total", fs_int(4200))])),
+            ),
+        ]);
+
+        let order = decode_order_fields("ja", "legacy_web_001", &data);
+
+        assert_eq!(order.order_no, "HF-LEGACY-001");
+        assert_eq!(order.channel, "web");
+        assert_eq!(order.locale, "ja");
+        assert_eq!(order.currency, "JPY");
+        assert_eq!(order.status, "paid");
+        assert_eq!(order.payment_status, "paid");
+        assert_eq!(order.fulfillment_status, "pending");
+        assert_eq!(order.engraving_text, "佐藤");
+        assert!(order.ai_generation_id.is_empty());
+        assert!(order.ai_variant_id.is_empty());
+        assert!(order.seal_preview_image_storage_path.is_empty());
+        assert!(order.seal_style_name.is_empty());
+        assert!(order.customer_confirmation_kanji_and_design.is_none());
+        assert!(order.customer_confirmation_custom_made_policy.is_none());
+        assert!(order.customer_confirmation_confirmed_at.is_none());
+        assert!(order.customer_confirmation_confirmed_seal_text.is_empty());
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_handles_legacy_web_order_missing_app_fields() {
+        let now = Utc::now();
+        let data = btree_from_pairs(vec![
+            ("order_no", fs_string("HF-LEGACY-002")),
+            ("channel", fs_string("web")),
+            ("status", fs_string("paid")),
+            ("created_at", fs_timestamp(now)),
+            ("updated_at", fs_timestamp(now)),
+            (
+                "contact",
+                fs_map(btree_from_pairs(vec![(
+                    "email",
+                    fs_string("legacy@example.com"),
+                )])),
+            ),
+            (
+                "shipping",
+                fs_map(btree_from_pairs(vec![("country_code", fs_string("JP"))])),
+            ),
+            (
+                "seal",
+                fs_map(btree_from_pairs(vec![
+                    ("line1", fs_string("佐")),
+                    ("line2", fs_string("藤")),
+                ])),
+            ),
+            (
+                "pricing",
+                fs_map(btree_from_pairs(vec![("total", fs_int(4200))])),
+            ),
+        ]);
+        let mut snapshot = new_mock_snapshot();
+        snapshot.orders.insert(
+            "legacy_web_002".to_owned(),
+            decode_order_fields("ja", "legacy_web_002", &data),
+        );
+        snapshot.refresh_order_ids();
+        let state = ServerState {
+            source_label: "Mock".to_owned(),
+            storage_assets_bucket: "hanko-field-dev".to_owned(),
+            source: DataSource::Mock,
+            data: RwLock::new(snapshot),
+        };
+
+        let detail = state
+            .get_order_detail("legacy_web_002", "", "")
+            .await
+            .expect("legacy web order should exist");
+        let html = render_order_detail(&detail).expect("legacy web order detail should render");
+
+        assert_eq!(detail.order_no, "HF-LEGACY-002");
+        assert_eq!(detail.status_label, "支払い済み");
+        assert_eq!(detail.payment_status_label, "支払い済み");
+        assert_eq!(detail.fulfillment_status_label, "未着手");
+        assert!(!detail.has_seal_preview_image);
+        assert!(!detail.has_ai_seal_metadata);
+        assert!(!detail.has_customer_confirmation);
+        assert!(html.contains("HF-LEGACY-002"));
+        assert!(html.contains("佐 / 藤"));
+        assert!(!html.contains("AI印影プレビュー"));
+        assert!(!html.contains("AI印影メタデータ"));
+        assert!(!html.contains("顧客確認"));
     }
 
     #[tokio::test]
