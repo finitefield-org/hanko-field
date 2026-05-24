@@ -973,7 +973,7 @@ MVPで後回し可能:
 | M11-T03 | admin詳細 | [x] AI Generation/Variant/Style表示 | `admin/templates/order_detail.html`, `admin/src/main.rs` | `seal.ai_generation_id`, `seal.ai_variant_id`, `seal.style.*` を表示 |
 | M11-T04 | admin詳細 | [x] 顧客確認チェック表示 | `admin/templates/order_detail.html`, `admin/src/main.rs` | `customer_confirmation.*` と確認時刻を表示 |
 | M11-T05 | admin互換 | [x] 欠損データ対応 | `admin/src/main.rs` | 既存Web注文で詳細画面が壊れない |
-| M11-T06 | admin操作 | app注文のステータス/出荷操作確認 | `admin/src/main.rs` | app注文でも既存操作が使える |
+| M11-T06 | admin操作 | [x] app注文のステータス/出荷操作確認 | `admin/src/main.rs` | app注文でも既存操作が使える |
 
 ### M12: 通知・メール・共通エラー
 

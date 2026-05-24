@@ -11784,6 +11784,85 @@ mod tests {
         assert_eq!(detail.fulfillment_status_label, "製造中");
     }
 
+    #[tokio::test]
+    async fn app_order_status_transition_preserves_app_metadata() {
+        let state = mock_server_state();
+
+        let result = state
+            .update_order_status("ord_1006", "manufacturing", "test.admin")
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+        assert_eq!(detail.status_label, "製造中");
+        assert_eq!(detail.ai_generation_id, "seal_request_006");
+        assert_eq!(detail.ai_variant_id, "seal_variant_006");
+        assert!(detail.has_ai_seal_metadata);
+        assert!(detail.has_seal_preview_image);
+        assert!(detail.has_customer_confirmation);
+
+        let data = state.data.read().await;
+        let order = data
+            .orders
+            .get("ord_1006")
+            .expect("app order should remain in mock state");
+        assert!(order.events.iter().any(|event| {
+            event.kind == "status_changed"
+                && event.actor_id == "test.admin"
+                && event.before_status == "paid"
+                && event.after_status == "manufacturing"
+        }));
+    }
+
+    #[tokio::test]
+    async fn app_order_shipping_update_uses_existing_operation() {
+        let state = mock_server_state();
+
+        state
+            .update_order_status("ord_1006", "manufacturing", "test.admin")
+            .await
+            .expect("app order should enter manufacturing before shipping");
+
+        let result = state
+            .update_shipping("ord_1006", "DHL", "APP-TRACK-001", "shipped", "test.admin")
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+        assert_eq!(detail.status_label, "出荷済み");
+        assert_eq!(detail.payment_status_label, "支払い済み");
+        assert_eq!(detail.fulfillment_status_label, "出荷済み");
+        assert_eq!(detail.carrier, "DHL");
+        assert_eq!(detail.tracking_no, "APP-TRACK-001");
+        assert!(detail.has_tracking_no);
+        assert_eq!(detail.ai_variant_id, "seal_variant_006");
+        assert!(detail.has_ai_seal_metadata);
+        assert!(detail.has_customer_confirmation);
+
+        let data = state.data.read().await;
+        let order = data
+            .orders
+            .get("ord_1006")
+            .expect("app order should remain in mock state");
+        assert!(order.events.iter().any(|event| {
+            event.kind == "shipment_registered"
+                && event.actor_id == "test.admin"
+                && event.note == "DHL / APP-TRACK-001"
+        }));
+        assert!(order.events.iter().any(|event| {
+            event.kind == "status_changed"
+                && event.actor_id == "test.admin"
+                && event.before_status == "manufacturing"
+                && event.after_status == "shipped"
+        }));
+    }
+
     #[test]
     fn stone_listing_status_tracks_order_resolution() {
         assert_eq!(
