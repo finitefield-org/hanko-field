@@ -1,13 +1,36 @@
-use anyhow::{Result, anyhow, bail};
+use std::io::Cursor;
+
+use anyhow::{Context, Result, anyhow, bail};
 use fontdue::{Font, FontSettings};
+use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
 
 use crate::seal_fonts::{SealFontProfileAsset, seal_font_profile_assets};
 
-use super::{SealRecipeFontProfile, is_cjk_han_character};
+use super::{SealRecipeFontProfile, SealShape, is_cjk_han_character};
 
+const SEAL_RENDER_CANVAS_SIZE: u32 = 1024;
+const SEAL_RENDER_CONTENT_TYPE: &str = "image/png";
+const SEAL_RENDER_RED: [u8; 4] = [0x9D, 0x1F, 0x22, 0xFF];
+const SEAL_RENDER_WHITE: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
+const SQUARE_FRAME_OUTER_INSET: u32 = 96;
+const ROUND_FRAME_OUTER_INSET: u32 = 96;
+const FIXED_FRAME_STROKE_WIDTH: u32 = 34;
+const GLYPH_FRAME_INNER_MARGIN: u32 = 96;
+const GLYPH_SIZE_FIT_STEP_PX: f32 = 24.0;
 const DEFAULT_GLYPH_FONT_SIZE_PX: f32 = 720.0;
 const MIN_GLYPH_FONT_SIZE_PX: f32 = 32.0;
 const MAX_GLYPH_FONT_SIZE_PX: f32 = 1600.0;
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub(crate) struct RenderedFixedRuleSealImage {
+    pub(crate) content_type: &'static str,
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) shape: SealShape,
+    pub(crate) font_profile: &'static str,
+}
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -38,6 +61,57 @@ pub(crate) fn render_seal_glyphs_from_real_font(
     requested_profile: SealRecipeFontProfile,
 ) -> Result<RenderedSealGlyphRun> {
     render_seal_glyphs_from_real_font_at_px(kanji, requested_profile, DEFAULT_GLYPH_FONT_SIZE_PX)
+}
+
+#[allow(dead_code)]
+pub(crate) fn render_fixed_rule_seal_png(
+    kanji: &str,
+    requested_profile: SealRecipeFontProfile,
+    shape: SealShape,
+) -> Result<RenderedFixedRuleSealImage> {
+    let glyph_run = render_glyph_run_fitting_fixed_frame(kanji, requested_profile)?;
+    let mut canvas = RgbaImage::from_pixel(
+        SEAL_RENDER_CANVAS_SIZE,
+        SEAL_RENDER_CANVAS_SIZE,
+        Rgba(SEAL_RENDER_WHITE),
+    );
+
+    draw_fixed_single_frame(&mut canvas, shape);
+    draw_red_glyph_run(&mut canvas, &glyph_run)?;
+
+    let mut bytes = Vec::new();
+    DynamicImage::ImageRgba8(canvas)
+        .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+        .context("failed to encode fixed-rule seal png")?;
+
+    Ok(RenderedFixedRuleSealImage {
+        content_type: SEAL_RENDER_CONTENT_TYPE,
+        bytes,
+        width: SEAL_RENDER_CANVAS_SIZE,
+        height: SEAL_RENDER_CANVAS_SIZE,
+        shape,
+        font_profile: glyph_run.font_profile,
+    })
+}
+
+fn render_glyph_run_fitting_fixed_frame(
+    kanji: &str,
+    requested_profile: SealRecipeFontProfile,
+) -> Result<RenderedSealGlyphRun> {
+    let mut font_size = glyph_font_size_for_text(kanji)?;
+    loop {
+        let glyph_run =
+            render_seal_glyphs_from_real_font_at_px(kanji, requested_profile, font_size)?;
+        if glyph_run_fits_fixed_frame(&glyph_run)? {
+            return Ok(glyph_run);
+        }
+
+        let next_font_size = font_size - GLYPH_SIZE_FIT_STEP_PX;
+        if next_font_size < MIN_GLYPH_FONT_SIZE_PX {
+            bail!("glyph run does not fit fixed frame interior at minimum font size");
+        }
+        font_size = next_font_size;
+    }
 }
 
 #[allow(dead_code)]
@@ -80,6 +154,15 @@ fn validate_glyph_font_size(font_size_px: f32) -> Result<()> {
         );
     }
     Ok(())
+}
+
+fn glyph_font_size_for_text(kanji: &str) -> Result<f32> {
+    let char_count = kanji.chars().count();
+    match char_count {
+        1 => Ok(560.0),
+        2 => Ok(390.0),
+        _ => bail!("selected kanji must be 1 or 2 characters"),
+    }
 }
 
 fn validate_selected_kanji_text(kanji: &str) -> Result<String> {
@@ -175,6 +258,150 @@ fn render_glyph_run_with_asset(
         font_family: asset.font_family,
         glyphs,
     })
+}
+
+fn draw_fixed_single_frame(canvas: &mut RgbaImage, shape: SealShape) {
+    match shape {
+        SealShape::Square => draw_square_frame(canvas),
+        SealShape::Round => draw_round_frame(canvas),
+    }
+}
+
+fn draw_square_frame(canvas: &mut RgbaImage) {
+    let outer_left = SQUARE_FRAME_OUTER_INSET;
+    let outer_top = SQUARE_FRAME_OUTER_INSET;
+    let outer_right = SEAL_RENDER_CANVAS_SIZE - SQUARE_FRAME_OUTER_INSET - 1;
+    let outer_bottom = SEAL_RENDER_CANVAS_SIZE - SQUARE_FRAME_OUTER_INSET - 1;
+    let inner_left = outer_left + FIXED_FRAME_STROKE_WIDTH;
+    let inner_top = outer_top + FIXED_FRAME_STROKE_WIDTH;
+    let inner_right = outer_right - FIXED_FRAME_STROKE_WIDTH;
+    let inner_bottom = outer_bottom - FIXED_FRAME_STROKE_WIDTH;
+
+    for y in outer_top..=outer_bottom {
+        for x in outer_left..=outer_right {
+            let in_outer =
+                x >= outer_left && x <= outer_right && y >= outer_top && y <= outer_bottom;
+            let in_inner =
+                x >= inner_left && x <= inner_right && y >= inner_top && y <= inner_bottom;
+            if in_outer && !in_inner {
+                canvas.put_pixel(x, y, Rgba(SEAL_RENDER_RED));
+            }
+        }
+    }
+}
+
+fn draw_round_frame(canvas: &mut RgbaImage) {
+    let center = (SEAL_RENDER_CANVAS_SIZE as f32 - 1.0) / 2.0;
+    let outer_radius = (SEAL_RENDER_CANVAS_SIZE - ROUND_FRAME_OUTER_INSET * 2) as f32 / 2.0;
+    let inner_radius = outer_radius - FIXED_FRAME_STROKE_WIDTH as f32;
+    let outer_radius_sq = outer_radius * outer_radius;
+    let inner_radius_sq = inner_radius * inner_radius;
+
+    for y in 0..SEAL_RENDER_CANVAS_SIZE {
+        for x in 0..SEAL_RENDER_CANVAS_SIZE {
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let distance_sq = dx * dx + dy * dy;
+            if distance_sq <= outer_radius_sq && distance_sq >= inner_radius_sq {
+                canvas.put_pixel(x, y, Rgba(SEAL_RENDER_RED));
+            }
+        }
+    }
+}
+
+fn draw_red_glyph_run(canvas: &mut RgbaImage, glyph_run: &RenderedSealGlyphRun) -> Result<()> {
+    let glyph_gap = glyph_gap_for_len(glyph_run.glyphs.len());
+    let (content_width, content_height) = glyph_run_dimensions(glyph_run)?;
+    let (available_width, available_height) = fixed_frame_available_size();
+    if content_width > available_width || content_height > available_height {
+        bail!("glyph run does not fit fixed frame interior");
+    }
+
+    let mut pen_x = (SEAL_RENDER_CANVAS_SIZE - content_width) / 2;
+    let base_y = (SEAL_RENDER_CANVAS_SIZE - content_height) / 2;
+    for glyph in &glyph_run.glyphs {
+        let glyph_y = base_y + (content_height - glyph.bitmap_height as u32) / 2;
+        draw_red_glyph_bitmap(canvas, glyph, pen_x, glyph_y);
+        pen_x += glyph.bitmap_width as u32 + glyph_gap;
+    }
+
+    Ok(())
+}
+
+fn glyph_run_fits_fixed_frame(glyph_run: &RenderedSealGlyphRun) -> Result<bool> {
+    let (content_width, content_height) = glyph_run_dimensions(glyph_run)?;
+    let (available_width, available_height) = fixed_frame_available_size();
+    Ok(content_width <= available_width && content_height <= available_height)
+}
+
+fn glyph_run_dimensions(glyph_run: &RenderedSealGlyphRun) -> Result<(u32, u32)> {
+    let glyph_gap = glyph_gap_for_len(glyph_run.glyphs.len());
+    let content_width = glyph_run
+        .glyphs
+        .iter()
+        .map(|glyph| glyph.bitmap_width as u32)
+        .sum::<u32>()
+        + glyph_gap * glyph_run.glyphs.len().saturating_sub(1) as u32;
+    let content_height = glyph_run
+        .glyphs
+        .iter()
+        .map(|glyph| glyph.bitmap_height as u32)
+        .max()
+        .unwrap_or(0);
+    if content_width == 0 || content_height == 0 {
+        bail!("glyph run has no drawable bitmap content");
+    }
+    Ok((content_width, content_height))
+}
+
+fn glyph_gap_for_len(len: usize) -> u32 {
+    if len <= 1 { 0 } else { 24 }
+}
+
+fn fixed_frame_available_size() -> (u32, u32) {
+    let frame_inner_left =
+        SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + GLYPH_FRAME_INNER_MARGIN;
+    let frame_inner_top = frame_inner_left;
+    let frame_inner_right = SEAL_RENDER_CANVAS_SIZE - frame_inner_left;
+    let frame_inner_bottom = SEAL_RENDER_CANVAS_SIZE - frame_inner_top;
+    (
+        frame_inner_right.saturating_sub(frame_inner_left),
+        frame_inner_bottom.saturating_sub(frame_inner_top),
+    )
+}
+
+fn draw_red_glyph_bitmap(
+    canvas: &mut RgbaImage,
+    glyph: &RenderedSealGlyph,
+    origin_x: u32,
+    origin_y: u32,
+) {
+    for y in 0..glyph.bitmap_height {
+        for x in 0..glyph.bitmap_width {
+            let alpha = glyph.bitmap[y * glyph.bitmap_width + x];
+            if alpha == 0 {
+                continue;
+            }
+            let canvas_x = origin_x + x as u32;
+            let canvas_y = origin_y + y as u32;
+            if canvas_x >= SEAL_RENDER_CANVAS_SIZE || canvas_y >= SEAL_RENDER_CANVAS_SIZE {
+                continue;
+            }
+            blend_red_over_white(canvas, canvas_x, canvas_y, alpha);
+        }
+    }
+}
+
+fn blend_red_over_white(canvas: &mut RgbaImage, x: u32, y: u32, alpha: u8) {
+    let alpha = alpha as u16;
+    let inv_alpha = 255 - alpha;
+    let red =
+        ((SEAL_RENDER_RED[0] as u16 * alpha) + (SEAL_RENDER_WHITE[0] as u16 * inv_alpha)) / 255;
+    let green =
+        ((SEAL_RENDER_RED[1] as u16 * alpha) + (SEAL_RENDER_WHITE[1] as u16 * inv_alpha)) / 255;
+    let blue =
+        ((SEAL_RENDER_RED[2] as u16 * alpha) + (SEAL_RENDER_WHITE[2] as u16 * inv_alpha)) / 255;
+    canvas.put_pixel(x, y, Rgba([red as u8, green as u8, blue as u8, 255]));
 }
 
 fn format_unicode_scalar(character: char) -> String {
@@ -273,6 +500,77 @@ mod tests {
         );
     }
 
+    #[test]
+    fn m14_t05_renders_square_png_with_fixed_red_frame_and_white_background() {
+        let first =
+            render_fixed_rule_seal_png("美", SealRecipeFontProfile::FormalSerif, SealShape::Square)
+                .expect("square seal should render");
+        let second =
+            render_fixed_rule_seal_png("空", SealRecipeFontProfile::SoftSans, SealShape::Square)
+                .expect("second square seal should render");
+
+        assert_eq!(first.shape, SealShape::Square);
+        assert_eq!(first.font_profile, "formal_serif");
+        assert_eq!(second.shape, SealShape::Square);
+        assert_eq!(second.font_profile, "soft_sans");
+        let first = decode_fixed_rule_image(&first);
+        let second = decode_fixed_rule_image(&second);
+        assert_fixed_square_frame(&first);
+        assert_fixed_square_frame(&second);
+        assert_red_or_white_palette(&first);
+        assert_red_or_white_palette(&second);
+        assert!(count_inner_red_pixels(&first) > 1_000);
+        assert!(count_inner_red_pixels(&second) > 1_000);
+    }
+
+    #[test]
+    fn m14_t05_renders_round_png_with_fixed_single_red_frame_and_white_background() {
+        let first =
+            render_fixed_rule_seal_png("美", SealRecipeFontProfile::FormalSerif, SealShape::Round)
+                .expect("round seal should render");
+        let second =
+            render_fixed_rule_seal_png("空", SealRecipeFontProfile::SoftSans, SealShape::Round)
+                .expect("second round seal should render");
+
+        assert_eq!(first.shape, SealShape::Round);
+        assert_eq!(first.font_profile, "formal_serif");
+        assert_eq!(second.shape, SealShape::Round);
+        assert_eq!(second.font_profile, "soft_sans");
+        let first = decode_fixed_rule_image(&first);
+        let second = decode_fixed_rule_image(&second);
+        assert_fixed_round_frame(&first);
+        assert_fixed_round_frame(&second);
+        assert_red_or_white_palette(&first);
+        assert_red_or_white_palette(&second);
+        assert!(count_inner_red_pixels(&first) > 1_000);
+        assert!(count_inner_red_pixels(&second) > 1_000);
+    }
+
+    #[test]
+    fn m14_t05_fits_two_character_text_inside_fixed_frame() {
+        let square = render_fixed_rule_seal_png(
+            "美空",
+            SealRecipeFontProfile::FormalSerif,
+            SealShape::Square,
+        )
+        .expect("two-character square seal should render");
+        let round = render_fixed_rule_seal_png(
+            "美空",
+            SealRecipeFontProfile::FormalSerif,
+            SealShape::Round,
+        )
+        .expect("two-character round seal should render");
+
+        let square = decode_fixed_rule_image(&square);
+        let round = decode_fixed_rule_image(&round);
+        assert_fixed_square_frame(&square);
+        assert_fixed_round_frame(&round);
+        assert_red_or_white_palette(&square);
+        assert_red_or_white_palette(&round);
+        assert!(count_inner_red_pixels(&square) > 1_000);
+        assert!(count_inner_red_pixels(&round) > 1_000);
+    }
+
     fn find_character_missing_from_primary_but_present_in_fallback(
         primary_key: &str,
         fallback_key: &str,
@@ -307,5 +605,133 @@ mod tests {
 
     fn unsupported_test_candidates() -> Vec<char> {
         vec!['㐀', '㐁', '㐄', '㐅', '㐆', '㐇', '㐈', '㐉', '䶵', '䶴']
+    }
+
+    fn decode_fixed_rule_image(image: &RenderedFixedRuleSealImage) -> RgbaImage {
+        assert_eq!(image.content_type, SEAL_RENDER_CONTENT_TYPE);
+        assert_eq!(image.width, SEAL_RENDER_CANVAS_SIZE);
+        assert_eq!(image.height, SEAL_RENDER_CANVAS_SIZE);
+        assert!(image.bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
+        image::load_from_memory_with_format(&image.bytes, ImageFormat::Png)
+            .expect("fixed-rule seal png should decode")
+            .to_rgba8()
+    }
+
+    fn assert_fixed_square_frame(image: &RgbaImage) {
+        assert_eq!(image.width(), SEAL_RENDER_CANVAS_SIZE);
+        assert_eq!(image.height(), SEAL_RENDER_CANVAS_SIZE);
+        assert_eq!(*image.get_pixel(0, 0), Rgba(SEAL_RENDER_WHITE));
+        assert_eq!(
+            *image.get_pixel(SQUARE_FRAME_OUTER_INSET, SEAL_RENDER_CANVAS_SIZE / 2),
+            Rgba(SEAL_RENDER_RED)
+        );
+        assert_eq!(
+            *image.get_pixel(
+                SEAL_RENDER_CANVAS_SIZE - SQUARE_FRAME_OUTER_INSET - 1,
+                SEAL_RENDER_CANVAS_SIZE / 2
+            ),
+            Rgba(SEAL_RENDER_RED)
+        );
+        assert_eq!(
+            *image.get_pixel(SEAL_RENDER_CANVAS_SIZE / 2, SQUARE_FRAME_OUTER_INSET),
+            Rgba(SEAL_RENDER_RED)
+        );
+        assert_eq!(
+            *image.get_pixel(
+                SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + 16,
+                SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + 16
+            ),
+            Rgba(SEAL_RENDER_WHITE)
+        );
+        assert_eq!(
+            count_exact_red_segments_on_row(
+                image,
+                SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH / 2
+            ),
+            1
+        );
+    }
+
+    fn assert_fixed_round_frame(image: &RgbaImage) {
+        assert_eq!(image.width(), SEAL_RENDER_CANVAS_SIZE);
+        assert_eq!(image.height(), SEAL_RENDER_CANVAS_SIZE);
+        assert_eq!(*image.get_pixel(0, 0), Rgba(SEAL_RENDER_WHITE));
+        assert_eq!(
+            *image.get_pixel(ROUND_FRAME_OUTER_INSET, ROUND_FRAME_OUTER_INSET),
+            Rgba(SEAL_RENDER_WHITE)
+        );
+        assert_eq!(
+            *image.get_pixel(SEAL_RENDER_CANVAS_SIZE / 2, ROUND_FRAME_OUTER_INSET),
+            Rgba(SEAL_RENDER_RED)
+        );
+        assert_eq!(
+            *image.get_pixel(ROUND_FRAME_OUTER_INSET, SEAL_RENDER_CANVAS_SIZE / 2),
+            Rgba(SEAL_RENDER_RED)
+        );
+        assert_eq!(
+            *image.get_pixel(
+                SEAL_RENDER_CANVAS_SIZE / 2,
+                ROUND_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + 20
+            ),
+            Rgba(SEAL_RENDER_WHITE)
+        );
+        assert_eq!(
+            *image.get_pixel(
+                SEAL_RENDER_CANVAS_SIZE / 2,
+                SEAL_RENDER_CANVAS_SIZE - ROUND_FRAME_OUTER_INSET - FIXED_FRAME_STROKE_WIDTH - 20
+            ),
+            Rgba(SEAL_RENDER_WHITE)
+        );
+    }
+
+    fn assert_red_or_white_palette(image: &RgbaImage) {
+        for pixel in image.pixels() {
+            let [red, green, blue, alpha] = pixel.0;
+            assert_eq!(alpha, 255);
+            if pixel.0 == SEAL_RENDER_WHITE || pixel.0 == SEAL_RENDER_RED {
+                continue;
+            }
+            assert!(
+                red >= green
+                    && red >= blue
+                    && green >= SEAL_RENDER_RED[1]
+                    && blue >= SEAL_RENDER_RED[2],
+                "pixel must be red antialias or white, got rgba({red},{green},{blue},{alpha})"
+            );
+        }
+    }
+
+    fn count_inner_red_pixels(image: &RgbaImage) -> usize {
+        let start = SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + GLYPH_FRAME_INNER_MARGIN;
+        let end = SEAL_RENDER_CANVAS_SIZE - start;
+        let mut count = 0;
+        for y in start..end {
+            for x in start..end {
+                let [red, green, blue, alpha] = image.get_pixel(x, y).0;
+                if alpha == 255
+                    && red >= green
+                    && red >= blue
+                    && image.get_pixel(x, y).0 != SEAL_RENDER_WHITE
+                {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+
+    fn count_exact_red_segments_on_row(image: &RgbaImage, y: u32) -> usize {
+        let mut count = 0;
+        let mut in_segment = false;
+        for x in 0..SEAL_RENDER_CANVAS_SIZE {
+            let red = *image.get_pixel(x, y) == Rgba(SEAL_RENDER_RED);
+            if red && !in_segment {
+                count += 1;
+                in_segment = true;
+            } else if !red {
+                in_segment = false;
+            }
+        }
+        count
     }
 }
