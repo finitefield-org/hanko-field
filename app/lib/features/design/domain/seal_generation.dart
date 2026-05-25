@@ -52,6 +52,7 @@ class SealDesignVariant {
     required this.label,
     required this.width,
     required this.height,
+    this.recipe,
   });
 
   final String id;
@@ -60,6 +61,25 @@ class SealDesignVariant {
   final String label;
   final int width;
   final int height;
+  final SealDesignRecipe? recipe;
+}
+
+class SealDesignRecipe {
+  const SealDesignRecipe({
+    required this.fontProfile,
+    required this.impression,
+    required this.weight,
+    required this.spacing,
+    required this.texture,
+    required this.frame,
+  });
+
+  final String fontProfile;
+  final String impression;
+  final String weight;
+  final String spacing;
+  final String texture;
+  final String frame;
 }
 
 typedef SealDesignsGenerator =

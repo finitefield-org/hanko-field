@@ -1065,7 +1065,7 @@ MVPで後回し可能:
 
 | Task ID | 領域 | タスク | 主要ファイル/コマンド | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M15-T01 | app DTO | [ ] `recipe` 付きvariantのparse対応 | `app/lib/features/design/domain/`, `app/lib/features/design/data/seal_designs_repository.dart` | `recipe` があるresponseを読み取れ、旧responseでもクラッシュしない |
+| M15-T01 | app DTO | [x] `recipe` 付きvariantのparse対応 | `app/lib/features/design/domain/`, `app/lib/features/design/data/seal_designs_repository.dart` | `recipe` があるresponseを読み取れ、旧responseでもクラッシュしない |
 | M15-T02 | app Design | [ ] `DES-006` を最終カスタマイズ画面として固定 | `app/lib/features/design/presentation/design_home_screen.dart` | Shape/Style/Stroke/Balance選択後に生成へ進み、`DES-008` 以降に追加スタイル調整UIが表示されない |
 | M15-T03 | app preview | [ ] 生成PNGの表示/保存/注文下書き確認 | `app/lib/features/design/`, `app/lib/features/my_seals/`, `app/lib/features/order/` | 3候補、拡大確認、My Seals保存、注文下書き、Checkout確認で同じStorage由来の生成印影を表示する |
 | M15-T04 | admin | [ ] 生成印影/AI Variant/Style表示の文言確認 | `admin/templates/order_detail.html`, `admin/src/main.rs` | AI画像生成と誤解されない文言で、生成印影画像、AI Variant ID、選択スタイル、顧客確認を確認できる |

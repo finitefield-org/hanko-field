@@ -119,6 +119,7 @@ class SealDesignVariantDto {
     required this.label,
     required this.width,
     required this.height,
+    required this.recipe,
   });
 
   factory SealDesignVariantDto.fromJson(JsonMap json) {
@@ -129,6 +130,7 @@ class SealDesignVariantDto {
       label: readString(json, 'label'),
       width: readInt(json, 'width', defaultValue: 1024),
       height: readInt(json, 'height', defaultValue: 1024),
+      recipe: SealDesignRecipeDto.fromOptionalJson(json['recipe']),
     );
   }
 
@@ -138,6 +140,7 @@ class SealDesignVariantDto {
   final String label;
   final int width;
   final int height;
+  final SealDesignRecipeDto? recipe;
 
   SealDesignVariant toDomain() {
     return SealDesignVariant(
@@ -147,6 +150,54 @@ class SealDesignVariantDto {
       label: label,
       width: width,
       height: height,
+      recipe: recipe?.toDomain(),
+    );
+  }
+}
+
+class SealDesignRecipeDto {
+  const SealDesignRecipeDto({
+    required this.fontProfile,
+    required this.impression,
+    required this.weight,
+    required this.spacing,
+    required this.texture,
+    required this.frame,
+  });
+
+  factory SealDesignRecipeDto.fromJson(JsonMap json) {
+    return SealDesignRecipeDto(
+      fontProfile: readString(json, 'font_profile'),
+      impression: readString(json, 'impression'),
+      weight: readString(json, 'weight'),
+      spacing: readString(json, 'spacing'),
+      texture: readString(json, 'texture'),
+      frame: readString(json, 'frame'),
+    );
+  }
+
+  static SealDesignRecipeDto? fromOptionalJson(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    return SealDesignRecipeDto.fromJson(asJsonMap(value, 'seal recipe'));
+  }
+
+  final String fontProfile;
+  final String impression;
+  final String weight;
+  final String spacing;
+  final String texture;
+  final String frame;
+
+  SealDesignRecipe toDomain() {
+    return SealDesignRecipe(
+      fontProfile: fontProfile,
+      impression: impression,
+      weight: weight,
+      spacing: spacing,
+      texture: texture,
+      frame: frame,
     );
   }
 }

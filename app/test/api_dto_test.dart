@@ -164,7 +164,64 @@ void main() {
     expect(result.variants[1].id, 'seal_variant_002');
     expect(result.variants[1].storagePath, contains('seal_variant_002.png'));
     expect(result.variants[1].width, 1024);
+    expect(result.variants[1].recipe, isNull);
   });
+
+  test(
+    'SealGenerationRepository maps optional recipe on generated variants',
+    () async {
+      final transport = FakeTransport([
+        HankoApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'request_id': 'seal_request_001',
+            'variants': [
+              {
+                'id': 'seal_variant_001',
+                'storage_path':
+                    'seal_designs/seal_request_001/seal_variant_001.png',
+                'download_url':
+                    'https://storage.googleapis.com/hanko-assets/seal_designs/seal_request_001/seal_variant_001.png',
+                'label': 'Formal balanced',
+                'recipe': {
+                  'font_profile': 'formal_serif',
+                  'impression': 'elegant',
+                  'weight': 'standard',
+                  'spacing': 'balanced',
+                  'texture': 'none',
+                  'frame': 'square_standard',
+                },
+                'width': 1024,
+                'height': 1024,
+              },
+            ],
+          }),
+        ),
+      ]);
+      final repo = SealGenerationRepository(_client(transport));
+
+      final result = await repo.generateSealDesigns(
+        const SealGenerationRequest(
+          inputName: 'Michael',
+          candidate: KanjiCandidate(
+            kanji: '美空',
+            reading: 'Misora',
+            reason: 'A graceful two-character option.',
+          ),
+          style: SealStyleSelection(),
+        ),
+      );
+
+      final recipe = result.variants.single.recipe;
+      expect(recipe, isNotNull);
+      expect(recipe!.fontProfile, 'formal_serif');
+      expect(recipe.impression, 'elegant');
+      expect(recipe.weight, 'standard');
+      expect(recipe.spacing, 'balanced');
+      expect(recipe.texture, 'none');
+      expect(recipe.frame, 'square_standard');
+    },
+  );
 
   test('SealGenerationRepository propagates storage save failures', () async {
     final transport = FakeTransport([
