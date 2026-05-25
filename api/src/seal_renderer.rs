@@ -6,7 +6,7 @@ use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
 
 use crate::seal_fonts::{SealFontProfileAsset, seal_font_profile_assets};
 
-use super::{SealRecipeFontProfile, SealShape, is_cjk_han_character};
+use super::{SealRecipeFontProfile, SealRecipeSpacing, SealShape, is_cjk_han_character};
 
 const SEAL_RENDER_CANVAS_SIZE: u32 = 1024;
 const SEAL_RENDER_CONTENT_TYPE: &str = "image/png";
@@ -15,8 +15,14 @@ const SEAL_RENDER_WHITE: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
 const SQUARE_FRAME_OUTER_INSET: u32 = 96;
 const ROUND_FRAME_OUTER_INSET: u32 = 96;
 const FIXED_FRAME_STROKE_WIDTH: u32 = 34;
-const GLYPH_FRAME_INNER_MARGIN: u32 = 96;
+const AIRY_GLYPH_FRAME_INNER_MARGIN: u32 = 140;
+const BALANCED_GLYPH_FRAME_INNER_MARGIN: u32 = 96;
+const DENSE_GLYPH_FRAME_INNER_MARGIN: u32 = 56;
+const ROUND_AIRY_GLYPH_LAYOUT_HALF_SIZE: i32 = 220;
+const ROUND_BALANCED_GLYPH_LAYOUT_HALF_SIZE: i32 = 248;
+const ROUND_DENSE_GLYPH_LAYOUT_HALF_SIZE: i32 = 268;
 const GLYPH_SIZE_FIT_STEP_PX: f32 = 24.0;
+const INK_BOUNDS_ALPHA_THRESHOLD: u8 = 16;
 const DEFAULT_GLYPH_FONT_SIZE_PX: f32 = 720.0;
 const MIN_GLYPH_FONT_SIZE_PX: f32 = 32.0;
 const MAX_GLYPH_FONT_SIZE_PX: f32 = 1600.0;
@@ -29,6 +35,7 @@ pub(crate) struct RenderedFixedRuleSealImage {
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub(crate) shape: SealShape,
+    pub(crate) spacing: SealRecipeSpacing,
     pub(crate) font_profile: &'static str,
 }
 
@@ -69,7 +76,22 @@ pub(crate) fn render_fixed_rule_seal_png(
     requested_profile: SealRecipeFontProfile,
     shape: SealShape,
 ) -> Result<RenderedFixedRuleSealImage> {
-    let glyph_run = render_glyph_run_fitting_fixed_frame(kanji, requested_profile)?;
+    render_fixed_rule_seal_png_with_spacing(
+        kanji,
+        requested_profile,
+        shape,
+        SealRecipeSpacing::Balanced,
+    )
+}
+
+#[allow(dead_code)]
+pub(crate) fn render_fixed_rule_seal_png_with_spacing(
+    kanji: &str,
+    requested_profile: SealRecipeFontProfile,
+    shape: SealShape,
+    spacing: SealRecipeSpacing,
+) -> Result<RenderedFixedRuleSealImage> {
+    let glyph_run = render_glyph_run_fitting_fixed_frame(kanji, requested_profile, shape, spacing)?;
     let mut canvas = RgbaImage::from_pixel(
         SEAL_RENDER_CANVAS_SIZE,
         SEAL_RENDER_CANVAS_SIZE,
@@ -77,7 +99,7 @@ pub(crate) fn render_fixed_rule_seal_png(
     );
 
     draw_fixed_single_frame(&mut canvas, shape);
-    draw_red_glyph_run(&mut canvas, &glyph_run)?;
+    draw_red_glyph_run(&mut canvas, &glyph_run, shape, spacing)?;
 
     let mut bytes = Vec::new();
     DynamicImage::ImageRgba8(canvas)
@@ -90,6 +112,7 @@ pub(crate) fn render_fixed_rule_seal_png(
         width: SEAL_RENDER_CANVAS_SIZE,
         height: SEAL_RENDER_CANVAS_SIZE,
         shape,
+        spacing,
         font_profile: glyph_run.font_profile,
     })
 }
@@ -97,12 +120,14 @@ pub(crate) fn render_fixed_rule_seal_png(
 fn render_glyph_run_fitting_fixed_frame(
     kanji: &str,
     requested_profile: SealRecipeFontProfile,
+    shape: SealShape,
+    spacing: SealRecipeSpacing,
 ) -> Result<RenderedSealGlyphRun> {
-    let mut font_size = glyph_font_size_for_text(kanji)?;
+    let mut font_size = glyph_font_size_for_text(kanji, spacing)?;
     loop {
         let glyph_run =
             render_seal_glyphs_from_real_font_at_px(kanji, requested_profile, font_size)?;
-        if glyph_run_fits_fixed_frame(&glyph_run)? {
+        if glyph_run_fits_fixed_frame(&glyph_run, shape, spacing)? {
             return Ok(glyph_run);
         }
 
@@ -156,11 +181,15 @@ fn validate_glyph_font_size(font_size_px: f32) -> Result<()> {
     Ok(())
 }
 
-fn glyph_font_size_for_text(kanji: &str) -> Result<f32> {
+fn glyph_font_size_for_text(kanji: &str, spacing: SealRecipeSpacing) -> Result<f32> {
     let char_count = kanji.chars().count();
-    match char_count {
-        1 => Ok(560.0),
-        2 => Ok(390.0),
+    match (char_count, spacing) {
+        (1, SealRecipeSpacing::Airy) => Ok(500.0),
+        (1, SealRecipeSpacing::Balanced) => Ok(560.0),
+        (1, SealRecipeSpacing::Dense) => Ok(640.0),
+        (2, SealRecipeSpacing::Airy) => Ok(330.0),
+        (2, SealRecipeSpacing::Balanced) => Ok(390.0),
+        (2, SealRecipeSpacing::Dense) => Ok(460.0),
         _ => bail!("selected kanji must be 1 or 2 characters"),
     }
 }
@@ -309,72 +338,236 @@ fn draw_round_frame(canvas: &mut RgbaImage) {
     }
 }
 
-fn draw_red_glyph_run(canvas: &mut RgbaImage, glyph_run: &RenderedSealGlyphRun) -> Result<()> {
-    let glyph_gap = glyph_gap_for_len(glyph_run.glyphs.len());
-    let (content_width, content_height) = glyph_run_dimensions(glyph_run)?;
-    let (available_width, available_height) = fixed_frame_available_size();
-    if content_width > available_width || content_height > available_height {
+fn draw_red_glyph_run(
+    canvas: &mut RgbaImage,
+    glyph_run: &RenderedSealGlyphRun,
+    shape: SealShape,
+    spacing: SealRecipeSpacing,
+) -> Result<()> {
+    let layout = layout_glyph_run_by_ink(glyph_run)?;
+    let target_bounds = fixed_frame_layout_bounds(shape, spacing);
+    if layout.ink_bounds.width() > target_bounds.width()
+        || layout.ink_bounds.height() > target_bounds.height()
+    {
         bail!("glyph run does not fit fixed frame interior");
     }
 
-    let mut pen_x = (SEAL_RENDER_CANVAS_SIZE - content_width) / 2;
-    let base_y = (SEAL_RENDER_CANVAS_SIZE - content_height) / 2;
-    for glyph in &glyph_run.glyphs {
-        let glyph_y = base_y + (content_height - glyph.bitmap_height as u32) / 2;
-        draw_red_glyph_bitmap(canvas, glyph, pen_x, glyph_y);
-        pen_x += glyph.bitmap_width as u32 + glyph_gap;
+    let offset_x = target_bounds.left
+        + ((target_bounds.width() as i32 - layout.ink_bounds.width() as i32) / 2)
+        - layout.ink_bounds.left;
+    let offset_y = target_bounds.top
+        + ((target_bounds.height() as i32 - layout.ink_bounds.height() as i32) / 2)
+        - layout.ink_bounds.top;
+
+    for placement in layout.placements {
+        let glyph = &glyph_run.glyphs[placement.glyph_index];
+        draw_red_glyph_bitmap(
+            canvas,
+            glyph,
+            placement.origin_x + offset_x,
+            placement.origin_y + offset_y,
+        );
     }
 
     Ok(())
 }
 
-fn glyph_run_fits_fixed_frame(glyph_run: &RenderedSealGlyphRun) -> Result<bool> {
-    let (content_width, content_height) = glyph_run_dimensions(glyph_run)?;
-    let (available_width, available_height) = fixed_frame_available_size();
-    Ok(content_width <= available_width && content_height <= available_height)
+fn glyph_run_fits_fixed_frame(
+    glyph_run: &RenderedSealGlyphRun,
+    shape: SealShape,
+    spacing: SealRecipeSpacing,
+) -> Result<bool> {
+    let layout = layout_glyph_run_by_ink(glyph_run)?;
+    let target_bounds = fixed_frame_layout_bounds(shape, spacing);
+    Ok(layout.ink_bounds.width() <= target_bounds.width()
+        && layout.ink_bounds.height() <= target_bounds.height())
 }
 
-fn glyph_run_dimensions(glyph_run: &RenderedSealGlyphRun) -> Result<(u32, u32)> {
-    let glyph_gap = glyph_gap_for_len(glyph_run.glyphs.len());
-    let content_width = glyph_run
-        .glyphs
-        .iter()
-        .map(|glyph| glyph.bitmap_width as u32)
-        .sum::<u32>()
-        + glyph_gap * glyph_run.glyphs.len().saturating_sub(1) as u32;
-    let content_height = glyph_run
-        .glyphs
-        .iter()
-        .map(|glyph| glyph.bitmap_height as u32)
-        .max()
-        .unwrap_or(0);
-    if content_width == 0 || content_height == 0 {
-        bail!("glyph run has no drawable bitmap content");
+#[derive(Debug, Clone, Copy)]
+struct InkBounds {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+}
+
+impl InkBounds {
+    fn width(self) -> u32 {
+        (self.right - self.left) as u32
     }
-    Ok((content_width, content_height))
+
+    fn height(self) -> u32 {
+        (self.bottom - self.top) as u32
+    }
+
+    fn union(self, other: Self) -> Self {
+        Self {
+            left: self.left.min(other.left),
+            top: self.top.min(other.top),
+            right: self.right.max(other.right),
+            bottom: self.bottom.max(other.bottom),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutBounds {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+}
+
+impl LayoutBounds {
+    fn width(self) -> u32 {
+        (self.right - self.left) as u32
+    }
+
+    fn height(self) -> u32 {
+        (self.bottom - self.top) as u32
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct GlyphBitmapPlacement {
+    glyph_index: usize,
+    origin_x: i32,
+    origin_y: i32,
+}
+
+#[derive(Debug, Clone)]
+struct GlyphRunInkLayout {
+    placements: Vec<GlyphBitmapPlacement>,
+    ink_bounds: InkBounds,
+}
+
+fn layout_glyph_run_by_ink(glyph_run: &RenderedSealGlyphRun) -> Result<GlyphRunInkLayout> {
+    let glyph_gap = glyph_gap_for_len(glyph_run.glyphs.len());
+    let glyph_ink_bounds = glyph_run
+        .glyphs
+        .iter()
+        .map(glyph_ink_bounds)
+        .collect::<Result<Vec<_>>>()?;
+    let max_ink_height = glyph_ink_bounds
+        .iter()
+        .map(|bounds| bounds.height())
+        .max()
+        .ok_or_else(|| anyhow!("glyph run has no drawable bitmap content"))?;
+
+    let mut placements = Vec::with_capacity(glyph_run.glyphs.len());
+    let mut pen_x = 0_i32;
+    let mut layout_ink_bounds: Option<InkBounds> = None;
+    for (glyph_index, bounds) in glyph_ink_bounds.iter().enumerate() {
+        let ink_top = ((max_ink_height - bounds.height()) / 2) as i32;
+        let origin_x = pen_x - bounds.left;
+        let origin_y = ink_top - bounds.top;
+        let placed_bounds = InkBounds {
+            left: origin_x + bounds.left,
+            top: origin_y + bounds.top,
+            right: origin_x + bounds.right,
+            bottom: origin_y + bounds.bottom,
+        };
+
+        placements.push(GlyphBitmapPlacement {
+            glyph_index,
+            origin_x,
+            origin_y,
+        });
+        layout_ink_bounds = Some(match layout_ink_bounds {
+            Some(current) => current.union(placed_bounds),
+            None => placed_bounds,
+        });
+        pen_x += bounds.width() as i32 + glyph_gap as i32;
+    }
+
+    let ink_bounds =
+        layout_ink_bounds.ok_or_else(|| anyhow!("glyph run has no drawable bitmap content"))?;
+    Ok(GlyphRunInkLayout {
+        placements,
+        ink_bounds,
+    })
+}
+
+fn glyph_ink_bounds(glyph: &RenderedSealGlyph) -> Result<InkBounds> {
+    let mut left = glyph.bitmap_width as i32;
+    let mut top = glyph.bitmap_height as i32;
+    let mut right = 0_i32;
+    let mut bottom = 0_i32;
+
+    for y in 0..glyph.bitmap_height {
+        for x in 0..glyph.bitmap_width {
+            let alpha = glyph.bitmap[y * glyph.bitmap_width + x];
+            if alpha < INK_BOUNDS_ALPHA_THRESHOLD {
+                continue;
+            }
+            left = left.min(x as i32);
+            top = top.min(y as i32);
+            right = right.max(x as i32 + 1);
+            bottom = bottom.max(y as i32 + 1);
+        }
+    }
+
+    if left >= right || top >= bottom {
+        bail!("glyph has no ink pixels above layout threshold");
+    }
+    Ok(InkBounds {
+        left,
+        top,
+        right,
+        bottom,
+    })
 }
 
 fn glyph_gap_for_len(len: usize) -> u32 {
     if len <= 1 { 0 } else { 24 }
 }
 
-fn fixed_frame_available_size() -> (u32, u32) {
-    let frame_inner_left =
-        SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + GLYPH_FRAME_INNER_MARGIN;
-    let frame_inner_top = frame_inner_left;
-    let frame_inner_right = SEAL_RENDER_CANVAS_SIZE - frame_inner_left;
-    let frame_inner_bottom = SEAL_RENDER_CANVAS_SIZE - frame_inner_top;
-    (
-        frame_inner_right.saturating_sub(frame_inner_left),
-        frame_inner_bottom.saturating_sub(frame_inner_top),
-    )
+fn fixed_frame_layout_bounds(shape: SealShape, spacing: SealRecipeSpacing) -> LayoutBounds {
+    match shape {
+        SealShape::Square => {
+            let frame_inner_edge = SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH;
+            let inset = (frame_inner_edge + glyph_spacing_margin(spacing)) as i32;
+            LayoutBounds {
+                left: inset,
+                top: inset,
+                right: SEAL_RENDER_CANVAS_SIZE as i32 - inset,
+                bottom: SEAL_RENDER_CANVAS_SIZE as i32 - inset,
+            }
+        }
+        SealShape::Round => {
+            let half_size = round_glyph_layout_half_size(spacing);
+            let center = SEAL_RENDER_CANVAS_SIZE as i32 / 2;
+            LayoutBounds {
+                left: center - half_size,
+                top: center - half_size,
+                right: center + half_size,
+                bottom: center + half_size,
+            }
+        }
+    }
+}
+
+fn glyph_spacing_margin(spacing: SealRecipeSpacing) -> u32 {
+    match spacing {
+        SealRecipeSpacing::Airy => AIRY_GLYPH_FRAME_INNER_MARGIN,
+        SealRecipeSpacing::Balanced => BALANCED_GLYPH_FRAME_INNER_MARGIN,
+        SealRecipeSpacing::Dense => DENSE_GLYPH_FRAME_INNER_MARGIN,
+    }
+}
+
+fn round_glyph_layout_half_size(spacing: SealRecipeSpacing) -> i32 {
+    match spacing {
+        SealRecipeSpacing::Airy => ROUND_AIRY_GLYPH_LAYOUT_HALF_SIZE,
+        SealRecipeSpacing::Balanced => ROUND_BALANCED_GLYPH_LAYOUT_HALF_SIZE,
+        SealRecipeSpacing::Dense => ROUND_DENSE_GLYPH_LAYOUT_HALF_SIZE,
+    }
 }
 
 fn draw_red_glyph_bitmap(
     canvas: &mut RgbaImage,
     glyph: &RenderedSealGlyph,
-    origin_x: u32,
-    origin_y: u32,
+    origin_x: i32,
+    origin_y: i32,
 ) {
     for y in 0..glyph.bitmap_height {
         for x in 0..glyph.bitmap_width {
@@ -382,12 +575,16 @@ fn draw_red_glyph_bitmap(
             if alpha == 0 {
                 continue;
             }
-            let canvas_x = origin_x + x as u32;
-            let canvas_y = origin_y + y as u32;
-            if canvas_x >= SEAL_RENDER_CANVAS_SIZE || canvas_y >= SEAL_RENDER_CANVAS_SIZE {
+            let canvas_x = origin_x + x as i32;
+            let canvas_y = origin_y + y as i32;
+            if canvas_x < 0
+                || canvas_y < 0
+                || canvas_x >= SEAL_RENDER_CANVAS_SIZE as i32
+                || canvas_y >= SEAL_RENDER_CANVAS_SIZE as i32
+            {
                 continue;
             }
-            blend_red_over_white(canvas, canvas_x, canvas_y, alpha);
+            blend_red_over_white(canvas, canvas_x as u32, canvas_y as u32, alpha);
         }
     }
 }
@@ -510,8 +707,10 @@ mod tests {
                 .expect("second square seal should render");
 
         assert_eq!(first.shape, SealShape::Square);
+        assert_eq!(first.spacing, SealRecipeSpacing::Balanced);
         assert_eq!(first.font_profile, "formal_serif");
         assert_eq!(second.shape, SealShape::Square);
+        assert_eq!(second.spacing, SealRecipeSpacing::Balanced);
         assert_eq!(second.font_profile, "soft_sans");
         let first = decode_fixed_rule_image(&first);
         let second = decode_fixed_rule_image(&second);
@@ -533,8 +732,10 @@ mod tests {
                 .expect("second round seal should render");
 
         assert_eq!(first.shape, SealShape::Round);
+        assert_eq!(first.spacing, SealRecipeSpacing::Balanced);
         assert_eq!(first.font_profile, "formal_serif");
         assert_eq!(second.shape, SealShape::Round);
+        assert_eq!(second.spacing, SealRecipeSpacing::Balanced);
         assert_eq!(second.font_profile, "soft_sans");
         let first = decode_fixed_rule_image(&first);
         let second = decode_fixed_rule_image(&second);
@@ -569,6 +770,95 @@ mod tests {
         assert_red_or_white_palette(&round);
         assert!(count_inner_red_pixels(&square) > 1_000);
         assert!(count_inner_red_pixels(&round) > 1_000);
+    }
+
+    #[test]
+    fn m14_t06_centers_ink_for_shapes_spacings_and_character_counts() {
+        for shape in [SealShape::Square, SealShape::Round] {
+            for spacing in [
+                SealRecipeSpacing::Airy,
+                SealRecipeSpacing::Balanced,
+                SealRecipeSpacing::Dense,
+            ] {
+                for selected_text in ["美", "美空"] {
+                    let rendered = render_fixed_rule_seal_png_with_spacing(
+                        selected_text,
+                        SealRecipeFontProfile::FormalSerif,
+                        shape,
+                        spacing,
+                    )
+                    .expect("seal should render with requested layout");
+                    assert_eq!(rendered.shape, shape);
+                    assert_eq!(rendered.spacing, spacing);
+
+                    let image = decode_fixed_rule_image(&rendered);
+                    match shape {
+                        SealShape::Square => assert_fixed_square_frame(&image),
+                        SealShape::Round => assert_fixed_round_frame(&image),
+                    }
+                    assert_red_or_white_palette(&image);
+                    let bounds = assert_glyph_ink_centered_and_inside_target(
+                        &image,
+                        shape,
+                        spacing,
+                        selected_text,
+                    );
+                    assert!(
+                        bounds.width() > 80 && bounds.height() > 80,
+                        "rendered glyph ink should remain legible for {selected_text:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn m14_t06_spacing_changes_visible_ink_size() {
+        let airy = render_fixed_rule_seal_png_with_spacing(
+            "美",
+            SealRecipeFontProfile::FormalSerif,
+            SealShape::Square,
+            SealRecipeSpacing::Airy,
+        )
+        .expect("airy seal should render");
+        let balanced = render_fixed_rule_seal_png_with_spacing(
+            "美",
+            SealRecipeFontProfile::FormalSerif,
+            SealShape::Square,
+            SealRecipeSpacing::Balanced,
+        )
+        .expect("balanced seal should render");
+        let dense = render_fixed_rule_seal_png_with_spacing(
+            "美",
+            SealRecipeFontProfile::FormalSerif,
+            SealShape::Square,
+            SealRecipeSpacing::Dense,
+        )
+        .expect("dense seal should render");
+
+        let airy_bounds = assert_glyph_ink_centered_and_inside_target(
+            &decode_fixed_rule_image(&airy),
+            SealShape::Square,
+            SealRecipeSpacing::Airy,
+            "美",
+        );
+        let balanced_bounds = assert_glyph_ink_centered_and_inside_target(
+            &decode_fixed_rule_image(&balanced),
+            SealShape::Square,
+            SealRecipeSpacing::Balanced,
+            "美",
+        );
+        let dense_bounds = assert_glyph_ink_centered_and_inside_target(
+            &decode_fixed_rule_image(&dense),
+            SealShape::Square,
+            SealRecipeSpacing::Dense,
+            "美",
+        );
+
+        assert!(airy_bounds.height() < balanced_bounds.height());
+        assert!(balanced_bounds.height() < dense_bounds.height());
+        assert!(airy_bounds.width() < balanced_bounds.width());
+        assert!(balanced_bounds.width() < dense_bounds.width());
     }
 
     fn find_character_missing_from_primary_but_present_in_fallback(
@@ -702,7 +992,8 @@ mod tests {
     }
 
     fn count_inner_red_pixels(image: &RgbaImage) -> usize {
-        let start = SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + GLYPH_FRAME_INNER_MARGIN;
+        let start =
+            SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + BALANCED_GLYPH_FRAME_INNER_MARGIN;
         let end = SEAL_RENDER_CANVAS_SIZE - start;
         let mut count = 0;
         for y in start..end {
@@ -718,6 +1009,119 @@ mod tests {
             }
         }
         count
+    }
+
+    fn assert_glyph_ink_centered_and_inside_target(
+        image: &RgbaImage,
+        shape: SealShape,
+        spacing: SealRecipeSpacing,
+        selected_text: &str,
+    ) -> InkBounds {
+        let target = fixed_frame_layout_bounds(shape, spacing);
+        let search_bounds = fixed_frame_inner_search_bounds(shape);
+        let ink_bounds = rendered_glyph_ink_bounds(image, shape, search_bounds)
+            .unwrap_or_else(|| panic!("rendered glyph ink should exist for {selected_text:?}"));
+        let tolerance = 6;
+
+        assert!(
+            ink_bounds.left >= target.left - tolerance,
+            "{selected_text:?} {shape:?} {spacing:?} ink bounds {ink_bounds:?} should be inside target {target:?}"
+        );
+        assert!(
+            ink_bounds.top >= target.top - tolerance,
+            "{selected_text:?} {shape:?} {spacing:?} ink bounds {ink_bounds:?} should be inside target {target:?}"
+        );
+        assert!(
+            ink_bounds.right <= target.right + tolerance,
+            "{selected_text:?} {shape:?} {spacing:?} ink bounds {ink_bounds:?} should be inside target {target:?}"
+        );
+        assert!(
+            ink_bounds.bottom <= target.bottom + tolerance,
+            "{selected_text:?} {shape:?} {spacing:?} ink bounds {ink_bounds:?} should be inside target {target:?}"
+        );
+
+        let ink_center_x = (ink_bounds.left + ink_bounds.right) as f32 / 2.0;
+        let ink_center_y = (ink_bounds.top + ink_bounds.bottom) as f32 / 2.0;
+        let target_center_x = (target.left + target.right) as f32 / 2.0;
+        let target_center_y = (target.top + target.bottom) as f32 / 2.0;
+        assert!(
+            (ink_center_x - target_center_x).abs() <= 2.0,
+            "{selected_text:?} {shape:?} {spacing:?} ink center x {ink_center_x} should match target {target_center_x}"
+        );
+        assert!(
+            (ink_center_y - target_center_y).abs() <= 6.0,
+            "{selected_text:?} {shape:?} {spacing:?} ink center y {ink_center_y} should match target {target_center_y}"
+        );
+
+        ink_bounds
+    }
+
+    fn fixed_frame_inner_search_bounds(shape: SealShape) -> LayoutBounds {
+        let frame_inner_edge = match shape {
+            SealShape::Square => SQUARE_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + 1,
+            SealShape::Round => ROUND_FRAME_OUTER_INSET + FIXED_FRAME_STROKE_WIDTH + 1,
+        } as i32;
+        LayoutBounds {
+            left: frame_inner_edge,
+            top: frame_inner_edge,
+            right: SEAL_RENDER_CANVAS_SIZE as i32 - frame_inner_edge,
+            bottom: SEAL_RENDER_CANVAS_SIZE as i32 - frame_inner_edge,
+        }
+    }
+
+    fn rendered_glyph_ink_bounds(
+        image: &RgbaImage,
+        shape: SealShape,
+        search_bounds: LayoutBounds,
+    ) -> Option<InkBounds> {
+        let mut bounds: Option<InkBounds> = None;
+        for y in search_bounds.top..search_bounds.bottom {
+            for x in search_bounds.left..search_bounds.right {
+                if !is_inside_frame_open_area(x, y, shape) {
+                    continue;
+                }
+                if !is_rendered_ink_pixel_for_bounds(image.get_pixel(x as u32, y as u32)) {
+                    continue;
+                }
+                let pixel_bounds = InkBounds {
+                    left: x,
+                    top: y,
+                    right: x + 1,
+                    bottom: y + 1,
+                };
+                bounds = Some(match bounds {
+                    Some(current) => current.union(pixel_bounds),
+                    None => pixel_bounds,
+                });
+            }
+        }
+        bounds
+    }
+
+    fn is_inside_frame_open_area(x: i32, y: i32, shape: SealShape) -> bool {
+        match shape {
+            SealShape::Square => true,
+            SealShape::Round => {
+                let center = (SEAL_RENDER_CANVAS_SIZE as f32 - 1.0) / 2.0;
+                let inner_radius = (SEAL_RENDER_CANVAS_SIZE - ROUND_FRAME_OUTER_INSET * 2) as f32
+                    / 2.0
+                    - FIXED_FRAME_STROKE_WIDTH as f32
+                    - 1.0;
+                let dx = x as f32 - center;
+                let dy = y as f32 - center;
+                dx * dx + dy * dy < inner_radius * inner_radius
+            }
+        }
+    }
+
+    fn is_rendered_ink_pixel_for_bounds(pixel: &Rgba<u8>) -> bool {
+        let [red, green, blue, alpha] = pixel.0;
+        alpha == 255
+            && pixel.0 != SEAL_RENDER_WHITE
+            && red >= green
+            && red >= blue
+            && green <= 240
+            && blue <= 241
     }
 
     fn count_exact_red_segments_on_row(image: &RgbaImage, y: u32) -> usize {

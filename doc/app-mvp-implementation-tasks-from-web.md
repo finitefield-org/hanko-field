@@ -1056,7 +1056,7 @@ MVPで後回し可能:
 | M14-T03 | Gemini | [x] AIレシピ生成へ変更 | `api/src/main.rs` | Gemini呼び出しが画像生成ではなく構造化JSONレシピ3件だけを返し、未知キー・未許可値・件数不一致を失敗扱いにする |
 | M14-T04 | renderer | [x] 実在フォントのグリフ描画実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | 選択済み `kanji` のUnicode文字列だけを実在フォントから描画し、存在しない字形や別字を生成しない |
 | M14-T05 | renderer | [x] 固定外枠/色/背景ルール実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | 1024x1024 PNG、白背景、赤文字、赤枠1本、角印/丸印ごとの固定外枠サイズを全variantで満たす |
-| M14-T06 | renderer | [ ] 中央配置と余白調整実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | グリフのインク領域を基準に中央配置し、1文字/2文字、角印/丸印、余白 `airy` / `balanced` / `dense` で見切れや偏りがない |
+| M14-T06 | renderer | [x] 中央配置と余白調整実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | グリフのインク領域を基準に中央配置し、1文字/2文字、角印/丸印、余白 `airy` / `balanced` / `dense` で見切れや偏りがない |
 | M14-T07 | API/Storage | [ ] `POST /v1/seal-designs/generate` 統合 | `api/src/main.rs` | レシピ生成、プログラム描画、Storage保存、`recipe` 付きresponseを一連で返し、既存appのresponse parse互換を壊さない |
 | M14-T08 | API errors | [ ] エラーコード/ログ整理 | `api/src/main.rs` | レシピ生成失敗は `gemini_generation_failed`、描画/グリフ/Storage失敗は `seal_generation_failed` として画面状態へ正しく対応する |
 | M14-T09 | API tests | [ ] レンダラ/生成APIテスト追加 | `api/src/main.rs` tests または `api/tests/**` | 未許可レシピ、グリフ欠落、赤/白/1本枠、固定外枠サイズ、中央配置、Storage失敗を自動またはスナップショットで検証できる |
