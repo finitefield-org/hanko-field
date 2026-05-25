@@ -9,6 +9,7 @@ axum = { version = "0.8", features = ["macros"] }
 base64 = "0.22"
 chrono = { version = "0.4", features = ["clock"] }
 firebase_sdk_rust = { path = "../../firebase-sdk-rust" }
+fontdue = "0.9"
 gcp_auth = "0.12"
 hex = "0.4"
 hmac = "0.12"

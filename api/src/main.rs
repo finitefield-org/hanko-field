@@ -31,6 +31,7 @@ use tokio::net::TcpListener;
 use uuid::Uuid;
 
 mod seal_fonts;
+mod seal_renderer;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
