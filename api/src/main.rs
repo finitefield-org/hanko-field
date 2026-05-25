@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
+    fmt,
     net::SocketAddr,
     str::FromStr,
     sync::Arc,
@@ -1703,21 +1704,21 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
     let recipe_variants = match generate_seal_design_recipes_with_gemini(&state, &input).await {
         Ok(value) => value,
         Err(err) => {
-            eprintln!("failed to generate seal design recipes with gemini: {err:#}");
-            return error_response(
-                StatusCode::BAD_GATEWAY,
-                "gemini_generation_failed",
-                "failed to generate seal design recipes",
-            );
+            log_seal_design_failure(SealDesignFailurePhase::RecipeGeneration, format!("{err:#}"));
+            return seal_design_failure_response(SealDesignFailurePhase::RecipeGeneration);
         }
     };
 
     if recipe_variants.len() != input.variant_count {
-        return error_response(
-            StatusCode::BAD_GATEWAY,
-            "gemini_generation_failed",
-            "gemini returned an unexpected number of seal design recipes",
+        log_seal_design_failure(
+            SealDesignFailurePhase::RecipeValidation,
+            format!(
+                "expected_variant_count={} actual_variant_count={}",
+                input.variant_count,
+                recipe_variants.len()
+            ),
         );
+        return seal_design_failure_response(SealDesignFailurePhase::RecipeValidation);
     }
 
     let request_id = format!("seal_request_{}", Uuid::new_v4().simple());
@@ -1727,22 +1728,14 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
     let images = match generate_seal_design_images_with_renderer(&input, &variants) {
         Ok(value) => value,
         Err(err) => {
-            eprintln!("failed to render seal design images: {err:#}");
-            return error_response(
-                StatusCode::BAD_GATEWAY,
-                "seal_generation_failed",
-                "failed to render seal design images",
-            );
+            log_seal_design_failure(SealDesignFailurePhase::Rendering, format!("{err:#}"));
+            return seal_design_failure_response(SealDesignFailurePhase::Rendering);
         }
     };
 
     if let Err(err) = upload_seal_design_images_to_storage(&state, &variants, &images).await {
-        eprintln!("failed to upload seal design images to storage: {err:#}");
-        return error_response(
-            StatusCode::BAD_GATEWAY,
-            "storage_upload_failed",
-            "failed to save seal design images",
-        );
+        log_seal_design_failure(SealDesignFailurePhase::StorageUpload, format!("{err:#}"));
+        return seal_design_failure_response(SealDesignFailurePhase::StorageUpload);
     }
 
     json_response(
@@ -2170,6 +2163,58 @@ fn error_response(status: StatusCode, code: &str, message: &str) -> Response {
             }
         }),
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealDesignFailurePhase {
+    RecipeGeneration,
+    RecipeValidation,
+    Rendering,
+    StorageUpload,
+}
+
+impl SealDesignFailurePhase {
+    fn log_name(self) -> &'static str {
+        match self {
+            Self::RecipeGeneration => "recipe_generation",
+            Self::RecipeValidation => "recipe_validation",
+            Self::Rendering => "rendering",
+            Self::StorageUpload => "storage_upload",
+        }
+    }
+
+    fn error_code(self) -> &'static str {
+        match self {
+            Self::RecipeGeneration | Self::RecipeValidation => "gemini_generation_failed",
+            Self::Rendering | Self::StorageUpload => "seal_generation_failed",
+        }
+    }
+
+    fn public_message(self) -> &'static str {
+        match self {
+            Self::RecipeGeneration => "failed to generate seal design recipes",
+            Self::RecipeValidation => "gemini returned an unexpected number of seal design recipes",
+            Self::Rendering => "failed to render seal design images",
+            Self::StorageUpload => "failed to save seal design images",
+        }
+    }
+}
+
+fn seal_design_failure_response(phase: SealDesignFailurePhase) -> Response {
+    error_response(
+        StatusCode::BAD_GATEWAY,
+        phase.error_code(),
+        phase.public_message(),
+    )
+}
+
+fn log_seal_design_failure(phase: SealDesignFailurePhase, detail: impl fmt::Display) {
+    eprintln!(
+        "seal design generation failed phase={} code={} detail={}",
+        phase.log_name(),
+        phase.error_code(),
+        detail
+    );
 }
 
 fn order_status_response_json(result: &OrderStatusResult) -> JsonValue {
@@ -9121,6 +9166,38 @@ mod tests {
             err_chain.contains("recipe frame round_standard does not match requested shape square"),
             "unexpected error: {err_chain}"
         );
+    }
+
+    #[test]
+    fn m14_t08_seal_design_failure_codes_match_app_error_states() {
+        for phase in [
+            SealDesignFailurePhase::RecipeGeneration,
+            SealDesignFailurePhase::RecipeValidation,
+        ] {
+            assert_eq!(phase.error_code(), "gemini_generation_failed");
+        }
+
+        for phase in [
+            SealDesignFailurePhase::Rendering,
+            SealDesignFailurePhase::StorageUpload,
+        ] {
+            assert_eq!(phase.error_code(), "seal_generation_failed");
+        }
+    }
+
+    #[test]
+    fn m14_t08_seal_design_failure_response_uses_bad_gateway_status() {
+        for phase in [
+            SealDesignFailurePhase::RecipeGeneration,
+            SealDesignFailurePhase::RecipeValidation,
+            SealDesignFailurePhase::Rendering,
+            SealDesignFailurePhase::StorageUpload,
+        ] {
+            let response = seal_design_failure_response(phase);
+            assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+            assert!(!phase.public_message().is_empty());
+            assert!(!phase.log_name().is_empty());
+        }
     }
 
     #[test]
