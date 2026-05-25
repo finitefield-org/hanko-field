@@ -30,6 +30,8 @@ use sha2::{Digest, Sha256};
 use tokio::net::TcpListener;
 use uuid::Uuid;
 
+mod seal_fonts;
+
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
 const DEFAULT_PORT: &str = "3050";

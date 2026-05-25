@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "key": "formal_serif",
+      "font_family": "Noto Serif JP",
+      "file": "noto-serif-jp/NotoSerifJP-wght.ttf",
+      "license": "SIL Open Font License 1.1",
+      "license_file": "noto-serif-jp/OFL.txt",
+      "source_url": "https://github.com/google/fonts/tree/main/ofl/notoserifjp",
+      "sha256": "2fd527ba12b6a44ec30d796d633360da0aeba6c5d4af1304ce12bb4dc15a7dfc",
+      "fallback_profile": null,
+      "coverage": "Japanese kana and common CJK Unified Ideographs; preferred fallback for broad CJK coverage."
+    },
+    {
+      "key": "soft_sans",
+      "font_family": "Noto Sans JP",
+      "file": "noto-sans-jp/NotoSansJP-wght.ttf",
+      "license": "SIL Open Font License 1.1",
+      "license_file": "noto-sans-jp/OFL.txt",
+      "source_url": "https://github.com/google/fonts/tree/main/ofl/notosansjp",
+      "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f",
+      "fallback_profile": "formal_serif",
+      "coverage": "Japanese kana and common CJK Unified Ideographs; preferred readable sans profile."
+    },
+    {
+      "key": "bold_brush",
+      "font_family": "Yuji Syuku",
+      "file": "yuji-syuku/YujiSyuku-Regular.ttf",
+      "license": "SIL Open Font License 1.1",
+      "license_file": "yuji-syuku/OFL.txt",
+      "source_url": "https://github.com/google/fonts/tree/main/ofl/yujisyuku",
+      "sha256": "82728ebafc8c97391e2dab633414a806f344b8e4e2227d307179f07b548fca61",
+      "fallback_profile": "formal_serif",
+      "coverage": "Japanese kana and common JIS kanji; brush-like profile."
+    },
+    {
+      "key": "classic_seal",
+      "font_family": "Kaisei Tokumin",
+      "file": "kaisei-tokumin/KaiseiTokumin-Bold.ttf",
+      "license": "SIL Open Font License 1.1",
+      "license_file": "kaisei-tokumin/OFL.txt",
+      "source_url": "https://github.com/google/fonts/tree/main/ofl/kaiseitokumin",
+      "sha256": "4540f6b5c32724acc9c4ba77692195078de43a4ee762d436e39d32fa8d1a73c9",
+      "fallback_profile": "formal_serif",
+      "coverage": "Japanese kana and common JIS kanji; classic high-contrast seal profile."
+    }
+  ]
+}
