@@ -602,6 +602,158 @@ impl Default for SealGenerationRules {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SealDesignRecipeVariantDto {
+    label: String,
+    recipe: SealDesignRecipeDto,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SealDesignRecipeDto {
+    font_profile: String,
+    impression: String,
+    weight: String,
+    spacing: String,
+    texture: String,
+    frame: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SealDesignRecipeVariant {
+    label: String,
+    recipe: SealDesignRecipe,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SealDesignRecipe {
+    font_profile: SealRecipeFontProfile,
+    impression: SealRecipeImpression,
+    weight: SealRecipeWeight,
+    spacing: SealRecipeSpacing,
+    texture: SealRecipeTexture,
+    frame: SealRecipeFrame,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealRecipeFontProfile {
+    FormalSerif,
+    SoftSans,
+    BoldBrush,
+    ClassicSeal,
+}
+
+impl SealRecipeFontProfile {
+    #[allow(dead_code)]
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::FormalSerif => "formal_serif",
+            Self::SoftSans => "soft_sans",
+            Self::BoldBrush => "bold_brush",
+            Self::ClassicSeal => "classic_seal",
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealRecipeImpression {
+    Traditional,
+    Elegant,
+    Soft,
+    Bold,
+}
+
+impl SealRecipeImpression {
+    #[allow(dead_code)]
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Traditional => "traditional",
+            Self::Elegant => "elegant",
+            Self::Soft => "soft",
+            Self::Bold => "bold",
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealRecipeWeight {
+    Standard,
+    Bold,
+}
+
+impl SealRecipeWeight {
+    #[allow(dead_code)]
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Standard => "standard",
+            Self::Bold => "bold",
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealRecipeSpacing {
+    Airy,
+    Balanced,
+    Dense,
+}
+
+impl SealRecipeSpacing {
+    #[allow(dead_code)]
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Airy => "airy",
+            Self::Balanced => "balanced",
+            Self::Dense => "dense",
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealRecipeTexture {
+    None,
+    SubtleInk,
+    SoftBleed,
+}
+
+impl SealRecipeTexture {
+    #[allow(dead_code)]
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::SubtleInk => "subtle_ink",
+            Self::SoftBleed => "soft_bleed",
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealRecipeFrame {
+    SquareStandard,
+    RoundStandard,
+}
+
+impl SealRecipeFrame {
+    #[allow(dead_code)]
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::SquareStandard => "square_standard",
+            Self::RoundStandard => "round_standard",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SealShape {
     Square,
@@ -4115,6 +4267,96 @@ fn parse_seal_balance(raw: &str) -> Result<SealBalance> {
         "balanced" => Ok(SealBalance::Balanced),
         "dense" => Ok(SealBalance::Dense),
         _ => bail!("balance must be one of airy, balanced, dense"),
+    }
+}
+
+#[allow(dead_code)]
+fn validate_seal_design_recipe_variant(
+    dto: SealDesignRecipeVariantDto,
+) -> Result<SealDesignRecipeVariant> {
+    let label = dto.label.trim().to_owned();
+    if label.is_empty() {
+        bail!("label is required");
+    }
+    if label.chars().count() > 80 {
+        bail!("label must be 80 characters or fewer");
+    }
+
+    Ok(SealDesignRecipeVariant {
+        label,
+        recipe: validate_seal_design_recipe(dto.recipe)?,
+    })
+}
+
+#[allow(dead_code)]
+fn validate_seal_design_recipe(dto: SealDesignRecipeDto) -> Result<SealDesignRecipe> {
+    Ok(SealDesignRecipe {
+        font_profile: parse_seal_recipe_font_profile(&dto.font_profile)?,
+        impression: parse_seal_recipe_impression(&dto.impression)?,
+        weight: parse_seal_recipe_weight(&dto.weight)?,
+        spacing: parse_seal_recipe_spacing(&dto.spacing)?,
+        texture: parse_seal_recipe_texture(&dto.texture)?,
+        frame: parse_seal_recipe_frame(&dto.frame)?,
+    })
+}
+
+#[allow(dead_code)]
+fn parse_seal_recipe_font_profile(raw: &str) -> Result<SealRecipeFontProfile> {
+    match raw.trim().to_lowercase().as_str() {
+        "formal_serif" => Ok(SealRecipeFontProfile::FormalSerif),
+        "soft_sans" => Ok(SealRecipeFontProfile::SoftSans),
+        "bold_brush" => Ok(SealRecipeFontProfile::BoldBrush),
+        "classic_seal" => Ok(SealRecipeFontProfile::ClassicSeal),
+        _ => bail!("font_profile must be one of formal_serif, soft_sans, bold_brush, classic_seal"),
+    }
+}
+
+#[allow(dead_code)]
+fn parse_seal_recipe_impression(raw: &str) -> Result<SealRecipeImpression> {
+    match raw.trim().to_lowercase().as_str() {
+        "traditional" => Ok(SealRecipeImpression::Traditional),
+        "elegant" => Ok(SealRecipeImpression::Elegant),
+        "soft" => Ok(SealRecipeImpression::Soft),
+        "bold" => Ok(SealRecipeImpression::Bold),
+        _ => bail!("impression must be one of traditional, elegant, soft, bold"),
+    }
+}
+
+#[allow(dead_code)]
+fn parse_seal_recipe_weight(raw: &str) -> Result<SealRecipeWeight> {
+    match raw.trim().to_lowercase().as_str() {
+        "standard" => Ok(SealRecipeWeight::Standard),
+        "bold" => Ok(SealRecipeWeight::Bold),
+        _ => bail!("weight must be one of standard, bold"),
+    }
+}
+
+#[allow(dead_code)]
+fn parse_seal_recipe_spacing(raw: &str) -> Result<SealRecipeSpacing> {
+    match raw.trim().to_lowercase().as_str() {
+        "airy" => Ok(SealRecipeSpacing::Airy),
+        "balanced" => Ok(SealRecipeSpacing::Balanced),
+        "dense" => Ok(SealRecipeSpacing::Dense),
+        _ => bail!("spacing must be one of airy, balanced, dense"),
+    }
+}
+
+#[allow(dead_code)]
+fn parse_seal_recipe_texture(raw: &str) -> Result<SealRecipeTexture> {
+    match raw.trim().to_lowercase().as_str() {
+        "none" => Ok(SealRecipeTexture::None),
+        "subtle_ink" => Ok(SealRecipeTexture::SubtleInk),
+        "soft_bleed" => Ok(SealRecipeTexture::SoftBleed),
+        _ => bail!("texture must be one of none, subtle_ink, soft_bleed"),
+    }
+}
+
+#[allow(dead_code)]
+fn parse_seal_recipe_frame(raw: &str) -> Result<SealRecipeFrame> {
+    match raw.trim().to_lowercase().as_str() {
+        "square_standard" => Ok(SealRecipeFrame::SquareStandard),
+        "round_standard" => Ok(SealRecipeFrame::RoundStandard),
+        _ => bail!("frame must be one of square_standard, round_standard"),
     }
 }
 
@@ -8349,6 +8591,17 @@ mod tests {
         }
     }
 
+    fn valid_seal_design_recipe_dto() -> SealDesignRecipeDto {
+        SealDesignRecipeDto {
+            font_profile: "formal_serif".to_owned(),
+            impression: "elegant".to_owned(),
+            weight: "standard".to_owned(),
+            spacing: "balanced".to_owned(),
+            texture: "subtle_ink".to_owned(),
+            frame: "square_standard".to_owned(),
+        }
+    }
+
     #[test]
     fn validate_generate_seal_designs_request_accepts_contract_payload() {
         let input = validate_generate_seal_designs_request(valid_seal_designs_request())
@@ -8363,6 +8616,150 @@ mod tests {
         assert_eq!(input.variant_count, DEFAULT_SEAL_DESIGN_VARIANT_COUNT);
         assert_eq!(input.generation_rules.max_characters, 2);
         assert!(input.generation_rules.engraving_friendly);
+    }
+
+    #[test]
+    fn m14_t02_validate_seal_design_recipe_accepts_allowed_values() {
+        let recipe =
+            validate_seal_design_recipe(valid_seal_design_recipe_dto()).expect("recipe is valid");
+
+        assert_eq!(recipe.font_profile, SealRecipeFontProfile::FormalSerif);
+        assert_eq!(recipe.font_profile.as_str(), "formal_serif");
+        assert_eq!(recipe.impression, SealRecipeImpression::Elegant);
+        assert_eq!(recipe.impression.as_str(), "elegant");
+        assert_eq!(recipe.weight, SealRecipeWeight::Standard);
+        assert_eq!(recipe.weight.as_str(), "standard");
+        assert_eq!(recipe.spacing, SealRecipeSpacing::Balanced);
+        assert_eq!(recipe.spacing.as_str(), "balanced");
+        assert_eq!(recipe.texture, SealRecipeTexture::SubtleInk);
+        assert_eq!(recipe.texture.as_str(), "subtle_ink");
+        assert_eq!(recipe.frame, SealRecipeFrame::SquareStandard);
+        assert_eq!(recipe.frame.as_str(), "square_standard");
+
+        assert_eq!(
+            parse_seal_recipe_font_profile(" classic_seal ")
+                .expect("profile should parse")
+                .as_str(),
+            "classic_seal"
+        );
+        assert_eq!(
+            parse_seal_recipe_texture("soft_bleed")
+                .expect("texture should parse")
+                .as_str(),
+            "soft_bleed"
+        );
+        assert_eq!(
+            parse_seal_recipe_frame("round_standard")
+                .expect("frame should parse")
+                .as_str(),
+            "round_standard"
+        );
+    }
+
+    #[test]
+    fn m14_t02_validate_seal_design_recipe_rejects_disallowed_values() {
+        let invalid_cases = vec![
+            (
+                "font_profile",
+                SealDesignRecipeDto {
+                    font_profile: "blackletter".to_owned(),
+                    ..valid_seal_design_recipe_dto()
+                },
+                "font_profile must be one of formal_serif, soft_sans, bold_brush, classic_seal",
+            ),
+            (
+                "impression",
+                SealDesignRecipeDto {
+                    impression: "luxury".to_owned(),
+                    ..valid_seal_design_recipe_dto()
+                },
+                "impression must be one of traditional, elegant, soft, bold",
+            ),
+            (
+                "weight",
+                SealDesignRecipeDto {
+                    weight: "fine".to_owned(),
+                    ..valid_seal_design_recipe_dto()
+                },
+                "weight must be one of standard, bold",
+            ),
+            (
+                "spacing",
+                SealDesignRecipeDto {
+                    spacing: "crowded".to_owned(),
+                    ..valid_seal_design_recipe_dto()
+                },
+                "spacing must be one of airy, balanced, dense",
+            ),
+            (
+                "texture",
+                SealDesignRecipeDto {
+                    texture: "paper".to_owned(),
+                    ..valid_seal_design_recipe_dto()
+                },
+                "texture must be one of none, subtle_ink, soft_bleed",
+            ),
+            (
+                "frame",
+                SealDesignRecipeDto {
+                    frame: "double_square".to_owned(),
+                    ..valid_seal_design_recipe_dto()
+                },
+                "frame must be one of square_standard, round_standard",
+            ),
+        ];
+
+        for (field, dto, expected) in invalid_cases {
+            let err = validate_seal_design_recipe(dto).expect_err("invalid recipe value must fail");
+            assert!(
+                err.to_string().contains(expected),
+                "{field} error should contain {expected}, got {err:#}"
+            );
+        }
+    }
+
+    #[test]
+    fn m14_t02_recipe_variant_dto_rejects_unknown_fields() {
+        let payload = json!({
+            "label": "Formal balanced",
+            "recipe": {
+                "font_profile": "formal_serif",
+                "impression": "traditional",
+                "weight": "standard",
+                "spacing": "balanced",
+                "texture": "none",
+                "frame": "square_standard",
+                "palette": "red"
+            }
+        });
+
+        let err = serde_json::from_value::<SealDesignRecipeVariantDto>(payload)
+            .expect_err("unknown recipe fields must be rejected");
+        assert!(err.to_string().contains("unknown field"));
+    }
+
+    #[test]
+    fn m14_t02_validate_recipe_variant_trims_label_and_validates_recipe() {
+        let variant = validate_seal_design_recipe_variant(SealDesignRecipeVariantDto {
+            label: "  Formal balanced  ".to_owned(),
+            recipe: SealDesignRecipeDto {
+                font_profile: "soft_sans".to_owned(),
+                impression: "soft".to_owned(),
+                weight: "bold".to_owned(),
+                spacing: "airy".to_owned(),
+                texture: "soft_bleed".to_owned(),
+                frame: "round_standard".to_owned(),
+            },
+        })
+        .expect("variant should be valid");
+
+        assert_eq!(variant.label, "Formal balanced");
+        assert_eq!(variant.recipe.font_profile, SealRecipeFontProfile::SoftSans);
+        assert_eq!(variant.recipe.impression, SealRecipeImpression::Soft);
+        assert_eq!(variant.recipe.weight, SealRecipeWeight::Bold);
+        assert_eq!(variant.recipe.spacing, SealRecipeSpacing::Airy);
+        assert_eq!(variant.recipe.texture, SealRecipeTexture::SoftBleed);
+        assert_eq!(variant.recipe.frame, SealRecipeFrame::RoundStandard);
     }
 
     #[test]
