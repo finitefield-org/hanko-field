@@ -4977,13 +4977,7 @@ async fn upload_seal_design_images_to_storage(
     variants: &[SealDesignVariant],
     images: &[GeneratedSealDesignImage],
 ) -> Result<()> {
-    if variants.len() != images.len() {
-        bail!(
-            "seal design image count {} did not match variant count {}",
-            images.len(),
-            variants.len()
-        );
-    }
+    validate_seal_design_upload_inputs(variants, images)?;
 
     for (variant, image) in variants.iter().zip(images.iter()) {
         upload_storage_object(
@@ -4997,6 +4991,20 @@ async fn upload_seal_design_images_to_storage(
         .with_context(|| format!("failed to upload {}", variant.storage_path))?;
     }
 
+    Ok(())
+}
+
+fn validate_seal_design_upload_inputs(
+    variants: &[SealDesignVariant],
+    images: &[GeneratedSealDesignImage],
+) -> Result<()> {
+    if variants.len() != images.len() {
+        bail!(
+            "seal design image count {} did not match variant count {}",
+            images.len(),
+            variants.len()
+        );
+    }
     Ok(())
 }
 
@@ -9198,6 +9206,250 @@ mod tests {
             assert!(!phase.public_message().is_empty());
             assert!(!phase.log_name().is_empty());
         }
+    }
+
+    #[test]
+    fn m14_t09_rejects_unapproved_recipe_values() {
+        let mut dto = valid_seal_design_recipe_dto();
+        dto.font_profile = "ai_invented_font".to_owned();
+
+        let err = validate_seal_design_recipe(dto)
+            .expect_err("unapproved recipe values must be rejected");
+
+        assert!(
+            err.to_string().contains("font_profile"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn m14_t09_generation_renderer_rejects_missing_glyph() {
+        let recipe_variants = vec![valid_seal_design_recipe_variant("Missing glyph")];
+        let variants =
+            build_seal_design_variants("hanko-assets", "seal_request_001", &recipe_variants);
+        let unsupported = find_unsupported_kanji_for_generation_test(&variants)
+            .expect("test candidate set should include one unsupported CJK character");
+        let mut input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+        input.kanji = unsupported.to_string();
+
+        let err = generate_seal_design_images_with_renderer(&input, &variants)
+            .expect_err("unsupported selected kanji must fail before upload");
+        let err_chain = format!("{err:#}");
+
+        assert!(
+            err_chain.contains("selected kanji could not be rendered by any approved real font"),
+            "unexpected error: {err_chain}"
+        );
+    }
+
+    #[test]
+    fn m14_t09_generated_images_match_fixed_visual_contract() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+        let recipe_variants = vec![
+            valid_seal_design_recipe_variant("Formal"),
+            SealDesignRecipeVariant {
+                label: "Soft airy".to_owned(),
+                recipe: SealDesignRecipe {
+                    font_profile: SealRecipeFontProfile::SoftSans,
+                    impression: SealRecipeImpression::Soft,
+                    weight: SealRecipeWeight::Standard,
+                    spacing: SealRecipeSpacing::Airy,
+                    texture: SealRecipeTexture::None,
+                    frame: SealRecipeFrame::SquareStandard,
+                },
+            },
+            SealDesignRecipeVariant {
+                label: "Bold dense".to_owned(),
+                recipe: SealDesignRecipe {
+                    font_profile: SealRecipeFontProfile::BoldBrush,
+                    impression: SealRecipeImpression::Bold,
+                    weight: SealRecipeWeight::Bold,
+                    spacing: SealRecipeSpacing::Dense,
+                    texture: SealRecipeTexture::None,
+                    frame: SealRecipeFrame::SquareStandard,
+                },
+            },
+        ];
+        let variants =
+            build_seal_design_variants("hanko-assets", "seal_request_001", &recipe_variants);
+
+        let images = generate_seal_design_images_with_renderer(&input, &variants)
+            .expect("programmatic generation must render test variants");
+
+        assert_eq!(images.len(), 3);
+        for image in &images {
+            let decoded = decode_generated_seal_image(image);
+            assert_square_seal_visual_contract(&decoded);
+            assert_red_or_white_antialias_palette(&decoded);
+            assert_centered_inner_ink(&decoded);
+        }
+    }
+
+    #[test]
+    fn m14_t09_storage_upload_input_mismatch_is_seal_generation_failure() {
+        let recipe_variants = vec![valid_seal_design_recipe_variant("Missing image")];
+        let variants =
+            build_seal_design_variants("hanko-assets", "seal_request_001", &recipe_variants);
+        let err = validate_seal_design_upload_inputs(&variants, &[])
+            .expect_err("missing rendered image must reject storage upload");
+
+        assert!(
+            err.to_string()
+                .contains("seal design image count 0 did not match variant count 1"),
+            "unexpected error: {err:#}"
+        );
+        assert_eq!(
+            SealDesignFailurePhase::StorageUpload.error_code(),
+            "seal_generation_failed"
+        );
+    }
+
+    const TEST_SEAL_RED: [u8; 4] = [0x9D, 0x1F, 0x22, 0xFF];
+    const TEST_SEAL_WHITE: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
+    const TEST_FRAME_INSET: u32 = 96;
+    const TEST_FRAME_STROKE_WIDTH: u32 = 34;
+
+    fn find_unsupported_kanji_for_generation_test(variants: &[SealDesignVariant]) -> Option<char> {
+        ['㐀', '㐁', '㐄', '㐅', '㐆', '㐇', '㐈', '㐉', '䶵', '䶴']
+            .into_iter()
+            .find(|candidate| {
+                let mut input =
+                    validate_generate_seal_designs_request(valid_seal_designs_request())
+                        .expect("request must be valid");
+                input.kanji = candidate.to_string();
+                let Err(err) = generate_seal_design_images_with_renderer(&input, variants) else {
+                    return false;
+                };
+                format!("{err:#}")
+                    .contains("selected kanji could not be rendered by any approved real font")
+            })
+    }
+
+    fn decode_generated_seal_image(image: &GeneratedSealDesignImage) -> image::RgbaImage {
+        assert_eq!(image.content_type, "image/png");
+        assert!(image.bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
+        image::load_from_memory_with_format(&image.bytes, image::ImageFormat::Png)
+            .expect("rendered png must decode")
+            .to_rgba8()
+    }
+
+    fn assert_square_seal_visual_contract(image: &image::RgbaImage) {
+        assert_eq!(image.width(), SEAL_DESIGN_IMAGE_SIZE as u32);
+        assert_eq!(image.height(), SEAL_DESIGN_IMAGE_SIZE as u32);
+        assert_eq!(image.get_pixel(0, 0).0, TEST_SEAL_WHITE);
+        assert_eq!(
+            image
+                .get_pixel(TEST_FRAME_INSET, SEAL_DESIGN_IMAGE_SIZE as u32 / 2)
+                .0,
+            TEST_SEAL_RED
+        );
+        assert_eq!(
+            image
+                .get_pixel(
+                    SEAL_DESIGN_IMAGE_SIZE as u32 - TEST_FRAME_INSET - 1,
+                    SEAL_DESIGN_IMAGE_SIZE as u32 / 2
+                )
+                .0,
+            TEST_SEAL_RED
+        );
+        assert_eq!(
+            image
+                .get_pixel(SEAL_DESIGN_IMAGE_SIZE as u32 / 2, TEST_FRAME_INSET)
+                .0,
+            TEST_SEAL_RED
+        );
+        assert_eq!(
+            image
+                .get_pixel(
+                    TEST_FRAME_INSET + TEST_FRAME_STROKE_WIDTH + 16,
+                    TEST_FRAME_INSET + TEST_FRAME_STROKE_WIDTH + 16
+                )
+                .0,
+            TEST_SEAL_WHITE
+        );
+        assert_eq!(
+            count_exact_red_segments_on_row(image, TEST_FRAME_INSET + TEST_FRAME_STROKE_WIDTH / 2),
+            1,
+            "square seal must have exactly one continuous outer frame segment"
+        );
+    }
+
+    fn assert_red_or_white_antialias_palette(image: &image::RgbaImage) {
+        for pixel in image.pixels() {
+            let [red, green, blue, alpha] = pixel.0;
+            assert_eq!(alpha, 255);
+            if pixel.0 == TEST_SEAL_WHITE || pixel.0 == TEST_SEAL_RED {
+                continue;
+            }
+            assert!(
+                red >= green
+                    && red >= blue
+                    && green >= TEST_SEAL_RED[1]
+                    && blue >= TEST_SEAL_RED[2],
+                "pixel must be red antialias or white, got rgba({red},{green},{blue},{alpha})"
+            );
+        }
+    }
+
+    fn assert_centered_inner_ink(image: &image::RgbaImage) {
+        let inner_edge = TEST_FRAME_INSET + TEST_FRAME_STROKE_WIDTH + 1;
+        let search_end = SEAL_DESIGN_IMAGE_SIZE as u32 - inner_edge;
+        let mut left = search_end;
+        let mut top = search_end;
+        let mut right = inner_edge;
+        let mut bottom = inner_edge;
+        let mut found = false;
+
+        for y in inner_edge..search_end {
+            for x in inner_edge..search_end {
+                let pixel = image.get_pixel(x, y).0;
+                if pixel == TEST_SEAL_WHITE {
+                    continue;
+                }
+                found = true;
+                left = left.min(x);
+                top = top.min(y);
+                right = right.max(x);
+                bottom = bottom.max(y);
+            }
+        }
+
+        assert!(
+            found,
+            "generated seal should contain centered inner kanji ink"
+        );
+        assert!(right.saturating_sub(left) > 120);
+        assert!(bottom.saturating_sub(top) > 120);
+
+        let ink_center_x = (left + right) as f32 / 2.0;
+        let ink_center_y = (top + bottom) as f32 / 2.0;
+        let target_center = (SEAL_DESIGN_IMAGE_SIZE as f32 - 1.0) / 2.0;
+        assert!(
+            (ink_center_x - target_center).abs() <= 24.0,
+            "inner ink center x {ink_center_x} should match {target_center}"
+        );
+        assert!(
+            (ink_center_y - target_center).abs() <= 24.0,
+            "inner ink center y {ink_center_y} should match {target_center}"
+        );
+    }
+
+    fn count_exact_red_segments_on_row(image: &image::RgbaImage, row: u32) -> usize {
+        let mut count = 0;
+        let mut in_segment = false;
+        for x in 0..image.width() {
+            if image.get_pixel(x, row).0 == TEST_SEAL_RED {
+                if !in_segment {
+                    count += 1;
+                    in_segment = true;
+                }
+            } else {
+                in_segment = false;
+            }
+        }
+        count
     }
 
     #[test]

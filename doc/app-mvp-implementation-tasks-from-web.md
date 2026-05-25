@@ -1059,7 +1059,7 @@ MVPで後回し可能:
 | M14-T06 | renderer | [x] 中央配置と余白調整実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | グリフのインク領域を基準に中央配置し、1文字/2文字、角印/丸印、余白 `airy` / `balanced` / `dense` で見切れや偏りがない |
 | M14-T07 | API/Storage | [x] `POST /v1/seal-designs/generate` 統合 | `api/src/main.rs` | レシピ生成、プログラム描画、Storage保存、`recipe` 付きresponseを一連で返し、既存appのresponse parse互換を壊さない |
 | M14-T08 | API errors | [x] エラーコード/ログ整理 | `api/src/main.rs` | レシピ生成失敗は `gemini_generation_failed`、描画/グリフ/Storage失敗は `seal_generation_failed` として画面状態へ正しく対応する |
-| M14-T09 | API tests | [ ] レンダラ/生成APIテスト追加 | `api/src/main.rs` tests または `api/tests/**` | 未許可レシピ、グリフ欠落、赤/白/1本枠、固定外枠サイズ、中央配置、Storage失敗を自動またはスナップショットで検証できる |
+| M14-T09 | API tests | [x] レンダラ/生成APIテスト追加 | `api/src/main.rs` tests または `api/tests/**` | 未許可レシピ、グリフ欠落、赤/白/1本枠、固定外枠サイズ、中央配置、Storage失敗を自動またはスナップショットで検証できる |
 
 ### M15: app/admin - 新印影生成フロー接続と回帰確認
 
