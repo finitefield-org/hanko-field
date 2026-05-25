@@ -1,0 +1,128 @@
+[
+  {
+    "id": "low-1-square",
+    "kanji": "一",
+    "char_count": 1,
+    "stroke_complexity": "low",
+    "shape": "square",
+    "requested_style": "elegant",
+    "request_id": "seal_request_70c974b5b4b84490bd154157999fc06f",
+    "variant_id": "seal_variant_001",
+    "storage_path": "seal_designs/seal_request_70c974b5b4b84490bd154157999fc06f/seal_variant_001.png",
+    "file": "doc/qa/m15-t06/screenshots/low-1-square.png",
+    "label": "Low stroke one-character square seal",
+    "recipe": {
+      "font_profile": "formal_serif",
+      "frame": "square_standard",
+      "impression": "elegant",
+      "spacing": "balanced",
+      "texture": "none",
+      "weight": "standard"
+    }
+  },
+  {
+    "id": "medium-1-round",
+    "kanji": "明",
+    "char_count": 1,
+    "stroke_complexity": "medium",
+    "shape": "round",
+    "requested_style": "traditional",
+    "request_id": "seal_request_f69e9f4b4aac4db79e74504e29b718c3",
+    "variant_id": "seal_variant_001",
+    "storage_path": "seal_designs/seal_request_f69e9f4b4aac4db79e74504e29b718c3/seal_variant_001.png",
+    "file": "doc/qa/m15-t06/screenshots/medium-1-round.png",
+    "label": "Medium stroke one-character round seal",
+    "recipe": {
+      "font_profile": "formal_serif",
+      "frame": "round_standard",
+      "impression": "traditional",
+      "spacing": "balanced",
+      "texture": "none",
+      "weight": "standard"
+    }
+  },
+  {
+    "id": "high-1-square",
+    "kanji": "龍",
+    "char_count": 1,
+    "stroke_complexity": "high",
+    "shape": "square",
+    "requested_style": "bold",
+    "request_id": "seal_request_c91a8f89035046438b48250bc562fc02",
+    "variant_id": "seal_variant_001",
+    "storage_path": "seal_designs/seal_request_c91a8f89035046438b48250bc562fc02/seal_variant_001.png",
+    "file": "doc/qa/m15-t06/screenshots/high-1-square.png",
+    "label": "High stroke one-character square seal",
+    "recipe": {
+      "font_profile": "classic_seal",
+      "frame": "square_standard",
+      "impression": "bold",
+      "spacing": "dense",
+      "texture": "none",
+      "weight": "bold"
+    }
+  },
+  {
+    "id": "low-2-round",
+    "kanji": "大山",
+    "char_count": 2,
+    "stroke_complexity": "low",
+    "shape": "round",
+    "requested_style": "soft",
+    "request_id": "seal_request_0ad028cc55f342ad81eced705750f1a7",
+    "variant_id": "seal_variant_001",
+    "storage_path": "seal_designs/seal_request_0ad028cc55f342ad81eced705750f1a7/seal_variant_001.png",
+    "file": "doc/qa/m15-t06/screenshots/low-2-round.png",
+    "label": "Low stroke two-character round seal",
+    "recipe": {
+      "font_profile": "soft_sans",
+      "frame": "round_standard",
+      "impression": "soft",
+      "spacing": "airy",
+      "texture": "none",
+      "weight": "standard"
+    }
+  },
+  {
+    "id": "medium-2-square",
+    "kanji": "美空",
+    "char_count": 2,
+    "stroke_complexity": "medium",
+    "shape": "square",
+    "requested_style": "elegant",
+    "request_id": "seal_request_f81ac2b3fee043b1ba8b3cc3b2b87604",
+    "variant_id": "seal_variant_001",
+    "storage_path": "seal_designs/seal_request_f81ac2b3fee043b1ba8b3cc3b2b87604/seal_variant_001.png",
+    "file": "doc/qa/m15-t06/screenshots/medium-2-square.png",
+    "label": "Medium stroke two-character square seal",
+    "recipe": {
+      "font_profile": "formal_serif",
+      "frame": "square_standard",
+      "impression": "elegant",
+      "spacing": "balanced",
+      "texture": "none",
+      "weight": "standard"
+    }
+  },
+  {
+    "id": "high-2-round",
+    "kanji": "龍華",
+    "char_count": 2,
+    "stroke_complexity": "high",
+    "shape": "round",
+    "requested_style": "traditional",
+    "request_id": "seal_request_0bf32c7bff5148a4b6b869e1c6803b49",
+    "variant_id": "seal_variant_001",
+    "storage_path": "seal_designs/seal_request_0bf32c7bff5148a4b6b869e1c6803b49/seal_variant_001.png",
+    "file": "doc/qa/m15-t06/screenshots/high-2-round.png",
+    "label": "High stroke two-character round seal",
+    "recipe": {
+      "font_profile": "classic_seal",
+      "frame": "round_standard",
+      "impression": "traditional",
+      "spacing": "dense",
+      "texture": "none",
+      "weight": "bold"
+    }
+  }
+]
