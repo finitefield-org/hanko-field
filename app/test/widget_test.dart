@@ -39,6 +39,17 @@ void _expectSealStyleAdjustmentControlsAbsent() {
   expect(find.byType(ChoiceChip), findsNothing);
 }
 
+void _expectNetworkImageUrl(WidgetTester tester, String url) {
+  expect(
+    tester.widgetList<Image>(find.byType(Image)).any((image) {
+      final provider = image.image;
+      return provider is NetworkImage && provider.url == url;
+    }),
+    isTrue,
+    reason: 'Expected a NetworkImage backed by $url.',
+  );
+}
+
 void main() {
   Future<void> pumpLaunchedApp(
     WidgetTester tester, {
@@ -721,6 +732,166 @@ void main() {
     expect(backCount, 1);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'M15-T03 keeps generated storage image through save and checkout draft',
+    (tester) async {
+      tester.view.physicalSize = const Size(432, 912);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const selectedVariantId = 'seal_variant_002';
+      final selectedStoragePath = _sealVariantStoragePath(selectedVariantId);
+      final selectedDownloadUrl = _sealVariantDownloadUrl(selectedVariantId);
+      final sealRepository = InMemoryLocalSealDesignRepository();
+      final draftRepository = InMemoryLocalOrderDraftRepository();
+      SealOrderDraft? submittedOrderDraft;
+
+      await pumpLaunchedApp(
+        tester,
+        generateSealDesigns: (request) async =>
+            _sealGenerationResult(request: request, includeDownloadUrls: true),
+        listStoneListings: (query) async => _stoneListingsResult(),
+        createOrder: (draft) async {
+          submittedOrderDraft = draft;
+          return _successfulCreateOrder(draft);
+        },
+        localSealDesignRepository: sealRepository,
+        localOrderDraftRepository: draftRepository,
+      );
+      await tester.pumpAndSettle();
+
+      await _openGeneratedSealVariantSelection(tester);
+
+      expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+      for (final variantId in const [
+        'seal_variant_001',
+        'seal_variant_002',
+        'seal_variant_003',
+      ]) {
+        _expectNetworkImageUrl(tester, _sealVariantDownloadUrl(variantId));
+      }
+
+      await tester.ensureVisible(find.text('Soft spacing'));
+      await tester.pump();
+      await tester.tap(find.text('Soft spacing'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+      expect(find.text(selectedStoragePath), findsOneWidget);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+
+      await tester.ensureVisible(find.text('Save Seal'));
+      await tester.pump();
+      await tester.tap(find.text('Save Seal'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+
+      final savedDesigns = await sealRepository.listLocalSealDesigns();
+      expect(savedDesigns, hasLength(1));
+      expect(savedDesigns.single.previewImageStoragePath, selectedStoragePath);
+      expect(savedDesigns.single.previewImageDownloadUrl, selectedDownloadUrl);
+
+      final draftAfterSave = await draftRepository.loadOrderDraft();
+      expect(draftAfterSave.sealSelection?.aiVariantId, selectedVariantId);
+      expect(
+        draftAfterSave.sealSelection?.previewImageStoragePath,
+        selectedStoragePath,
+      );
+      expect(
+        draftAfterSave.sealSelection?.previewImageDownloadUrl,
+        selectedDownloadUrl,
+      );
+
+      await tester.ensureVisible(find.text('Choose a Stone'));
+      await tester.pump();
+      await tester.tap(find.text('Choose a Stone'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Select Stone'));
+      await tester.pump();
+      await tester.tap(find.text('Select Stone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderCombinationReviewScreen), findsOneWidget);
+      expect(find.text('Stone missing'), findsNothing);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+
+      await tester.ensureVisible(find.text('Continue to Shipping'));
+      await tester.pump();
+      await tester.tap(find.text('Continue to Shipping'));
+      await tester.pumpAndSettle();
+
+      Future<void> enterCheckoutField(String key, String text) async {
+        final field = find.byKey(Key(key));
+        await tester.ensureVisible(field);
+        await tester.pump();
+        await tester.enterText(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+          text,
+        );
+        await tester.pump();
+      }
+
+      await enterCheckoutField('checkout-email-field', 'customer@example.test');
+      await enterCheckoutField('checkout-full-name-field', 'Michael Smith');
+      await enterCheckoutField('checkout-phone-field', '+1 555 0100');
+      await enterCheckoutField('checkout-postal-code-field', '10001');
+      await enterCheckoutField(
+        'checkout-address-line1-field',
+        '123 Example Street',
+      );
+      await enterCheckoutField('checkout-city-field', 'New York');
+      await enterCheckoutField('checkout-state-field', 'NY');
+
+      await tester.ensureVisible(find.text('Save Checkout Information'));
+      await tester.pump();
+      await tester.tap(find.text('Save Checkout Information'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderConfirmationScreen), findsOneWidget);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+
+      await tester.ensureVisible(
+        find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('order-confirm-custom-made-checkbox')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const Key('order-confirm-custom-made-checkbox')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Proceed to Secure Payment'));
+      await tester.pump();
+      await tester.tap(find.text('Proceed to Secure Payment'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Complete payment in Stripe Checkout'), findsOneWidget);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+      expect(
+        submittedOrderDraft?.seal.previewImage?.storagePath,
+        selectedStoragePath,
+      );
+      expect(
+        submittedOrderDraft?.seal.previewImage?.downloadUrl,
+        selectedDownloadUrl,
+      );
+      expect(submittedOrderDraft?.seal.aiVariantId, selectedVariantId);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('MYS-001 displays saved seal cards', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
@@ -3974,7 +4145,7 @@ class _FailingSaveLocalSealDesignRepository
   Future<void> deleteLocalSealDesign(String id) async {}
 }
 
-Future<void> _openGeneratedSealPreview(WidgetTester tester) async {
+Future<void> _openGeneratedSealVariantSelection(WidgetTester tester) async {
   await tester.ensureVisible(find.text('Start Designing'));
   await tester.pump();
   await tester.tap(find.text('Start Designing'));
@@ -4002,7 +4173,10 @@ Future<void> _openGeneratedSealPreview(WidgetTester tester) async {
   await tester.pump();
   await tester.tap(find.text('Generate Seal'));
   await tester.pumpAndSettle();
+}
 
+Future<void> _openGeneratedSealPreview(WidgetTester tester) async {
+  await _openGeneratedSealVariantSelection(tester);
   await tester.ensureVisible(find.text('Soft spacing'));
   await tester.pump();
   await tester.tap(find.text('Soft spacing'));
@@ -4217,31 +4391,46 @@ SealGenerationRequest _sealGenerationRequest({int attemptNumber = 1}) {
   );
 }
 
-SealGenerationResult _sealGenerationResult({SealGenerationRequest? request}) {
+String _sealVariantStoragePath(String variantId) {
+  return 'seal_designs/seal_request_001/$variantId.png';
+}
+
+String _sealVariantDownloadUrl(String variantId) {
+  return 'https://storage.example.test/seal_request_001/$variantId.png';
+}
+
+SealGenerationResult _sealGenerationResult({
+  SealGenerationRequest? request,
+  bool includeDownloadUrls = false,
+}) {
+  String downloadUrl(String variantId) {
+    return includeDownloadUrls ? _sealVariantDownloadUrl(variantId) : '';
+  }
+
   return SealGenerationResult(
     request: request ?? _sealGenerationRequest(),
     requestId: 'seal_request_001',
-    variants: const [
+    variants: [
       SealDesignVariant(
         id: 'seal_variant_001',
-        storagePath: 'seal_designs/seal_request_001/seal_variant_001.png',
-        downloadUrl: '',
+        storagePath: _sealVariantStoragePath('seal_variant_001'),
+        downloadUrl: downloadUrl('seal_variant_001'),
         label: 'Elegant and balanced',
         width: 1024,
         height: 1024,
       ),
       SealDesignVariant(
         id: 'seal_variant_002',
-        storagePath: 'seal_designs/seal_request_001/seal_variant_002.png',
-        downloadUrl: '',
+        storagePath: _sealVariantStoragePath('seal_variant_002'),
+        downloadUrl: downloadUrl('seal_variant_002'),
         label: 'Soft spacing',
         width: 1024,
         height: 1024,
       ),
       SealDesignVariant(
         id: 'seal_variant_003',
-        storagePath: 'seal_designs/seal_request_001/seal_variant_003.png',
-        downloadUrl: '',
+        storagePath: _sealVariantStoragePath('seal_variant_003'),
+        downloadUrl: downloadUrl('seal_variant_003'),
         label: 'Bold readable seal',
         width: 1024,
         height: 1024,

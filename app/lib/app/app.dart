@@ -1202,6 +1202,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _localSealDesignsLoaded = true;
       _localSealDesignsLoadError = null;
     });
+    await _applyOrderDraft(
+      _orderDraft.withSealSelection(
+        _orderDraftSealSelectionFromLocalSealDesign(design),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
     final confirmationPage = _sealSaveConfirmationPage(result, variant);
     if (replaceTopOnComplete) {
       stack.replaceTop(confirmationPage);
