@@ -602,7 +602,12 @@ impl Default for SealGenerationRules {
     }
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SealDesignRecipeVariantsDto {
+    variants: Vec<SealDesignRecipeVariantDto>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SealDesignRecipeVariantDto {
@@ -622,14 +627,12 @@ struct SealDesignRecipeDto {
     frame: String,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct SealDesignRecipeVariant {
     label: String,
     recipe: SealDesignRecipe,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct SealDesignRecipe {
     font_profile: SealRecipeFontProfile,
@@ -857,6 +860,7 @@ struct SealDesignVariant {
     storage_path: String,
     download_url: String,
     label: String,
+    recipe: SealDesignRecipe,
     width: usize,
     height: usize,
 }
@@ -1697,28 +1701,29 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
         }
     };
 
-    let labels = match generate_seal_design_labels_with_gemini(&state, &input).await {
+    let recipe_variants = match generate_seal_design_recipes_with_gemini(&state, &input).await {
         Ok(value) => value,
         Err(err) => {
-            eprintln!("failed to generate seal design variants with gemini: {err:#}");
+            eprintln!("failed to generate seal design recipes with gemini: {err:#}");
             return error_response(
                 StatusCode::BAD_GATEWAY,
                 "gemini_generation_failed",
-                "failed to generate seal design variants",
+                "failed to generate seal design recipes",
             );
         }
     };
 
-    if labels.len() != input.variant_count {
+    if recipe_variants.len() != input.variant_count {
         return error_response(
             StatusCode::BAD_GATEWAY,
             "gemini_generation_failed",
-            "gemini returned an unexpected number of seal design variants",
+            "gemini returned an unexpected number of seal design recipes",
         );
     }
 
     let request_id = format!("seal_request_{}", Uuid::new_v4().simple());
-    let variants = build_seal_design_variants(&state.storage_assets_bucket, &request_id, &labels);
+    let variants =
+        build_seal_design_variants(&state.storage_assets_bucket, &request_id, &recipe_variants);
 
     let images = match generate_seal_design_images_with_gemini(&state, &input, &variants).await {
         Ok(value) => value,
@@ -1751,6 +1756,7 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
                     "storage_path": variant.storage_path,
                     "download_url": variant.download_url,
                     "label": variant.label,
+                    "recipe": seal_design_recipe_to_json(variant.recipe),
                     "width": variant.width,
                     "height": variant.height,
                 })
@@ -4636,10 +4642,10 @@ fn stone_listing_snapshot_fields(
     fields
 }
 
-async fn generate_seal_design_labels_with_gemini(
+async fn generate_seal_design_recipes_with_gemini(
     state: &AppState,
     input: &GenerateSealDesignsInput,
-) -> Result<Vec<String>> {
+) -> Result<Vec<SealDesignRecipeVariant>> {
     let request_body = build_seal_designs_request_body(input);
 
     let endpoint = format!(
@@ -4674,15 +4680,7 @@ async fn generate_seal_design_labels_with_gemini(
     let text = extract_gemini_response_text(&payload)
         .ok_or_else(|| anyhow!("gemini response did not include text"))?;
 
-    let labels = parse_seal_design_labels_from_gemini_text(&text, input.variant_count)?;
-    if labels.len() != input.variant_count {
-        bail!(
-            "gemini returned {} seal design labels, expected {}",
-            labels.len(),
-            input.variant_count
-        );
-    }
-    Ok(labels)
+    parse_seal_design_recipes_from_gemini_text(&text, input.variant_count)
 }
 
 fn build_seal_designs_request_body(input: &GenerateSealDesignsInput) -> JsonValue {
@@ -4723,10 +4721,50 @@ fn build_seal_designs_response_schema(variant_count: usize) -> JsonValue {
                     "properties": {
                         "label": {
                             "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
                             "description": "A concise display label for one generated seal design variant.",
                         },
+                        "recipe": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "font_profile": {
+                                    "type": "string",
+                                    "enum": ["formal_serif", "soft_sans", "bold_brush", "classic_seal"],
+                                },
+                                "impression": {
+                                    "type": "string",
+                                    "enum": ["traditional", "elegant", "soft", "bold"],
+                                },
+                                "weight": {
+                                    "type": "string",
+                                    "enum": ["standard", "bold"],
+                                },
+                                "spacing": {
+                                    "type": "string",
+                                    "enum": ["airy", "balanced", "dense"],
+                                },
+                                "texture": {
+                                    "type": "string",
+                                    "enum": ["none", "subtle_ink", "soft_bleed"],
+                                },
+                                "frame": {
+                                    "type": "string",
+                                    "enum": ["square_standard", "round_standard"],
+                                },
+                            },
+                            "required": [
+                                "font_profile",
+                                "impression",
+                                "weight",
+                                "spacing",
+                                "texture",
+                                "frame"
+                            ],
+                        },
                     },
-                    "required": ["label"],
+                    "required": ["label", "recipe"],
                 },
             },
         },
@@ -4736,9 +4774,9 @@ fn build_seal_designs_response_schema(variant_count: usize) -> JsonValue {
 
 fn build_seal_designs_prompt(input: &GenerateSealDesignsInput) -> String {
     format!(
-        "Generate exactly {} unique hanko seal design variants for image generation.\n\
+        "Generate exactly {} unique hanko seal design recipe variants.\n\
 Input name: \"{}\"\n\
-Kanji to render exactly: \"{}\"\n\
+Selected kanji, for context only and never to replace: \"{}\"\n\
 Shape: {}\n\
 Style: {}\n\
 Stroke weight: {}\n\
@@ -4748,12 +4786,18 @@ Balance: {}\n\
 {}\n\
 {}\n\
 Rules:\n\
-- Render only the specified kanji, with no extra characters.\n\
-- The design must fit {} or fewer CJK Han characters.\n\
-- Avoid overly complex character treatments or stroke arrangements.\n\
-- Use engraving-friendly geometry with no thin lines, decorative details, background pattern, gradients, shadows, or texture.\n\
-- Use a plain background and keep the character shapes readable at small gemstone-seal size.\n\
-- Return only JSON in this exact shape: {{\"variants\":[{{\"label\":\"Elegant and balanced\"}}]}}",
+- Return structured JSON recipes only. Do not generate, describe, embed, or request final seal images, image bytes, base64, SVG, glyph outlines, storage paths, URLs, colors, or backgrounds; the API renderer owns the final fixed size, red ink color (#9D1F22), pure white background, and no background pattern behavior.\n\
+- Do not change, replace, simplify, transliterate, or invent kanji glyphs; the API renderer will draw the selected Unicode kanji with real fonts.\n\
+- Each recipe must use only these enum values:\n\
+  font_profile: formal_serif, soft_sans, bold_brush, classic_seal\n\
+  impression: traditional, elegant, soft, bold\n\
+  weight: standard, bold\n\
+  spacing: airy, balanced, dense\n\
+  texture: none, subtle_ink, soft_bleed\n\
+  frame: square_standard, round_standard\n\
+- The recipe must fit {} or fewer CJK Han characters and remain engraving-friendly.\n\
+- Return exactly {} recipe variants and no extra keys.\n\
+- Return only JSON in this exact shape: {{\"variants\":[{{\"label\":\"Formal balanced\",\"recipe\":{{\"font_profile\":\"formal_serif\",\"impression\":\"traditional\",\"weight\":\"standard\",\"spacing\":\"balanced\",\"texture\":\"none\",\"frame\":\"square_standard\"}}}}]}}",
         input.variant_count,
         input.input_name,
         input.kanji,
@@ -4765,31 +4809,44 @@ Rules:\n\
         input.style.prompt_instruction(),
         input.stroke_weight.prompt_instruction(),
         input.balance.prompt_instruction(),
-        input.generation_rules.max_characters
+        input.generation_rules.max_characters,
+        input.variant_count
     )
 }
 
 fn build_seal_design_variants(
     storage_assets_bucket: &str,
     request_id: &str,
-    labels: &[String],
+    recipe_variants: &[SealDesignRecipeVariant],
 ) -> Vec<SealDesignVariant> {
-    labels
+    recipe_variants
         .iter()
         .enumerate()
-        .map(|(index, label)| {
+        .map(|(index, recipe_variant)| {
             let id = format!("seal_variant_{:03}", index + 1);
             let storage_path = format!("seal_designs/{request_id}/{id}.png");
             SealDesignVariant {
                 id,
                 download_url: make_asset_url(storage_assets_bucket, &storage_path),
                 storage_path,
-                label: label.clone(),
+                label: recipe_variant.label.clone(),
+                recipe: recipe_variant.recipe,
                 width: SEAL_DESIGN_IMAGE_SIZE,
                 height: SEAL_DESIGN_IMAGE_SIZE,
             }
         })
         .collect()
+}
+
+fn seal_design_recipe_to_json(recipe: SealDesignRecipe) -> JsonValue {
+    json!({
+        "font_profile": recipe.font_profile.as_str(),
+        "impression": recipe.impression.as_str(),
+        "weight": recipe.weight.as_str(),
+        "spacing": recipe.spacing.as_str(),
+        "texture": recipe.texture.as_str(),
+        "frame": recipe.frame.as_str(),
+    })
 }
 
 async fn generate_seal_design_images_with_gemini(
@@ -5256,46 +5313,25 @@ fn extract_gemini_response_text(payload: &JsonValue) -> Option<String> {
     None
 }
 
-fn parse_seal_design_labels_from_gemini_text(
+fn parse_seal_design_recipes_from_gemini_text(
     raw_text: &str,
-    max_count: usize,
-) -> Result<Vec<String>> {
+    expected_count: usize,
+) -> Result<Vec<SealDesignRecipeVariant>> {
     let parsed = parse_json_value_loose(raw_text)?;
-    let array = parsed
-        .get("variants")
-        .and_then(JsonValue::as_array)
-        .ok_or_else(|| anyhow!("gemini response JSON must contain variants array"))?;
-
-    let mut labels = Vec::with_capacity(array.len());
-    let mut seen = HashSet::new();
-    for entry in array {
-        let Some(label) = normalize_seal_design_label(entry) else {
-            continue;
-        };
-        if !seen.insert(label.to_lowercase()) {
-            continue;
-        }
-        labels.push(label);
-        if labels.len() >= max_count {
-            break;
-        }
+    let dto = serde_json::from_value::<SealDesignRecipeVariantsDto>(parsed)
+        .context("gemini recipe response JSON must match schema")?;
+    if dto.variants.len() != expected_count {
+        bail!(
+            "gemini returned {} seal design recipes, expected {}",
+            dto.variants.len(),
+            expected_count
+        );
     }
 
-    Ok(labels)
-}
-
-fn normalize_seal_design_label(value: &JsonValue) -> Option<String> {
-    let label = read_json_string(value, &["label", "title", "name"]);
-    if label.is_empty() {
-        return None;
-    }
-
-    let normalized = label.split_whitespace().collect::<Vec<_>>().join(" ");
-    if normalized.is_empty() {
-        return None;
-    }
-
-    Some(normalized.chars().take(80).collect())
+    dto.variants
+        .into_iter()
+        .map(validate_seal_design_recipe_variant)
+        .collect()
 }
 
 fn parse_kanji_candidates_from_gemini_text(
@@ -8602,6 +8638,14 @@ mod tests {
         }
     }
 
+    fn valid_seal_design_recipe_variant(label: &str) -> SealDesignRecipeVariant {
+        SealDesignRecipeVariant {
+            label: label.to_owned(),
+            recipe: validate_seal_design_recipe(valid_seal_design_recipe_dto())
+                .expect("test recipe must be valid"),
+        }
+    }
+
     #[test]
     fn validate_generate_seal_designs_request_accepts_contract_payload() {
         let input = validate_generate_seal_designs_request(valid_seal_designs_request())
@@ -8822,29 +8866,195 @@ mod tests {
     }
 
     #[test]
-    fn parse_seal_design_labels_from_gemini_text_accepts_markdown_json() {
+    fn m14_t03_parse_seal_design_recipes_from_gemini_text_accepts_markdown_json() {
         let payload = r#"
 ```json
 {
   "variants": [
-    { "label": "Elegant and balanced" },
-    { "label": "Soft spacing" },
-    { "label": "Bold readable seal" }
+    {
+      "label": "Elegant and balanced",
+      "recipe": {
+        "font_profile": "formal_serif",
+        "impression": "elegant",
+        "weight": "standard",
+        "spacing": "balanced",
+        "texture": "subtle_ink",
+        "frame": "square_standard"
+      }
+    },
+    {
+      "label": "Soft spacing",
+      "recipe": {
+        "font_profile": "soft_sans",
+        "impression": "soft",
+        "weight": "standard",
+        "spacing": "airy",
+        "texture": "none",
+        "frame": "round_standard"
+      }
+    },
+    {
+      "label": "Bold readable seal",
+      "recipe": {
+        "font_profile": "bold_brush",
+        "impression": "bold",
+        "weight": "bold",
+        "spacing": "dense",
+        "texture": "soft_bleed",
+        "frame": "square_standard"
+      }
+    }
   ]
 }
 ```
 "#;
 
-        let labels =
-            parse_seal_design_labels_from_gemini_text(payload, 3).expect("payload must parse");
+        let variants =
+            parse_seal_design_recipes_from_gemini_text(payload, 3).expect("payload must parse");
+        assert_eq!(variants.len(), 3);
+        assert_eq!(variants[0].label, "Elegant and balanced");
         assert_eq!(
-            labels,
-            vec!["Elegant and balanced", "Soft spacing", "Bold readable seal"]
+            variants[0].recipe.font_profile,
+            SealRecipeFontProfile::FormalSerif
+        );
+        assert_eq!(variants[1].recipe.impression, SealRecipeImpression::Soft);
+        assert_eq!(variants[2].recipe.weight, SealRecipeWeight::Bold);
+        assert_eq!(variants[2].recipe.texture, SealRecipeTexture::SoftBleed);
+    }
+
+    #[test]
+    fn m14_t03_parse_seal_design_recipes_rejects_unknown_keys() {
+        let payload = r#"
+{
+  "variants": [
+    {
+      "label": "Elegant and balanced",
+      "recipe": {
+        "font_profile": "formal_serif",
+        "impression": "elegant",
+        "weight": "standard",
+        "spacing": "balanced",
+        "texture": "none",
+        "frame": "square_standard",
+        "palette": "red"
+      }
+    },
+    {
+      "label": "Soft spacing",
+      "recipe": {
+        "font_profile": "soft_sans",
+        "impression": "soft",
+        "weight": "standard",
+        "spacing": "airy",
+        "texture": "none",
+        "frame": "round_standard"
+      }
+    },
+    {
+      "label": "Bold readable seal",
+      "recipe": {
+        "font_profile": "bold_brush",
+        "impression": "bold",
+        "weight": "bold",
+        "spacing": "dense",
+        "texture": "soft_bleed",
+        "frame": "square_standard"
+      }
+    }
+  ]
+}
+"#;
+
+        let err = parse_seal_design_recipes_from_gemini_text(payload, 3)
+            .expect_err("unknown keys must fail");
+        let error_chain = format!("{err:#}");
+        assert!(
+            error_chain.contains("unknown field"),
+            "unexpected error: {err:#}"
         );
     }
 
     #[test]
-    fn build_seal_designs_request_body_enables_schema_for_three_variants() {
+    fn m14_t03_parse_seal_design_recipes_rejects_disallowed_values() {
+        let payload = r#"
+{
+  "variants": [
+    {
+      "label": "Elegant and balanced",
+      "recipe": {
+        "font_profile": "fantasy",
+        "impression": "elegant",
+        "weight": "standard",
+        "spacing": "balanced",
+        "texture": "none",
+        "frame": "square_standard"
+      }
+    },
+    {
+      "label": "Soft spacing",
+      "recipe": {
+        "font_profile": "soft_sans",
+        "impression": "soft",
+        "weight": "standard",
+        "spacing": "airy",
+        "texture": "none",
+        "frame": "round_standard"
+      }
+    },
+    {
+      "label": "Bold readable seal",
+      "recipe": {
+        "font_profile": "bold_brush",
+        "impression": "bold",
+        "weight": "bold",
+        "spacing": "dense",
+        "texture": "soft_bleed",
+        "frame": "square_standard"
+      }
+    }
+  ]
+}
+"#;
+
+        let err = parse_seal_design_recipes_from_gemini_text(payload, 3)
+            .expect_err("disallowed enum values must fail");
+        assert!(
+            err.to_string().contains("font_profile must be one of"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn m14_t03_parse_seal_design_recipes_rejects_count_mismatch() {
+        let payload = r#"
+{
+  "variants": [
+    {
+      "label": "Elegant and balanced",
+      "recipe": {
+        "font_profile": "formal_serif",
+        "impression": "elegant",
+        "weight": "standard",
+        "spacing": "balanced",
+        "texture": "none",
+        "frame": "square_standard"
+      }
+    }
+  ]
+}
+"#;
+
+        let err = parse_seal_design_recipes_from_gemini_text(payload, 3)
+            .expect_err("variant count mismatch must fail");
+        assert!(
+            err.to_string()
+                .contains("gemini returned 1 seal design recipes, expected 3"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn m14_t03_build_seal_designs_request_body_enables_recipe_schema_for_three_variants() {
         let input = validate_generate_seal_designs_request(valid_seal_designs_request())
             .expect("request must be valid");
 
@@ -8866,26 +9076,47 @@ mod tests {
             body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["maxItems"],
             json!(3)
         );
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["items"]["required"],
+            json!(["label", "recipe"])
+        );
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["items"]["properties"]
+                ["recipe"]["additionalProperties"],
+            json!(false)
+        );
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["items"]["properties"]
+                ["recipe"]["properties"]["font_profile"]["enum"],
+            json!(["formal_serif", "soft_sans", "bold_brush", "classic_seal"])
+        );
+        assert!(body["generationConfig"]["responseModalities"].is_null());
         assert!(
             body["contents"][0]["parts"][0]["text"]
                 .as_str()
                 .expect("prompt must be text")
-                .contains("no thin lines")
+                .contains("Do not generate, describe, embed, or request final seal images")
         );
     }
 
     #[test]
     fn build_seal_design_variants_returns_canonical_paths() {
-        let labels = vec![
-            "Elegant and balanced".to_owned(),
-            "Soft spacing".to_owned(),
-            "Bold readable seal".to_owned(),
+        let recipe_variants = vec![
+            valid_seal_design_recipe_variant("Elegant and balanced"),
+            valid_seal_design_recipe_variant("Soft spacing"),
+            valid_seal_design_recipe_variant("Bold readable seal"),
         ];
 
-        let variants = build_seal_design_variants("hanko-assets", "seal_request_001", &labels);
+        let variants =
+            build_seal_design_variants("hanko-assets", "seal_request_001", &recipe_variants);
 
         assert_eq!(variants.len(), 3);
         assert_eq!(variants[0].id, "seal_variant_001");
+        assert_eq!(variants[0].label, "Elegant and balanced");
+        assert_eq!(
+            variants[0].recipe.font_profile,
+            SealRecipeFontProfile::FormalSerif
+        );
         assert_eq!(
             variants[0].storage_path,
             "seal_designs/seal_request_001/seal_variant_001.png"
@@ -8907,6 +9138,7 @@ mod tests {
             storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
             download_url: String::new(),
             label: "Elegant and balanced".to_owned(),
+            recipe: valid_seal_design_recipe_variant("Elegant and balanced").recipe,
             width: SEAL_DESIGN_IMAGE_SIZE,
             height: SEAL_DESIGN_IMAGE_SIZE,
         };
@@ -8934,6 +9166,7 @@ mod tests {
             storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
             download_url: String::new(),
             label: "Elegant and balanced".to_owned(),
+            recipe: valid_seal_design_recipe_variant("Elegant and balanced").recipe,
             width: SEAL_DESIGN_IMAGE_SIZE,
             height: SEAL_DESIGN_IMAGE_SIZE,
         };

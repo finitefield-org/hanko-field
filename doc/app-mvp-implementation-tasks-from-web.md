@@ -1053,7 +1053,7 @@ MVPで後回し可能:
 | --- | --- | --- | --- | --- |
 | M14-T01 | font/assets | [x] 実在フォントプロファイル確定 | `api/assets/fonts/` (new), `api/src/seal_fonts.rs`, `api/src/main.rs`, 運用管理ファイル | `formal_serif` / `soft_sans` / `bold_brush` / `classic_seal` に対応する使用可能フォント、ライセンス、グリフ対応範囲を確認し、APIから参照できる |
 | M14-T02 | API domain | [x] AIレシピDTO/enum追加 | `api/src/main.rs` | `font_profile` / `impression` / `weight` / `spacing` / `texture` / `frame` を許可値でvalidateできる |
-| M14-T03 | Gemini | [ ] AIレシピ生成へ変更 | `api/src/main.rs` | Gemini呼び出しが画像生成ではなく構造化JSONレシピ3件だけを返し、未知キー・未許可値・件数不一致を失敗扱いにする |
+| M14-T03 | Gemini | [x] AIレシピ生成へ変更 | `api/src/main.rs` | Gemini呼び出しが画像生成ではなく構造化JSONレシピ3件だけを返し、未知キー・未許可値・件数不一致を失敗扱いにする |
 | M14-T04 | renderer | [ ] 実在フォントのグリフ描画実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | 選択済み `kanji` のUnicode文字列だけを実在フォントから描画し、存在しない字形や別字を生成しない |
 | M14-T05 | renderer | [ ] 固定外枠/色/背景ルール実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | 1024x1024 PNG、白背景、赤文字、赤枠1本、角印/丸印ごとの固定外枠サイズを全variantで満たす |
 | M14-T06 | renderer | [ ] 中央配置と余白調整実装 | `api/src/main.rs` または `api/src/seal_renderer.rs` | グリフのインク領域を基準に中央配置し、1文字/2文字、角印/丸印、余白 `airy` / `balanced` / `dense` で見切れや偏りがない |
