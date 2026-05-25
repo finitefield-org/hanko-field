@@ -19,6 +19,26 @@ import 'package:hankofield/features/order_lookup/order_lookup.dart';
 import 'package:hankofield/features/settings/settings.dart';
 import 'package:hankofield/features/stones/stones.dart';
 
+const _sealStyleAdjustmentControlKeys = <Key>[
+  Key('DES-006-seal-shape-options'),
+  Key('DES-006-seal-style-options'),
+  Key('DES-006-seal-stroke-options'),
+  Key('DES-006-seal-balance-options'),
+];
+
+void _expectSealStyleAdjustmentControlsPresent() {
+  for (final key in _sealStyleAdjustmentControlKeys) {
+    expect(find.byKey(key), findsOneWidget);
+  }
+}
+
+void _expectSealStyleAdjustmentControlsAbsent() {
+  for (final key in _sealStyleAdjustmentControlKeys) {
+    expect(find.byKey(key), findsNothing);
+  }
+  expect(find.byType(ChoiceChip), findsNothing);
+}
+
 void main() {
   Future<void> pumpLaunchedApp(
     WidgetTester tester, {
@@ -315,6 +335,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Selected kanji'), findsOneWidget);
+    _expectSealStyleAdjustmentControlsPresent();
     expect(find.text('Shape'), findsWidgets);
     expect(find.text('Square'), findsWidgets);
     expect(find.text('Round'), findsOneWidget);
@@ -364,6 +385,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(find.text('Seal Options'), findsOneWidget);
     expect(find.text('Elegant and balanced'), findsOneWidget);
     expect(find.text('Soft spacing'), findsOneWidget);
@@ -375,6 +397,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(find.text('Seal Preview'), findsOneWidget);
     expect(
       find.text('Review your selected seal design before saving.'),
@@ -392,6 +415,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(find.text('Seal Saved'), findsOneWidget);
     expect(find.text('Seal saved to My Seals'), findsOneWidget);
     expect(find.text('Go to My Seals'), findsOneWidget);
@@ -408,6 +432,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
 
     await tester.ensureVisible(find.text('Go to My Seals'));
     await tester.pump();
@@ -415,6 +440,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Saved on this device'), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(find.text('美空'), findsWidgets);
     expect(find.text('Beautiful sky'), findsOneWidget);
     expect(find.text('View Details'), findsOneWidget);
@@ -423,6 +449,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
 
     await tester.ensureVisible(find.text('Create Another Seal'));
     await tester.pump();
@@ -543,6 +570,7 @@ void main() {
     );
 
     expect(find.text('Seal Options'), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(find.text('Choose one AI seal design.'), findsOneWidget);
     expect(find.text('Elegant and balanced'), findsOneWidget);
     expect(find.text('Soft spacing'), findsOneWidget);
@@ -594,6 +622,7 @@ void main() {
     );
 
     expect(find.text('Seal Preview'), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(
       find.text('Review your selected seal design before saving.'),
       findsOneWidget,
@@ -657,6 +686,7 @@ void main() {
     );
 
     expect(find.text('Seal Saved'), findsOneWidget);
+    _expectSealStyleAdjustmentControlsAbsent();
     expect(find.text('Seal saved to My Seals'), findsOneWidget);
     expect(
       find.text(

@@ -628,6 +628,7 @@ class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
               _SelectedKanjiStyleCard(candidate: widget.candidate),
               const SizedBox(height: 24),
               _StyleOptionGroup<SealShape>(
+                key: const Key('DES-006-seal-shape-options'),
                 label: l10n.sealShapeLabel,
                 selectedValue: _selection.shape,
                 options: [
@@ -648,6 +649,7 @@ class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
               ),
               const SizedBox(height: 20),
               _StyleOptionGroup<SealStyleName>(
+                key: const Key('DES-006-seal-style-options'),
                 label: l10n.sealStyleNameLabel,
                 selectedValue: _selection.style,
                 options: [
@@ -678,6 +680,7 @@ class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
               ),
               const SizedBox(height: 20),
               _StyleOptionGroup<SealStrokeWeight>(
+                key: const Key('DES-006-seal-stroke-options'),
                 label: l10n.sealStrokeWeightLabel,
                 selectedValue: _selection.strokeWeight,
                 options: [
@@ -703,6 +706,7 @@ class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
               ),
               const SizedBox(height: 20),
               _StyleOptionGroup<SealBalance>(
+                key: const Key('DES-006-seal-balance-options'),
                 label: l10n.sealBalanceLabel,
                 selectedValue: _selection.balance,
                 options: [
@@ -1548,6 +1552,7 @@ class _StyleOption<T> {
 
 class _StyleOptionGroup<T> extends StatelessWidget {
   const _StyleOptionGroup({
+    super.key,
     required this.label,
     required this.options,
     required this.selectedValue,
