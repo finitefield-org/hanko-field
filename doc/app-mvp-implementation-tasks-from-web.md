@@ -1068,7 +1068,7 @@ MVPで後回し可能:
 | M15-T01 | app DTO | [x] `recipe` 付きvariantのparse対応 | `app/lib/features/design/domain/`, `app/lib/features/design/data/seal_designs_repository.dart` | `recipe` があるresponseを読み取れ、旧responseでもクラッシュしない |
 | M15-T02 | app Design | [x] `DES-006` を最終カスタマイズ画面として固定 | `app/lib/features/design/presentation/design_home_screen.dart` | Shape/Style/Stroke/Balance選択後に生成へ進み、`DES-008` 以降に追加スタイル調整UIが表示されない |
 | M15-T03 | app preview | [x] 生成PNGの表示/保存/注文下書き確認 | `app/lib/features/design/`, `app/lib/features/my_seals/`, `app/lib/features/order/` | 3候補、拡大確認、My Seals保存、注文下書き、Checkout確認で同じStorage由来の生成印影を表示する |
-| M15-T04 | admin | [ ] 生成印影/AI Variant/Style表示の文言確認 | `admin/templates/order_detail.html`, `admin/src/main.rs` | AI画像生成と誤解されない文言で、生成印影画像、AI Variant ID、選択スタイル、顧客確認を確認できる |
+| M15-T04 | admin | [x] 生成印影/AI Variant/Style表示の文言確認 | `admin/templates/order_detail.html`, `admin/src/main.rs` | AI画像生成と誤解されない文言で、生成印影画像、AI Variant ID、選択スタイル、顧客確認を確認できる |
 | M15-T05 | QA | [ ] Docker/dev環境でE2E確認 | `docker compose`, `flutter test`, simulator | 名前入力から漢字選択、`DES-006`、3候補生成、保存、注文作成、Stripe Checkout遷移まで通る |
 | M15-T06 | QA | [ ] 代表漢字セットの視覚確認 | manual/screenshots | 1文字/2文字、画数少/中/多、角印/丸印で赤文字、赤枠1本、白背景、中央配置、可読性を確認する |
 | M15-T07 | docs/release | [ ] 実装後の仕様差分と運用注意を更新 | `doc/app-mvp-implementation-tasks-from-web.md`, `doc/design.md` | 実装済みのフォントプロファイル、既知制約、ロールバック手順がドキュメントと一致する |

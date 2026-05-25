@@ -11197,7 +11197,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn render_order_detail_includes_ai_seal_preview_image() {
+    async fn render_order_detail_includes_generated_seal_preview_image() {
         let state = mock_server_state();
         let detail = state
             .get_order_detail("ord_1006", "", "")
@@ -11206,14 +11206,17 @@ mod tests {
 
         let html = render_order_detail(&detail).expect("order detail should render");
 
-        assert!(html.contains("AI印影プレビュー"));
+        assert!(html.contains("生成印影プレビュー"));
+        assert!(html.contains(
+            "AIは構造化レシピ提案のみを担い、最終PNGは実在フォントを使ったプログラム描画です。"
+        ));
         assert!(html.contains("seal_designs/seal_request_006/seal_variant_006.png"));
         assert!(html.contains("https://storage.googleapis.com/hanko-field-dev/seal_designs/seal_request_006/seal_variant_006.png"));
-        assert!(html.contains("HF-20260209-1006 のAI印影プレビュー"));
+        assert!(html.contains("HF-20260209-1006 の生成印影プレビュー"));
     }
 
     #[tokio::test]
-    async fn render_order_detail_includes_ai_seal_metadata() {
+    async fn render_order_detail_includes_generated_seal_recipe_metadata() {
         let state = mock_server_state();
         let detail = state
             .get_order_detail("ord_1006", "", "")
@@ -11222,17 +11225,25 @@ mod tests {
 
         let html = render_order_detail(&detail).expect("order detail should render");
 
-        assert!(html.contains("AI印影メタデータ"));
-        assert!(html.contains("AI Generation ID"));
+        assert!(html.contains("生成印影レシピ/スタイル"));
+        assert!(html.contains(
+            "制作確認ではStorageパス、AI Variant ID、選択スタイル、顧客確認を正本として扱います。"
+        ));
+        assert!(html.contains("AIレシピ生成ID"));
         assert!(html.contains("seal_request_006"));
+        assert!(html.contains("AI Variant ID"));
         assert!(html.contains("seal_variant_006"));
-        assert!(html.contains("Style name"));
+        assert!(html.contains("選択スタイル"));
         assert!(html.contains("elegant"));
-        assert!(html.contains("Stroke weight"));
+        assert!(html.contains("線の太さ"));
         assert!(html.contains("standard"));
-        assert!(html.contains("Balance"));
+        assert!(html.contains("余白バランス"));
         assert!(html.contains("balanced"));
+        assert!(html.contains("レシピ要約"));
         assert!(html.contains("Latin initials with refined spacing"));
+        assert!(!html.contains("AI画像生成"));
+        assert!(!html.contains("AI印影プレビュー"));
+        assert!(!html.contains("AI印影メタデータ"));
     }
 
     #[tokio::test]
@@ -11270,8 +11281,8 @@ mod tests {
 
         let html = render_order_detail(&detail).expect("order detail should render");
 
-        assert!(html.contains("顧客確認"));
-        assert!(html.contains("漢字/印影確認"));
+        assert!(html.contains("顧客確認チェック"));
+        assert!(html.contains("漢字/生成印影確認"));
         assert!(html.contains("カスタムメイド規約"));
         assert!(html.contains("確認時刻"));
         assert!(html.contains("確認時彫刻文字"));
@@ -11409,9 +11420,9 @@ mod tests {
         assert!(!detail.has_customer_confirmation);
         assert!(html.contains("HF-LEGACY-002"));
         assert!(html.contains("佐 / 藤"));
-        assert!(!html.contains("AI印影プレビュー"));
-        assert!(!html.contains("AI印影メタデータ"));
-        assert!(!html.contains("顧客確認"));
+        assert!(!html.contains("生成印影プレビュー"));
+        assert!(!html.contains("生成印影レシピ/スタイル"));
+        assert!(!html.contains("顧客確認チェック"));
     }
 
     #[tokio::test]
