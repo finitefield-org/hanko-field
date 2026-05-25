@@ -16,6 +16,23 @@
 ## 関連ドキュメント
 - Firebase Firestore 設計（本番向け・多言語対応）: `doc/firebase-firestore-design.md`
 
+## 印影生成方針
+
+- アプリの印影スタイル選択画面で、形、雰囲気、線の太さ、バランスのカスタマイズを完了させる。
+- AIは最終印影画像を直接生成せず、許可されたスタイルレシピを3件提案する役割に限定する。
+- 最終印影PNGは、API側のプログラムレンダラが実在フォントの漢字グリフを使って生成する。
+- 生成印影は常に赤文字、赤枠1本、白背景、固定外枠サイズ、中央配置にする。
+- 候補表示画面以降は、生成済み3候補から選択するだけにし、追加カスタマイズUIを出さない。
+
+## 印影生成MVP運用（M15時点）
+
+- 承認済みフォントプロファイルは `formal_serif`（Noto Serif JP）、`soft_sans`（Noto Sans JP）、`bold_brush`（Yuji Syuku）、`classic_seal`（Kaisei Tokumin Bold）の4件に固定する。
+- フォントassetは `api/assets/fonts/` 配下に同梱し、licenseはすべて SIL Open Font License 1.1 とする。profile、license、checksum、coverageの正本は `api/assets/fonts/README.md`、`api/assets/fonts/profiles.json`、`api/src/seal_fonts.rs` に揃える。
+- 描画時は要求profile、`formal_serif`、`soft_sans` の順にグリフ対応を確認する。どの承認済みフォントでも描画できない文字は `seal_generation_failed` とし、AI画像や未検証字形へ切り替えない。
+- MVPで扱う印影文字は1から2文字のCJK Han文字のみ。3文字以上、空白、非漢字、細線、複雑背景、2本枠、白以外の背景は扱わない。
+- M15時点のPNGレンダラは `font_profile`、`spacing`、`frame` を画へ反映し、`impression`、`weight`、`texture` は保存、表示、admin確認用のrecipeメタデータとして保持する。
+- 生成導線に問題が出た場合は、アプリの生成CTAをメンテナンス表示にするhotfix、またはAPIの直前Cloud Run revisionへのrollbackで止める。既存Web注文と保存済みStorage印影の表示は維持する。
+
 ## タスク
 - [x] 管理画面（`admin`）の初期モック実装を追加
 - [x] 管理画面（`admin`）で `mock` / `dev` / `prod` のデータソース切替を追加

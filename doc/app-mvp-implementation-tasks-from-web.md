@@ -365,7 +365,7 @@ API内部は以下の2段階に分ける。
    - AIは選択済みの `kanji` を別字、異体字、存在しない字形へ置き換えない。
 2. プログラム描画
    - Rust API側のレンダラが、承認済みの実在フォントから選択漢字のグリフを描画する。
-   - レシピに基づき、線幅、字間、余白、墨溜まり風の軽いテクスチャなどを決定的に装飾する。
+   - M15時点では `font_profile`、`spacing`、`frame` に基づき、字形、字間、余白、外枠を決定的に描画する。
    - 生成したPNGをFirebase Storageへ保存し、保存済み `storage_path` を正本にする。
 
 AIレシピの許可値:
@@ -378,6 +378,19 @@ AIレシピの許可値:
 | `spacing` | `airy` / `balanced` / `dense` |
 | `texture` | `none` / `subtle_ink` / `soft_bleed` |
 | `frame` | `square_standard` / `round_standard` |
+
+実装済みフォントプロファイル（M15時点）:
+
+| `font_profile` | 実フォント | asset | fallback | license |
+| --- | --- | --- | --- | --- |
+| `formal_serif` | Noto Serif JP | `api/assets/fonts/noto-serif-jp/NotoSerifJP-wght.ttf` | `soft_sans` | SIL Open Font License 1.1 |
+| `soft_sans` | Noto Sans JP | `api/assets/fonts/noto-sans-jp/NotoSansJP-wght.ttf` | `formal_serif` | SIL Open Font License 1.1 |
+| `bold_brush` | Yuji Syuku | `api/assets/fonts/yuji-syuku/YujiSyuku-Regular.ttf` | `formal_serif` -> `soft_sans` | SIL Open Font License 1.1 |
+| `classic_seal` | Kaisei Tokumin Bold | `api/assets/fonts/kaisei-tokumin/KaiseiTokumin-Bold.ttf` | `formal_serif` -> `soft_sans` | SIL Open Font License 1.1 |
+
+フォント選択は `requested_profile` -> `formal_serif` -> `soft_sans` の順に重複を除いて試す。選択漢字のグリフがどの承認済みフォントにもない場合は `seal_generation_failed` とし、AI画像生成や未検証アウトラインへfallbackしない。
+
+M15時点のレンダラで実際に画へ反映するrecipeは `font_profile`、`spacing`、`frame`。`impression`、`weight`、`texture` はAI提案、アプリ表示、保存済み印影、admin確認用の構造化メタデータとして保持するが、最終PNGは赤文字、赤枠1本、白背景の固定視覚契約を優先する。`weight` や `texture` を将来pixel差分へ反映する場合も、M15の視覚QA条件を崩さない。
 
 プログラム描画の固定ルール:
 
@@ -1071,7 +1084,7 @@ MVPで後回し可能:
 | M15-T04 | admin | [x] 生成印影/AI Variant/Style表示の文言確認 | `admin/templates/order_detail.html`, `admin/src/main.rs` | AI画像生成と誤解されない文言で、生成印影画像、AI Variant ID、選択スタイル、顧客確認を確認できる |
 | M15-T05 | QA | [x] Docker/dev環境でE2E確認 | `docker compose`, `flutter test`, simulator | 名前入力から漢字選択、`DES-006`、3候補生成、保存、注文作成、Stripe Checkout遷移まで通る |
 | M15-T06 | QA | [x] 代表漢字セットの視覚確認 | manual/screenshots | 1文字/2文字、画数少/中/多、角印/丸印で赤文字、赤枠1本、白背景、中央配置、可読性を確認する |
-| M15-T07 | docs/release | [ ] 実装後の仕様差分と運用注意を更新 | `doc/app-mvp-implementation-tasks-from-web.md`, `doc/design.md` | 実装済みのフォントプロファイル、既知制約、ロールバック手順がドキュメントと一致する |
+| M15-T07 | docs/release | [x] 実装後の仕様差分と運用注意を更新 | `doc/app-mvp-implementation-tasks-from-web.md`, `doc/design.md` | 実装済みのフォントプロファイル、既知制約、ロールバック手順がドキュメントと一致する |
 
 ## 10. 受け入れ基準
 
@@ -1158,6 +1171,8 @@ MVPで後回し可能:
 - 既存Web注文は生成印影情報なしで継続可能にする。
 - Firestoreの新フィールドは optional として読み、app注文ではAPI validationで必須化する。
 - adminは新フィールド欠損時に `-` や「Web注文」と表示する。
+- M15-T07時点で追加のFirestore migrationは行わない。生成印影の正本は既存のapp注文拡張で保存する `orders.seal.preview_image.storage_path`、`orders.seal.ai_variant_id`、`orders.seal.style.*`、顧客確認チェックとする。
+- `fonts/ai_generated_seal` は互換用system recordであり、実際の字形はAPIにbundledされた承認済みフォントプロファイルで描画する。
 
 ### Rollout
 
@@ -1165,10 +1180,22 @@ MVPで後回し可能:
 - admin表示を次にdeployし、新旧注文の表示を確認する。
 - appをdev環境でAIレシピ + プログラム印影生成/Checkout/Lookupまで確認する。
 - prod公開前にStripe test modeとFirestore dev/prod設定を確認する。
+- リリース前QAでは `doc/qa/m15-t06/` の代表セットを基準に、1文字/2文字、画数少/中/多、角印/丸印で赤文字、赤枠1本、白背景、中央配置、可読性を確認する。
+- Font assetの差し替え時は `api/assets/fonts/README.md`、`api/assets/fonts/profiles.json`、`api/src/seal_fonts.rs` のprofile名、license、checksum、coverageを同時に更新し、renderer testと代表視覚QAを再実行する。
+
+### 既知制約
+
+- MVPの生成印影は1から2文字のCJK Han文字のみ。3文字以上、空白、非漢字、全承認済みフォントで描画できない文字は生成失敗にする。
+- `variant_count` は3固定。候補選択画面以降に追加カスタマイズUIは出さない。
+- `impression`、`weight`、`texture` はM15時点では保存/表示用のrecipeメタデータであり、最終PNGの色、背景、外枠本数を変えない。
+- 生成AIが最終画像、字形、外枠、背景、URL、画像バイト列を生成する経路は持たない。
+- 保存済み印影はMVPでは端末内保存であり、端末間同期やアカウント復元は行わない。
 
 ### Rollback
 
-- app公開後にAIレシピ提案またはプログラム印影生成に問題が出た場合、アプリ側で生成導線を一時停止し、既存Web注文は維持する。
+- app公開後にAIレシピ提案またはプログラム印影生成に問題が出た場合、アプリ側で生成導線を一時停止する。リモートkill switchがないbuildでは、`DES-006` の生成CTAをメンテナンス表示にするhotfixを出し、既存Web注文は維持する。
+- Gemini/AIレシピ提案だけに問題がある場合は、APIの直前revisionへ戻すか、app生成導線を停止する。最終画像をAIへ切り替えるrollbackは行わない。
+- レンダラまたはフォントassetに問題がある場合は、問題revisionのAPIをCloud Runでrollbackする。既にStorageへ保存済みの印影PNGと注文情報は正本として保持し、admin/order lookup表示は継続する。
 - APIのapp注文拡張に問題が出た場合、`channel = web` の互換を維持したままapp注文をメンテナンス表示にする。
 - admin表示追加は欠損時表示へフォールバックできるようにし、注文処理を止めない。
 
