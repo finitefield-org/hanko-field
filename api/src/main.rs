@@ -15,7 +15,6 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use chrono::{DateTime, Duration, FixedOffset, SecondsFormat, Utc};
 use firebase_sdk_rust::firebase_firestore::{
     CommitRequest, CreateDocumentOptions, Document, FirebaseFirestoreClient,
@@ -46,7 +45,6 @@ const STRIPE_CHECKOUT_SESSIONS_URL: &str = "https://api.stripe.com/v1/checkout/s
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS: i64 = 5 * 60;
 const STORAGE_SCOPE: &str = "https://www.googleapis.com/auth/devstorage.read_write";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
-const DEFAULT_GEMINI_IMAGE_MODEL: &str = "gemini-2.5-flash-image";
 const DEFAULT_GEMINI_THINKING_BUDGET: i32 = 1024;
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
@@ -64,7 +62,6 @@ struct AppConfig {
     stripe_checkout_cancel_url: String,
     gemini_api_key: String,
     gemini_model: String,
-    gemini_image_model: String,
     gemini_base_url: String,
     credentials_file: Option<String>,
 }
@@ -90,7 +87,6 @@ struct StripeCheckoutConfig {
 struct GeminiClientConfig {
     api_key: String,
     model: String,
-    image_model: String,
     base_url: String,
 }
 
@@ -772,6 +768,13 @@ impl SealShape {
         }
     }
 
+    fn recipe_frame(self) -> SealRecipeFrame {
+        match self {
+            Self::Square => SealRecipeFrame::SquareStandard,
+            Self::Round => SealRecipeFrame::RoundStandard,
+        }
+    }
+
     fn prompt_instruction(self) -> &'static str {
         match self {
             Self::Square => "Use a square outer seal frame with balanced inner margins.",
@@ -1033,7 +1036,6 @@ async fn run() -> Result<()> {
         gemini: GeminiClientConfig {
             api_key: cfg.gemini_api_key,
             model: cfg.gemini_model,
-            image_model: cfg.gemini_image_model,
             base_url: cfg.gemini_base_url,
         },
         http_client,
@@ -1129,9 +1131,6 @@ fn load_config() -> Result<AppConfig> {
     let gemini_model = first_non_empty(&[std::env::var("API_GEMINI_MODEL").ok()])
         .unwrap_or_else(|| DEFAULT_GEMINI_MODEL.to_owned());
 
-    let gemini_image_model = first_non_empty(&[std::env::var("API_GEMINI_IMAGE_MODEL").ok()])
-        .unwrap_or_else(|| DEFAULT_GEMINI_IMAGE_MODEL.to_owned());
-
     let gemini_base_url = first_non_empty(&[std::env::var("API_GEMINI_BASE_URL").ok()])
         .unwrap_or_else(|| "https://generativelanguage.googleapis.com".to_owned());
 
@@ -1150,7 +1149,6 @@ fn load_config() -> Result<AppConfig> {
         stripe_checkout_cancel_url,
         gemini_api_key,
         gemini_model,
-        gemini_image_model,
         gemini_base_url,
         credentials_file,
     })
@@ -1726,14 +1724,14 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
     let variants =
         build_seal_design_variants(&state.storage_assets_bucket, &request_id, &recipe_variants);
 
-    let images = match generate_seal_design_images_with_gemini(&state, &input, &variants).await {
+    let images = match generate_seal_design_images_with_renderer(&input, &variants) {
         Ok(value) => value,
         Err(err) => {
-            eprintln!("failed to generate seal design images with gemini: {err:#}");
+            eprintln!("failed to render seal design images: {err:#}");
             return error_response(
                 StatusCode::BAD_GATEWAY,
-                "gemini_generation_failed",
-                "failed to generate seal design images",
+                "seal_generation_failed",
+                "failed to render seal design images",
             );
         }
     };
@@ -4699,7 +4697,7 @@ fn build_seal_designs_request_body(input: &GenerateSealDesignsInput) -> JsonValu
         "generationConfig": {
             "temperature": 0.35,
             "responseMimeType": "application/json",
-            "responseJsonSchema": build_seal_designs_response_schema(input.variant_count),
+            "responseJsonSchema": build_seal_designs_response_schema(input),
             "thinkingConfig": {
                 "thinkingBudget": DEFAULT_GEMINI_THINKING_BUDGET,
             }
@@ -4707,7 +4705,10 @@ fn build_seal_designs_request_body(input: &GenerateSealDesignsInput) -> JsonValu
     })
 }
 
-fn build_seal_designs_response_schema(variant_count: usize) -> JsonValue {
+fn build_seal_designs_response_schema(input: &GenerateSealDesignsInput) -> JsonValue {
+    let variant_count = input.variant_count;
+    let required_frame = input.shape.recipe_frame().as_str();
+
     json!({
         "type": "object",
         "additionalProperties": false,
@@ -4752,7 +4753,7 @@ fn build_seal_designs_response_schema(variant_count: usize) -> JsonValue {
                                 },
                                 "frame": {
                                     "type": "string",
-                                    "enum": ["square_standard", "round_standard"],
+                                    "enum": [required_frame],
                                 },
                             },
                             "required": [
@@ -4795,10 +4796,10 @@ Rules:\n\
   weight: standard, bold\n\
   spacing: airy, balanced, dense\n\
   texture: none, subtle_ink, soft_bleed\n\
-  frame: square_standard, round_standard\n\
+  frame: {} only\n\
 - The recipe must fit {} or fewer CJK Han characters and remain engraving-friendly.\n\
 - Return exactly {} recipe variants and no extra keys.\n\
-- Return only JSON in this exact shape: {{\"variants\":[{{\"label\":\"Formal balanced\",\"recipe\":{{\"font_profile\":\"formal_serif\",\"impression\":\"traditional\",\"weight\":\"standard\",\"spacing\":\"balanced\",\"texture\":\"none\",\"frame\":\"square_standard\"}}}}]}}",
+- Return only JSON in this exact shape: {{\"variants\":[{{\"label\":\"Formal balanced\",\"recipe\":{{\"font_profile\":\"formal_serif\",\"impression\":\"traditional\",\"weight\":\"standard\",\"spacing\":\"balanced\",\"texture\":\"none\",\"frame\":\"{}\"}}}}]}}",
         input.variant_count,
         input.input_name,
         input.kanji,
@@ -4810,8 +4811,10 @@ Rules:\n\
         input.style.prompt_instruction(),
         input.stroke_weight.prompt_instruction(),
         input.balance.prompt_instruction(),
+        input.shape.recipe_frame().as_str(),
         input.generation_rules.max_characters,
-        input.variant_count
+        input.variant_count,
+        input.shape.recipe_frame().as_str()
     )
 }
 
@@ -4850,165 +4853,64 @@ fn seal_design_recipe_to_json(recipe: SealDesignRecipe) -> JsonValue {
     })
 }
 
-async fn generate_seal_design_images_with_gemini(
-    state: &AppState,
+fn generate_seal_design_images_with_renderer(
     input: &GenerateSealDesignsInput,
     variants: &[SealDesignVariant],
 ) -> Result<Vec<GeneratedSealDesignImage>> {
     let mut images = Vec::with_capacity(variants.len());
     for variant in variants {
-        let image = generate_seal_design_image_with_gemini(state, input, variant)
-            .await
-            .with_context(|| format!("failed to generate image for {}", variant.id))?;
+        let image = render_seal_design_image(input, variant)
+            .with_context(|| format!("failed to render image for {}", variant.id))?;
         images.push(image);
     }
     Ok(images)
 }
 
-async fn generate_seal_design_image_with_gemini(
-    state: &AppState,
+fn render_seal_design_image(
     input: &GenerateSealDesignsInput,
     variant: &SealDesignVariant,
 ) -> Result<GeneratedSealDesignImage> {
-    let request_body = build_seal_design_image_request_body(input, variant);
-
-    let endpoint = format!(
-        "{}/v1beta/models/{}:generateContent",
-        state.gemini.base_url.trim_end_matches('/'),
-        state.gemini.image_model.trim()
-    );
-
-    let response = state
-        .http_client
-        .post(endpoint)
-        .query(&[("key", state.gemini.api_key.as_str())])
-        .json(&request_body)
-        .send()
-        .await
-        .context("failed to call gemini image generateContent")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+    let shape = seal_shape_for_recipe_frame(variant.recipe.frame);
+    if shape != input.shape {
         bail!(
-            "gemini image request failed status={} body={}",
-            status,
-            body
+            "recipe frame {} does not match requested shape {}",
+            variant.recipe.frame.as_str(),
+            input.shape.as_str()
         );
     }
 
-    let payload = response
-        .json::<JsonValue>()
-        .await
-        .context("failed to parse gemini image response payload")?;
+    let rendered = seal_renderer::render_fixed_rule_seal_png_with_spacing(
+        &input.kanji,
+        variant.recipe.font_profile,
+        shape,
+        variant.recipe.spacing,
+    )?;
 
-    let image = extract_gemini_inline_image(&payload)?;
+    if rendered.width as usize != SEAL_DESIGN_IMAGE_SIZE
+        || rendered.height as usize != SEAL_DESIGN_IMAGE_SIZE
+    {
+        bail!(
+            "rendered seal image size {}x{} did not match expected {}x{}",
+            rendered.width,
+            rendered.height,
+            SEAL_DESIGN_IMAGE_SIZE,
+            SEAL_DESIGN_IMAGE_SIZE
+        );
+    }
+
+    let image = GeneratedSealDesignImage {
+        content_type: rendered.content_type.to_owned(),
+        bytes: rendered.bytes,
+    };
     validate_generated_seal_image(&image)?;
     Ok(image)
 }
 
-fn build_seal_design_image_request_body(
-    input: &GenerateSealDesignsInput,
-    variant: &SealDesignVariant,
-) -> JsonValue {
-    json!({
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": build_seal_design_image_prompt(input, variant),
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "responseModalities": ["TEXT", "IMAGE"],
-        }
-    })
-}
-
-fn build_seal_design_image_prompt(
-    input: &GenerateSealDesignsInput,
-    variant: &SealDesignVariant,
-) -> String {
-    format!(
-        "Create one finished PNG image for a Japanese hanko seal design.\n\
-Variant label: \"{}\"\n\
-Input name: \"{}\"\n\
-Render exactly this kanji and no other text: \"{}\"\n\
-Shape: {}\n\
-Style: {}\n\
-Stroke weight: {}\n\
-Balance: {}\n\
-{}\n\
-{}\n\
-{}\n\
-{}\n\
-Image requirements:\n\
-- Square image intended for {}x{} display.\n\
-- Plain light background only, with no background pattern, texture, shadow, gradient, or watermark-like decoration.\n\
-- Engraving-friendly monochrome seal artwork with readable strokes.\n\
-- Avoid thin lines, tiny decorative details, overly complex stroke arrangements, and illegible forms.\n\
-- Preserve clear inner margin so artwork never touches the image edge or seal frame.\n\
-- Output image data only as image/png.",
-        variant.label,
-        input.input_name,
-        input.kanji,
-        input.shape.as_str(),
-        input.style.as_str(),
-        input.stroke_weight.as_str(),
-        input.balance.as_str(),
-        input.shape.prompt_instruction(),
-        input.style.prompt_instruction(),
-        input.stroke_weight.prompt_instruction(),
-        input.balance.prompt_instruction(),
-        SEAL_DESIGN_IMAGE_SIZE,
-        SEAL_DESIGN_IMAGE_SIZE
-    )
-}
-
-fn extract_gemini_inline_image(payload: &JsonValue) -> Result<GeneratedSealDesignImage> {
-    let candidates = payload
-        .get("candidates")
-        .and_then(JsonValue::as_array)
-        .ok_or_else(|| anyhow!("gemini image response JSON must contain candidates array"))?;
-
-    for candidate in candidates {
-        let Some(parts) = candidate
-            .get("content")
-            .and_then(|content| content.get("parts"))
-            .and_then(JsonValue::as_array)
-        else {
-            continue;
-        };
-
-        for part in parts {
-            let inline_data = part.get("inlineData").or_else(|| part.get("inline_data"));
-            let Some(inline_data) = inline_data else {
-                continue;
-            };
-
-            let content_type = read_json_string(inline_data, &["mimeType", "mime_type"]);
-            let data = read_json_string(inline_data, &["data"]);
-            if content_type.is_empty() || data.is_empty() {
-                continue;
-            }
-
-            let bytes = BASE64_STANDARD
-                .decode(data.as_bytes())
-                .context("failed to decode gemini inline image data")?;
-            return Ok(GeneratedSealDesignImage {
-                content_type,
-                bytes,
-            });
-        }
+fn seal_shape_for_recipe_frame(frame: SealRecipeFrame) -> SealShape {
+    match frame {
+        SealRecipeFrame::SquareStandard => SealShape::Square,
+        SealRecipeFrame::RoundStandard => SealShape::Round,
     }
-
-    bail!("gemini image response did not include inline image data")
 }
 
 fn validate_generated_seal_image(image: &GeneratedSealDesignImage) -> Result<()> {
@@ -9091,6 +8993,11 @@ mod tests {
                 ["recipe"]["properties"]["font_profile"]["enum"],
             json!(["formal_serif", "soft_sans", "bold_brush", "classic_seal"])
         );
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["items"]["properties"]
+                ["recipe"]["properties"]["frame"]["enum"],
+            json!(["square_standard"])
+        );
         assert!(body["generationConfig"]["responseModalities"].is_null());
         assert!(
             body["contents"][0]["parts"][0]["text"]
@@ -9131,92 +9038,116 @@ mod tests {
     }
 
     #[test]
-    fn build_seal_design_image_request_body_requests_image_modality() {
-        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
-            .expect("request must be valid");
-        let variant = SealDesignVariant {
-            id: "seal_variant_001".to_owned(),
-            storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
-            download_url: String::new(),
-            label: "Elegant and balanced".to_owned(),
-            recipe: valid_seal_design_recipe_variant("Elegant and balanced").recipe,
-            width: SEAL_DESIGN_IMAGE_SIZE,
-            height: SEAL_DESIGN_IMAGE_SIZE,
-        };
+    fn m14_t07_round_shape_recipe_schema_allows_only_round_frame() {
+        let mut request = valid_seal_designs_request();
+        request.shape = "round".to_owned();
+        let input = validate_generate_seal_designs_request(request).expect("request must be valid");
 
-        let body = build_seal_design_image_request_body(&input, &variant);
+        let body = build_seal_designs_request_body(&input);
 
         assert_eq!(
-            body["generationConfig"]["responseModalities"],
-            json!(["TEXT", "IMAGE"])
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["items"]["properties"]
+                ["recipe"]["properties"]["frame"]["enum"],
+            json!(["round_standard"])
         );
         let prompt = body["contents"][0]["parts"][0]["text"]
             .as_str()
             .expect("prompt must be text");
-        assert!(prompt.contains("Render exactly this kanji and no other text: \"美空\""));
-        assert!(prompt.contains("Output image data only as image/png"));
-        assert!(prompt.contains("Plain light background"));
+        assert!(prompt.contains("frame: round_standard only"));
+        assert!(prompt.contains("\"frame\":\"round_standard\""));
+    }
+
+    #[test]
+    fn m14_t07_renderer_generates_programmatic_png_images_for_recipe_variants() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+        let recipe_variants = vec![
+            valid_seal_design_recipe_variant("Elegant and balanced"),
+            SealDesignRecipeVariant {
+                label: "Soft spacing".to_owned(),
+                recipe: SealDesignRecipe {
+                    font_profile: SealRecipeFontProfile::SoftSans,
+                    impression: SealRecipeImpression::Soft,
+                    weight: SealRecipeWeight::Standard,
+                    spacing: SealRecipeSpacing::Airy,
+                    texture: SealRecipeTexture::None,
+                    frame: SealRecipeFrame::SquareStandard,
+                },
+            },
+            SealDesignRecipeVariant {
+                label: "Bold readable".to_owned(),
+                recipe: SealDesignRecipe {
+                    font_profile: SealRecipeFontProfile::BoldBrush,
+                    impression: SealRecipeImpression::Bold,
+                    weight: SealRecipeWeight::Bold,
+                    spacing: SealRecipeSpacing::Dense,
+                    texture: SealRecipeTexture::None,
+                    frame: SealRecipeFrame::SquareStandard,
+                },
+            },
+        ];
+        let variants =
+            build_seal_design_variants("hanko-assets", "seal_request_001", &recipe_variants);
+
+        let images = generate_seal_design_images_with_renderer(&input, &variants)
+            .expect("programmatic renderer must generate png variants");
+
+        assert_eq!(images.len(), variants.len());
+        for image in images {
+            assert_eq!(image.content_type, "image/png");
+            validate_generated_seal_image(&image).expect("rendered image must be a valid png");
+            let decoded =
+                image::load_from_memory_with_format(&image.bytes, image::ImageFormat::Png)
+                    .expect("rendered png must decode");
+            assert_eq!(decoded.width(), SEAL_DESIGN_IMAGE_SIZE as u32);
+            assert_eq!(decoded.height(), SEAL_DESIGN_IMAGE_SIZE as u32);
+        }
+    }
+
+    #[test]
+    fn m14_t07_renderer_rejects_recipe_frame_that_does_not_match_requested_shape() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+        let mut recipe_variant = valid_seal_design_recipe_variant("Mismatched round");
+        recipe_variant.recipe.frame = SealRecipeFrame::RoundStandard;
+        let variants =
+            build_seal_design_variants("hanko-assets", "seal_request_001", &[recipe_variant]);
+
+        let err = generate_seal_design_images_with_renderer(&input, &variants)
+            .expect_err("mismatched recipe frame must fail");
+        let err_chain = format!("{err:#}");
+
+        assert!(
+            err_chain.contains("recipe frame round_standard does not match requested shape square"),
+            "unexpected error: {err_chain}"
+        );
     }
 
     #[test]
     fn m13_t07_seal_quality_prompts_cover_visual_acceptance_criteria() {
         let input = validate_generate_seal_designs_request(valid_seal_designs_request())
             .expect("request must be valid");
-        let variant = SealDesignVariant {
-            id: "seal_variant_001".to_owned(),
-            storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
-            download_url: String::new(),
-            label: "Elegant and balanced".to_owned(),
-            recipe: valid_seal_design_recipe_variant("Elegant and balanced").recipe,
-            width: SEAL_DESIGN_IMAGE_SIZE,
-            height: SEAL_DESIGN_IMAGE_SIZE,
-        };
-
-        let label_prompt = build_seal_designs_prompt(&input);
-        let image_prompt = build_seal_design_image_prompt(&input, &variant);
-        let combined = format!("{label_prompt}\n{image_prompt}").to_ascii_lowercase();
+        let prompt = build_seal_designs_prompt(&input).to_ascii_lowercase();
 
         for required in [
+            "structured json recipes only",
+            "do not generate",
+            "api renderer owns",
+            "selected unicode kanji",
+            "real fonts",
             "2 or fewer cjk han characters",
-            "readable",
-            "stroke weight",
-            "line thickness",
-            "thin lines",
+            "engraving-friendly",
+            "fixed size",
+            "red ink color (#9d1f22)",
+            "pure white background",
             "no background pattern",
-            "plain light background",
-            "inner margin",
+            "frame: square_standard only",
         ] {
             assert!(
-                combined.contains(required),
+                prompt.contains(required),
                 "AI quality prompt must include {required}"
             );
         }
-    }
-
-    #[test]
-    fn extract_gemini_inline_image_accepts_camel_case_payload() {
-        let png_signature = b"\x89PNG\r\n\x1a\n";
-        let payload = json!({
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [
-                            {
-                                "inlineData": {
-                                    "mimeType": "image/png",
-                                    "data": BASE64_STANDARD.encode(png_signature),
-                                }
-                            }
-                        ]
-                    }
-                }
-            ]
-        });
-
-        let image = extract_gemini_inline_image(&payload).expect("image must parse");
-        assert_eq!(image.content_type, "image/png");
-        assert_eq!(image.bytes, png_signature);
-        validate_generated_seal_image(&image).expect("image must validate");
     }
 
     #[test]
