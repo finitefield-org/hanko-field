@@ -67,7 +67,7 @@
           <span>{% if selected_locale == "ja" %}決済完了{% else %}Payment confirmed{% endif %}</span>
         </h3>
         <div class="legal-section__copy">
-          <p>{% if selected_locale == "ja" %}ご注文ありがとうございます。確認メール送信後、順次製作を開始します。{% else %}Thank you for your order. We will start production after the confirmation email is sent.{% endif %}</p>
+          <p>{% if selected_locale == "ja" %}ご注文ありがとうございます。決済確認後、順次製作を開始します。{% else %}Thank you for your order. We will start production after payment confirmation.{% endif %}</p>
           <div class="legal-notes">
             <div class="legal-note">
               <p class="legal-note__label">{% if selected_locale == "ja" %}状態{% else %}Status{% endif %}</p>
@@ -75,9 +75,16 @@
             </div>
             <div class="legal-note">
               <p class="legal-note__label">{% if selected_locale == "ja" %}製作開始{% else %}Production{% endif %}</p>
-              <p class="legal-note__text">{% if selected_locale == "ja" %}確認メール送信後に製作を開始します。{% else %}We will begin production after the confirmation email is sent.{% endif %}</p>
+              <p class="legal-note__text">{% if selected_locale == "ja" %}決済確認後に製作を開始します。{% else %}We will begin production after payment confirmation.{% endif %}</p>
             </div>
           </div>
+          {% if has_app_redirect_url %}
+          <div class="legal-actions">
+            <a class="legal-button legal-button--primary" href="{{ app_redirect_url }}" data-app-return-link>
+              {% if selected_locale == "ja" %}アプリに戻る{% else %}Return to app{% endif %}
+            </a>
+          </div>
+          {% endif %}
         </div>
       </section>
 
@@ -103,7 +110,7 @@
             {% endif %}
           </dl>
           {% else %}
-          <p>{% if selected_locale == "ja" %}確認メールをご確認ください。{% else %}Please check your confirmation email.{% endif %}</p>
+          <p>{% if selected_locale == "ja" %}Stripeの決済完了メールをご確認ください。{% else %}Please check your Stripe payment receipt.{% endif %}</p>
           {% endif %}
         </div>
       </section>
@@ -116,9 +123,9 @@
         <div class="legal-section__copy">
           <p class="legal-section__body">{% if selected_locale == "ja" %}ご不明点はお問い合わせフォームからご連絡ください。{% else %}If you have any questions, please contact us through the inquiry form.{% endif %}</p>
           <ul class="legal-list">
-            <li>{% if selected_locale == "ja" %}確認メールをご確認ください。{% else %}Check your confirmation email.{% endif %}</li>
+            <li>{% if selected_locale == "ja" %}Stripeの決済完了メールをご確認ください。{% else %}Check your Stripe payment receipt.{% endif %}</li>
             <li>{% if selected_locale == "ja" %}注文IDは問い合わせ時にお伝えください。{% else %}Keep your order ID for support.{% endif %}</li>
-            <li>{% if selected_locale == "ja" %}メールが届かない場合はお問い合わせください。{% else %}If the email does not arrive, contact us.{% endif %}</li>
+            <li>{% if selected_locale == "ja" %}Stripeのメールが届かない場合はお問い合わせください。{% else %}If the Stripe email does not arrive, contact us.{% endif %}</li>
           </ul>
           <div class="legal-actions">
             <button type="button" class="legal-button legal-button--primary" onclick="window.location.href='{{ top_url }}'">

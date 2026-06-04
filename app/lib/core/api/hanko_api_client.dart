@@ -3,10 +3,29 @@ import 'dart:io';
 
 import 'api_json.dart';
 
-const defaultHankoApiBaseUrl = String.fromEnvironment(
-  'HANKO_API_BASE_URL',
-  defaultValue: 'http://127.0.0.1:3050',
+const _hankoApiBaseUrlOverride = String.fromEnvironment('HANKO_API_BASE_URL');
+const _legacyHankoAppProdApiBaseUrlOverride = String.fromEnvironment(
+  'HANKO_APP_PROD_API_BASE_URL',
 );
+
+final defaultHankoApiBaseUrl = resolveDefaultHankoApiBaseUrl();
+
+String resolveDefaultHankoApiBaseUrl({bool? isAndroid}) {
+  final configured = _hankoApiBaseUrlOverride.trim();
+  if (configured.isNotEmpty) {
+    return configured;
+  }
+
+  final legacyConfigured = _legacyHankoAppProdApiBaseUrlOverride.trim();
+  if (legacyConfigured.isNotEmpty) {
+    return legacyConfigured;
+  }
+
+  if (isAndroid ?? Platform.isAndroid) {
+    return 'http://10.0.2.2:3050';
+  }
+  return 'http://127.0.0.1:3050';
+}
 
 class HankoApiClient {
   HankoApiClient({required this.baseUri, HankoApiTransport? transport})

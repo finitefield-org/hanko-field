@@ -24,20 +24,25 @@ Before release, host the platform association files on both domains.
 
 ## Stripe Environment
 
-Production Stripe Checkout return URLs should use the verified app link domain:
+Production Stripe Checkout web return URLs should use the public web domain. App-originated Checkout Sessions should use the app checkout custom scheme so Stripe returns to the installed Flutter app instead of first loading a public web page:
 
 ```env
 API_PSP_STRIPE_CHECKOUT_SUCCESS_URL=https://finitefield.org/payment/success?session_id={CHECKOUT_SESSION_ID}
 API_PSP_STRIPE_CHECKOUT_CANCEL_URL=https://finitefield.org/payment/failure
+API_PSP_STRIPE_APP_CHECKOUT_SUCCESS_URL=hankofield://checkout/success?session_id={CHECKOUT_SESSION_ID}
+API_PSP_STRIPE_APP_CHECKOUT_CANCEL_URL=hankofield://checkout/cancel
 HANKO_WEB_SITE_BASE_URL=https://finitefield.org
 ```
 
-The API appends `checkout=success` or `checkout=cancel`, `order_id`, and `lang`, so the app receives enough context to show success, pending, cancel, or failure states.
+The web return URLs keep browser checkout on the web site. The app return URLs are used only when the Flutter app sends `return_to_app=true`; those URLs must match the app's registered `hankofield://checkout/*` custom scheme. Universal Links can remain configured as a compatibility path, but app-originated Stripe Checkout should not use `https://finitefield.org/payment/*` because a hosting or association-file issue can leave the customer on a web 404 before returning to the app.
+
+The API appends `checkout=success` or `checkout=cancel`, `order_id`, `lang`, and `return_to=app` for app-originated Checkout Sessions, so the app receives enough context to show success, pending, cancel, or failure states. App-originated Checkout Sessions also set `origin_context=mobile_app`.
 
 ## Smoke Test
 
 1. Install a release-signed app build.
-2. Verify Android App Links or iOS Universal Links for `https://finitefield.org/payment/success?checkout=success&order_id=<order>&session_id=<session>&lang=en`.
-3. Start Checkout from the app, pay with Stripe test mode, and confirm the return opens the app at the payment status check screen.
+2. Verify the custom scheme route `hankofield://checkout/success?checkout=success&order_id=<order>&session_id=<session>&lang=en` opens the app.
+3. Start Checkout from the app, pay with Stripe test mode, and confirm the return opens the app at the payment status check screen without showing a web 404.
 4. Cancel Checkout and confirm the app opens the canceled state.
-5. Open an invalid checkout route and confirm the app shows the deep link error state.
+5. Verify the Universal Link route `https://finitefield.org/payment/success?checkout=success&order_id=<order>&session_id=<session>&lang=en&return_to=app` still opens the app or the web success page for compatibility diagnostics.
+6. Open an invalid checkout route and confirm the app shows the deep link error state.

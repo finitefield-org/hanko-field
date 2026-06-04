@@ -7,21 +7,29 @@ import '../../../core/widgets/core_widgets.dart';
 import 'settings_content.dart';
 
 class SettingsHomeScreen extends StatelessWidget {
-  const SettingsHomeScreen({super.key});
+  const SettingsHomeScreen({super.key, this.onLocaleSelected});
+
+  final ValueChanged<Locale>? onLocaleSelected;
 
   @override
   Widget build(BuildContext context) {
-    return const SettingsScreen();
+    return SettingsScreen(onLocaleSelected: onLocaleSelected);
   }
 }
 
 enum SettingsInitialDestination { contact }
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, this.onClose, this.initialDestination});
+  const SettingsScreen({
+    super.key,
+    this.onClose,
+    this.initialDestination,
+    this.onLocaleSelected,
+  });
 
   final VoidCallback? onClose;
   final SettingsInitialDestination? initialDestination;
+  final ValueChanged<Locale>? onLocaleSelected;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -84,6 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return _SettingsDetailPage(
               destination: destination,
               onBack: _popDestination,
+              onLocaleSelected: widget.onLocaleSelected,
             );
           }
 
@@ -226,10 +235,15 @@ class _SettingsRow extends StatelessWidget {
 }
 
 class _SettingsDetailPage extends StatelessWidget {
-  const _SettingsDetailPage({required this.destination, required this.onBack});
+  const _SettingsDetailPage({
+    required this.destination,
+    required this.onBack,
+    required this.onLocaleSelected,
+  });
 
   final _SettingsDestination destination;
   final VoidCallback onBack;
+  final ValueChanged<Locale>? onLocaleSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +260,10 @@ class _SettingsDetailPage extends StatelessWidget {
       ),
       children: [
         switch (destination) {
-          _SettingsDestination.language => const _LanguageSettingsContent(),
+          _SettingsDestination.language => _LanguageSettingsContent(
+            currentLocale: l10n.locale,
+            onLocaleSelected: onLocaleSelected,
+          ),
           _SettingsDestination.about => _AboutSettingsContent(
             content: content.about,
           ),
@@ -273,18 +290,26 @@ class _SettingsDetailPage extends StatelessWidget {
 }
 
 class _LanguageSettingsContent extends StatelessWidget {
-  const _LanguageSettingsContent();
+  const _LanguageSettingsContent({
+    required this.currentLocale,
+    required this.onLocaleSelected,
+  });
+
+  final Locale currentLocale;
+  final ValueChanged<Locale>? onLocaleSelected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final currentLanguageCode = currentLocale.languageCode;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        HankoStateView.empty(
+        _ContentIntroCard(
+          icon: Icons.language,
           title: l10n.settingsLanguageTitle,
-          message: l10n.settingsLanguageMessage,
+          body: l10n.settingsLanguageMessage,
         ),
         const SizedBox(height: HankoSpacing.md),
         HankoSurfaceCard(
@@ -292,8 +317,20 @@ class _LanguageSettingsContent extends StatelessWidget {
           radius: HankoRadii.md,
           child: Column(
             children: [
-              _LanguageOptionRow(label: l10n.settingsLanguageEnglish),
-              _LanguageOptionRow(label: l10n.settingsLanguageJapanese),
+              _LanguageOptionRow(
+                label: l10n.settingsLanguageEnglish,
+                isSelected: currentLanguageCode == 'en',
+                onTap: onLocaleSelected == null
+                    ? null
+                    : () => onLocaleSelected!(const Locale('en')),
+              ),
+              _LanguageOptionRow(
+                label: l10n.settingsLanguageJapanese,
+                isSelected: currentLanguageCode == 'ja',
+                onTap: onLocaleSelected == null
+                    ? null
+                    : () => onLocaleSelected!(const Locale('ja')),
+              ),
             ],
           ),
         ),
@@ -303,22 +340,42 @@ class _LanguageSettingsContent extends StatelessWidget {
 }
 
 class _LanguageOptionRow extends StatelessWidget {
-  const _LanguageOptionRow({required this.label});
+  const _LanguageOptionRow({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   final String label;
+  final bool isSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: Row(
-          children: [
-            const Icon(Icons.translate, color: HankoColors.gold, size: 20),
-            const SizedBox(width: 14),
-            Expanded(child: Text(label, style: HankoTextStyles.label)),
-          ],
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: SizedBox(
+        height: 56,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(
+              children: [
+                const Icon(Icons.translate, color: HankoColors.gold, size: 20),
+                const SizedBox(width: 14),
+                Expanded(child: Text(label, style: HankoTextStyles.label)),
+                Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: isSelected ? HankoColors.gold : HankoColors.body,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

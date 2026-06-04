@@ -81,7 +81,7 @@
       .screen-title {
         position: absolute;
         top: 7.44%;
-        left: 6.05%;
+        left: 16.25%;
         z-index: 5;
         margin: 0;
         color: var(--deep-wine);
@@ -94,6 +94,17 @@
         transform: scaleX(0.95);
         transform-origin: left center;
         white-space: nowrap;
+      }
+
+      .screen-logo {
+        position: absolute;
+        top: 6.88%;
+        left: 5.8%;
+        z-index: 5;
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        filter: drop-shadow(0 7px 11px rgba(76, 47, 28, 0.13));
       }
 
       .settings-button {
@@ -496,6 +507,7 @@
   </head>
   <body class="grid min-h-screen justify-items-center">
     <main class="phone" aria-label="Design screen">
+      <img class="screen-logo" src="../../../web/static/site-logo.png" alt="Stone Signature" />
       <h1 class="screen-title">Design</h1>
       <button class="settings-button" type="button" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">

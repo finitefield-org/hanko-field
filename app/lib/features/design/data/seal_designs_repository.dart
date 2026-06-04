@@ -36,6 +36,8 @@ class SealGenerationRequestDto {
     required this.strokeWeight,
     required this.balance,
     required this.variantCount,
+    required this.attemptNumber,
+    required this.previousRecipes,
   });
 
   factory SealGenerationRequestDto.fromDomain(SealGenerationRequest request) {
@@ -47,6 +49,8 @@ class SealGenerationRequestDto {
       strokeWeight: request.style.strokeWeight.apiValue,
       balance: request.style.balance.apiValue,
       variantCount: 3,
+      attemptNumber: request.attemptNumber,
+      previousRecipes: request.previousRecipes,
     );
   }
 
@@ -57,6 +61,8 @@ class SealGenerationRequestDto {
   final String strokeWeight;
   final String balance;
   final int variantCount;
+  final int attemptNumber;
+  final List<SealDesignRecipe> previousRecipes;
 
   JsonMap toJson() {
     return {
@@ -67,6 +73,12 @@ class SealGenerationRequestDto {
       'stroke_weight': strokeWeight,
       'balance': balance,
       'variant_count': variantCount,
+      'attempt_number': attemptNumber,
+      if (previousRecipes.isNotEmpty)
+        'previous_recipes': [
+          for (final recipe in previousRecipes)
+            SealDesignRecipeDto.fromDomain(recipe).toJson(),
+        ],
       'generation_rules': const {
         'max_characters': 2,
         'avoid_complex_characters': true,
@@ -176,6 +188,17 @@ class SealDesignRecipeDto {
     );
   }
 
+  factory SealDesignRecipeDto.fromDomain(SealDesignRecipe recipe) {
+    return SealDesignRecipeDto(
+      fontProfile: recipe.fontProfile,
+      impression: recipe.impression,
+      weight: recipe.weight,
+      spacing: recipe.spacing,
+      texture: recipe.texture,
+      frame: recipe.frame,
+    );
+  }
+
   static SealDesignRecipeDto? fromOptionalJson(Object? value) {
     if (value == null) {
       return null;
@@ -199,5 +222,16 @@ class SealDesignRecipeDto {
       texture: texture,
       frame: frame,
     );
+  }
+
+  JsonMap toJson() {
+    return {
+      'font_profile': fontProfile,
+      'impression': impression,
+      'weight': weight,
+      'spacing': spacing,
+      'texture': texture,
+      'frame': frame,
+    };
   }
 }

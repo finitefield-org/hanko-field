@@ -64,6 +64,8 @@ void main() {
     CheckoutUrlLauncher? openCheckoutUrl,
     OrderStatusFetcher? fetchOrderStatus,
     OrderLookupFetcher? lookupOrder,
+    PreferredLocaleLoader? loadPreferredLocale,
+    PreferredLocaleWriter? savePreferredLocale,
     Duration paymentStatusRetryDelay = Duration.zero,
     String? initialCheckoutRoute,
     LocalSealDesignRepository? localSealDesignRepository,
@@ -73,6 +75,8 @@ void main() {
       ProviderScope(
         child: HankoApp(
           locale: locale,
+          loadPreferredLocale: loadPreferredLocale ?? () async => null,
+          savePreferredLocale: savePreferredLocale ?? (_) async {},
           hasSeenOnboardingResolver: () async => hasSeenOnboarding,
           markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
@@ -219,6 +223,22 @@ void main() {
     expect(find.text('Stones'), findsOneWidget);
     expect(find.byType(Navigator, skipOffstage: false), findsNWidgets(5));
 
+    await tester.tap(find.text('Saved Seals'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Seals'), findsNWidgets(2));
+
+    await tester.tap(find.text('Design').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Browse Stones'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stones'), findsNWidgets(2));
+
+    await tester.tap(find.text('Design').last);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Stones').last);
     await tester.pumpAndSettle();
 
@@ -261,6 +281,10 @@ void main() {
 
     expect(find.byType(NameInputScreen), findsOneWidget);
     expect(find.text('Enter Your Name'), findsOneWidget);
+    expect(
+      find.text("We'll suggest kanji based on your preferences."),
+      findsOneWidget,
+    );
     expect(find.text('Your name'), findsOneWidget);
     expect(find.text('Gender preference'), findsOneWidget);
     expect(find.text('Kanji style'), findsOneWidget);
@@ -291,10 +315,8 @@ void main() {
 
     expect(find.byType(KanjiSuggestionLoadingScreen), findsOneWidget);
     expect(find.text('Finding Kanji'), findsOneWidget);
-    expect(
-      find.text('Creating engraving-friendly kanji suggestions...'),
-      findsOneWidget,
-    );
+    expect(find.text('Creating kanji suggestions...'), findsOneWidget);
+    expect(find.textContaining('sound, meaning'), findsNothing);
     expect(find.text('Michael Smith'), findsWidgets);
     expect(find.text('Japanese style'), findsWidgets);
     expect(capturedRequest?.realName, 'Michael Smith');
@@ -309,15 +331,16 @@ void main() {
     expect(find.text('Kanji Suggestions'), findsOneWidget);
     expect(find.text('美空'), findsOneWidget);
     expect(find.text('Misora'), findsOneWidget);
-    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(
+      find.text('Meaning: Beautiful sky', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text('Elegant'), findsOneWidget);
     expect(find.text('Gentle'), findsOneWidget);
     expect(find.text('A graceful two-character option.'), findsOneWidget);
-    expect(find.text('Characters'), findsOneWidget);
-    expect(find.text('Stroke complexity'), findsOneWidget);
-    expect(find.text('Medium'), findsOneWidget);
-    expect(find.text('Engraving suitability'), findsOneWidget);
-    expect(find.text('High'), findsOneWidget);
+    expect(find.text('Characters'), findsNothing);
+    expect(find.text('Stroke complexity'), findsNothing);
+    expect(find.text('Engraving suitability'), findsNothing);
 
     await tester.tap(find.text('美空'));
     await tester.pumpAndSettle();
@@ -328,11 +351,14 @@ void main() {
       find.text(
         'Review the meaning and engraving fit before choosing this kanji.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('美空'), findsOneWidget);
-    expect(find.text('Misora'), findsOneWidget);
+    expect(find.text('Reading: Misora', findRichText: true), findsOneWidget);
     expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('Characters'), findsNothing);
+    expect(find.text('Stroke complexity'), findsNothing);
+    expect(find.text('Engraving suitability'), findsNothing);
 
     await tester.ensureVisible(find.text('Select Kanji'));
     await tester.pump();
@@ -341,10 +367,7 @@ void main() {
 
     expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
     expect(find.text('Seal Style'), findsOneWidget);
-    expect(
-      find.text('Choose a fixed style set for AI seal generation.'),
-      findsOneWidget,
-    );
+    expect(find.text('Customize your seal style.'), findsOneWidget);
     expect(find.text('Selected kanji'), findsOneWidget);
     _expectSealStyleAdjustmentControlsPresent();
     expect(find.text('Shape'), findsWidgets);
@@ -545,6 +568,11 @@ void main() {
       find.text('Creating three AI seal design directions...'),
       findsOneWidget,
     );
+    expect(
+      find.text('We are checking the kanji and style before saving previews.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('engraving safety'), findsNothing);
     expect(find.text('Generation details'), findsOneWidget);
     expect(find.text('美空'), findsOneWidget);
     expect(find.text('Attempts'), findsOneWidget);
@@ -565,6 +593,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     SealDesignVariant? selected;
+    var regenerateCount = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -576,6 +605,7 @@ void main() {
           result: _sealGenerationResult(),
           onSelected: (variant) => selected = variant,
           onBack: () {},
+          onRegenerate: () => regenerateCount += 1,
         ),
       ),
     );
@@ -587,6 +617,14 @@ void main() {
     expect(find.text('Soft spacing'), findsOneWidget);
     expect(find.text('Bold readable seal'), findsOneWidget);
     expect(find.text('Selected'), findsNothing);
+    expect(find.text('Regenerate Seal'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Regenerate Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Regenerate Seal'));
+    await tester.pumpAndSettle();
+
+    expect(regenerateCount, 1);
 
     await tester.ensureVisible(find.text('Soft spacing'));
     await tester.pump();
@@ -640,7 +678,7 @@ void main() {
     );
     expect(
       find.text('Created within engraving-friendly design rules.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('美空'), findsOneWidget);
     expect(find.text('Beautiful sky'), findsOneWidget);
@@ -648,7 +686,7 @@ void main() {
     expect(find.text('Soft spacing'), findsOneWidget);
     expect(
       find.text('seal_designs/seal_request_001/seal_variant_002.png'),
-      findsOneWidget,
+      findsNothing,
     );
 
     await tester.ensureVisible(find.text('Save Seal'));
@@ -662,6 +700,40 @@ void main() {
 
     expect(saveCount, 1);
     expect(chooseStoneCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-009 hides internal seal preview metadata in Japanese', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final result = _sealGenerationResult();
+    final variant = result.variants.first;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ja'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealPreviewDetailScreen(
+          result: result,
+          variant: variant,
+          onSave: () {},
+          onChooseStone: () {},
+          onBack: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('印影プレビュー'), findsOneWidget);
+    expect(find.textContaining('Storageパス'), findsNothing);
+    expect(find.textContaining('seal_designs/'), findsNothing);
+    expect(find.textContaining('彫刻しやすいデザインルール'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -765,6 +837,7 @@ void main() {
       await _openGeneratedSealVariantSelection(tester);
 
       expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+      expect(find.textContaining('Storage path'), findsNothing);
       for (final variantId in const [
         'seal_variant_001',
         'seal_variant_002',
@@ -779,7 +852,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
-      expect(find.text(selectedStoragePath), findsOneWidget);
+      expect(find.text('Storage path'), findsNothing);
+      expect(find.text(selectedStoragePath), findsNothing);
       _expectNetworkImageUrl(tester, selectedDownloadUrl);
 
       await tester.ensureVisible(find.text('Save Seal'));
@@ -893,6 +967,83 @@ void main() {
     },
   );
 
+  testWidgets(
+    'DES-009 uses current unsaved generated seal when choosing a stone',
+    (tester) async {
+      tester.view.physicalSize = const Size(432, 912);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const selectedVariantId = 'seal_variant_002';
+      final selectedStoragePath = _sealVariantStoragePath(selectedVariantId);
+      final selectedDownloadUrl = _sealVariantDownloadUrl(selectedVariantId);
+      const pastSealSelection = OrderDraftSealSelection(
+        localSealDesignId: 'local_past_seal',
+        selectedKanji: '過去',
+        reading: 'Kako',
+        shape: 'square',
+        style: 'traditional',
+        strokeWeight: 'standard',
+        balance: 'balanced',
+        aiGenerationId: 'old_seal_request',
+        aiVariantId: 'old_seal_variant',
+        previewImageStoragePath: 'seal_designs/old_request/old_variant.png',
+        previewImageDownloadUrl: 'https://storage.example.test/old.png',
+        localImagePath: '',
+      );
+      final sealRepository = InMemoryLocalSealDesignRepository();
+      final draftRepository = InMemoryLocalOrderDraftRepository(
+        OrderDraft.empty().withSealSelection(pastSealSelection),
+      );
+
+      await pumpLaunchedApp(
+        tester,
+        generateSealDesigns: (request) async =>
+            _sealGenerationResult(request: request, includeDownloadUrls: true),
+        listStoneListings: (query) async => _stoneListingsResult(),
+        localSealDesignRepository: sealRepository,
+        localOrderDraftRepository: draftRepository,
+      );
+      await tester.pumpAndSettle();
+
+      await _openGeneratedSealPreview(tester);
+      expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+
+      await tester.ensureVisible(find.text('Choose a Stone'));
+      await tester.pump();
+      await tester.tap(find.text('Choose a Stone'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Select Stone'));
+      await tester.pump();
+      await tester.tap(find.text('Select Stone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderCombinationReviewScreen), findsOneWidget);
+      expect(find.text('過去'), findsNothing);
+      _expectNetworkImageUrl(tester, selectedDownloadUrl);
+
+      final savedDraft = await draftRepository.loadOrderDraft();
+      expect(savedDraft.sealSelection?.selectedKanji, '美空');
+      expect(savedDraft.sealSelection?.aiGenerationId, 'seal_request_001');
+      expect(savedDraft.sealSelection?.aiVariantId, selectedVariantId);
+      expect(
+        savedDraft.sealSelection?.previewImageStoragePath,
+        selectedStoragePath,
+      );
+      expect(
+        savedDraft.sealSelection?.previewImageDownloadUrl,
+        selectedDownloadUrl,
+      );
+      expect(savedDraft.stoneSelection?.listingId, 'stone_listing_001');
+      expect(await sealRepository.listLocalSealDesigns(), isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('MYS-001 displays saved seal cards', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
     tester.view.devicePixelRatio = 1;
@@ -900,6 +1051,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     LocalSealDesign? opened;
+    LocalSealDesign? favoriteToggled;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -919,6 +1071,7 @@ void main() {
             ),
           ],
           onChooseSeal: (design) => opened = design,
+          onToggleFavorite: (design) => favoriteToggled = design,
         ),
       ),
     );
@@ -934,6 +1087,24 @@ void main() {
     expect(find.text('Standard'), findsWidgets);
     expect(find.text('Balanced'), findsWidgets);
     expect(find.text('Compare Seals'), findsOneWidget);
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(
+              const ValueKey('MYS-001-saved-seal-card-local_seal_002'),
+            ),
+          )
+          .dy,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.byKey(
+                const ValueKey('MYS-001-saved-seal-card-local_seal_001'),
+              ),
+            )
+            .dy,
+      ),
+    );
 
     await tester.ensureVisible(find.text('Compare Seals'));
     await tester.pump();
@@ -943,20 +1114,47 @@ void main() {
     expect(find.text('Compare saved seals'), findsOneWidget);
     expect(
       find.text(
-        'Open each saved seal to review its preview, kanji, and style details. Side-by-side comparison will be added later.',
+        'Review saved seal previews, kanji meanings, and style choices side by side.',
       ),
       findsOneWidget,
+    );
+    expect(find.textContaining('will be added later'), findsNothing);
+    expect(find.text('Reading'), findsWidgets);
+    expect(find.text('Shape'), findsWidgets);
+    expect(find.text('永愛'), findsWidgets);
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(
+              const ValueKey('MYS-002-comparison-card-local_seal_002'),
+            ),
+          )
+          .dx,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.byKey(
+                const ValueKey('MYS-002-comparison-card-local_seal_001'),
+              ),
+            )
+            .dx,
+      ),
     );
 
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Favorite seal').first);
+    await tester.pump();
+
+    expect(favoriteToggled?.id, 'local_seal_001');
 
     await tester.ensureVisible(find.text('View Details').first);
     await tester.pump();
     await tester.tap(find.text('View Details').first);
     await tester.pump();
 
-    expect(opened?.id, 'local_seal_001');
+    expect(opened?.id, 'local_seal_002');
     expect(tester.takeException(), isNull);
   });
 
@@ -1005,6 +1203,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     var chooseCount = 0;
+    var editCount = 0;
     var deleteCount = 0;
     var backCount = 0;
 
@@ -1017,6 +1216,7 @@ void main() {
         home: SealDetailScreen(
           design: _localSealDesign(),
           onChooseForOrder: (_) => chooseCount += 1,
+          onEditRegenerate: (_) => editCount += 1,
           onDelete: (_) async {
             deleteCount += 1;
           },
@@ -1051,16 +1251,8 @@ void main() {
     await tester.tap(find.text('Edit / Regenerate'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create a new version from Design'), findsOneWidget);
-    expect(
-      find.text(
-        'Saved seals stay unchanged. To try different kanji or style choices, start a new design and save it.',
-      ),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('Close'));
-    await tester.pumpAndSettle();
+    expect(editCount, 1);
+    expect(find.text('Create a new version from Design'), findsNothing);
 
     await tester.ensureVisible(find.text('Choose for Order'));
     await tester.pump();
@@ -1105,6 +1297,80 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('MYS-005 regenerates a saved seal through the design flow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final generation = Completer<SealGenerationResult>();
+    SealGenerationRequest? capturedRequest;
+
+    await pumpLaunchedApp(
+      tester,
+      localSealDesignRepository: InMemoryLocalSealDesignRepository([
+        _localSealDesign(
+          selectedKanji: '雄護',
+          meaning: 'Strong guardian',
+          shape: 'round',
+          style: 'bold',
+          strokeWeight: 'bold',
+          balance: 'dense',
+        ),
+      ]),
+      generateSealDesigns: (request) {
+        capturedRequest = request;
+        return generation.future;
+      },
+    );
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Edit / Regenerate'));
+    await tester.pump();
+    await tester.tap(find.text('Edit / Regenerate'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
+    expect(find.text('Seal Style'), findsOneWidget);
+    expect(find.text('Selected kanji'), findsOneWidget);
+    expect(find.text('雄護'), findsWidgets);
+    expect(find.text('Strong guardian'), findsOneWidget);
+    _expectSealStyleAdjustmentControlsPresent();
+
+    await tester.ensureVisible(find.text('Confirm Style'));
+    await tester.pump();
+    await tester.tap(find.text('Confirm Style'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Generate Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Generate Seal'));
+    await tester.pump();
+
+    expect(find.byType(SealGenerationLoadingScreen), findsOneWidget);
+    expect(capturedRequest?.inputName, 'Michael Smith');
+    expect(capturedRequest?.candidate.kanji, '雄護');
+    expect(capturedRequest?.candidate.reading, 'Misora');
+    expect(capturedRequest?.candidate.meaning, 'Strong guardian');
+    expect(capturedRequest?.style.shape, SealShape.round);
+    expect(capturedRequest?.style.style, SealStyleName.bold);
+    expect(capturedRequest?.style.strokeWeight, SealStrokeWeight.bold);
+    expect(capturedRequest?.style.balance, SealBalance.dense);
+
+    generation.complete(_sealGenerationResult(request: capturedRequest!));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('MYS-003 opens from the My Seals stack', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
     tester.view.devicePixelRatio = 1;
@@ -1132,6 +1398,56 @@ void main() {
 
     expect(find.byType(MySealsHomeScreen), findsOneWidget);
     expect(find.text('Saved on this device'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-004 toggles a saved seal favorite from the card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = InMemoryLocalSealDesignRepository([_localSealDesign()]);
+
+    await pumpLaunchedApp(tester, localSealDesignRepository: repository);
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Favorite seal'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Favorite seal'));
+    await tester.pumpAndSettle();
+
+    expect(
+      (await repository.getLocalSealDesign('local_seal_001'))?.isFavorite,
+      isTrue,
+    );
+    expect(find.byTooltip('Remove favorite'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byTooltip('Remove favorite'),
+        matching: find.byIcon(Icons.favorite),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byTooltip('Remove favorite'),
+        matching: find.byIcon(Icons.star),
+      ),
+      findsNothing,
+    );
+
+    await tester.tap(find.byTooltip('Remove favorite'));
+    await tester.pumpAndSettle();
+
+    expect(
+      (await repository.getLocalSealDesign('local_seal_001'))?.isFavorite,
+      isFalse,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -1180,6 +1496,65 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Selected for order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-008 prioritizes favorite saved seals for order selection', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      localSealDesignRepository: InMemoryLocalSealDesignRepository([
+        _localSealDesign(),
+        _localSealDesign(
+          id: 'local_seal_002',
+          selectedKanji: '永愛',
+          meaning: 'Eternal love',
+          style: 'soft',
+          isFavorite: true,
+        ),
+      ]),
+    );
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(
+              const ValueKey('MYS-001-saved-seal-card-local_seal_002'),
+            ),
+          )
+          .dy,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.byKey(
+                const ValueKey('MYS-001-saved-seal-card-local_seal_001'),
+              ),
+            )
+            .dy,
+      ),
+    );
+
+    await tester.tap(find.text('View Details').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('永愛'), findsWidgets);
+    expect(find.text('Eternal love'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stone missing'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1319,6 +1694,46 @@ void main() {
     await tester.pump();
 
     expect(selectedStone?.id, 'stone_listing_001');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-001 does not mark unavailable stale stone as selected', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    StoneListing? selectedStone;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          result: _stoneListingsResult(
+            listings: [_stoneListing(status: 'reserved', isOrderable: false)],
+          ),
+          selectedStoneId: 'stone_listing_001',
+          onSelectStone: (listing) => selectedStone = listing,
+        ),
+      ),
+    );
+
+    expect(find.text('Unavailable'), findsWidgets);
+    expect(find.text('Selected for Order'), findsNothing);
+    expect(find.text('Select Stone'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select this stone?'), findsNothing);
+    expect(selectedStone, isNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -1825,10 +2240,50 @@ void main() {
     expect(find.text('Item price'), findsOneWidget);
     expect(find.text('Shipping'), findsOneWidget);
     expect(find.text('Total'), findsOneWidget);
-    expect(find.text('¥18,000'), findsWidgets);
-    expect(find.text('¥600'), findsOneWidget);
-    expect(find.text('¥18,600'), findsOneWidget);
+    expect(find.text('JPY 18,000'), findsWidgets);
+    expect(find.text('JPY 600'), findsOneWidget);
+    expect(find.text('JPY 18,600'), findsOneWidget);
     expect(find.text('Continue to Shipping'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M08-T02 displays USD order pricing with currency code', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderFlowEntryScreen(
+          draft: OrderDraft.empty()
+              .withSealSelection(_orderDraftSealSelection())
+              .withStoneSelection(
+                _orderDraftStoneSelection(
+                  price: const Money(amount: 28000, currency: 'USD'),
+                ),
+              )
+              .withInput(
+                const OrderDraftInput.empty().copyWith(
+                  shipping: const OrderDraftShippingInput.empty().copyWith(
+                    countryCode: 'US',
+                  ),
+                ),
+              ),
+        ),
+      ),
+    );
+
+    expect(find.text('USD 280.00'), findsWidgets);
+    expect(find.text('USD 18.00'), findsOneWidget);
+    expect(find.text('USD 298.00'), findsOneWidget);
+    expect(find.textContaining(r'$'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -2005,7 +2460,7 @@ void main() {
     expect(find.text('Order Review'), findsOneWidget);
     expect(find.text('光'), findsWidgets);
     expect(find.text('Blue Lapis Seal Stone'), findsOneWidget);
-    expect(find.text('¥24,000'), findsWidgets);
+    expect(find.text('JPY 24,000'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -2108,6 +2563,7 @@ void main() {
 
     final savedDraft = await draftRepository.loadOrderDraft();
     expect(savedDraft.input.contact.email, 'customer@example.test');
+    expect(savedDraft.inputUpdatedAt, isNotNull);
     expect(savedDraft.input.contact.preferredLocale, 'en');
     expect(savedDraft.input.shipping.countryCode, 'US');
     expect(savedDraft.input.shipping.recipientName, 'Michael Smith');
@@ -2119,6 +2575,58 @@ void main() {
     expect(savedDraft.input.shipping.state, 'NY');
     expect(savedDraft.input.orderNote, 'Please ship on a weekday.');
     expect(savedDraft.hasCombinationSelections, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T01 discards checkout input older than 24 hours', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final expiredAt = DateTime.now().subtract(const Duration(hours: 25));
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository(
+      OrderDraft.empty(updatedAt: expiredAt)
+          .withStoneSelection(_orderDraftStoneSelection(), updatedAt: expiredAt)
+          .withInput(_checkoutInput(), updatedAt: expiredAt),
+    );
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Continue to Shipping'));
+    await tester.pump();
+    await tester.tap(find.text('Continue to Shipping'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CheckoutInputScreen), findsOneWidget);
+    expect(find.text('old@example.test'), findsNothing);
+    expect(find.text('Old Recipient'), findsNothing);
+    expect(find.text('999 Expired Street'), findsNothing);
+
+    final savedDraft = await draftRepository.loadOrderDraft();
+    expect(savedDraft.hasCombinationSelections, isTrue);
+    expect(savedDraft.input.isEmpty, isTrue);
+    expect(savedDraft.inputUpdatedAt, isNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -2334,7 +2842,7 @@ void main() {
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
     expect(find.text('Michael Smith'), findsOneWidget);
     expect(find.text('customer@example.test'), findsOneWidget);
-    expect(find.text('¥18,600'), findsOneWidget);
+    expect(find.text('JPY 18,600'), findsOneWidget);
     expect(
       find.text(
         'I confirm that the selected kanji and seal design are correct.',
@@ -2535,6 +3043,7 @@ void main() {
     expect(find.text('HF-20260521-0001'), findsOneWidget);
     expect(submittedCheckoutRequest?.orderId, 'ord_001');
     expect(submittedCheckoutRequest?.customerEmail, 'customer@example.test');
+    expect(submittedCheckoutRequest?.returnToApp, isTrue);
 
     sessionCompleter.complete(
       const CheckoutSession(
@@ -2593,6 +3102,57 @@ void main() {
     expect(handled, isTrue);
     expect(find.text('Order Complete'), findsOneWidget);
     expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(find.text('customer@example.test'), findsOneWidget);
+    final savedDraft = await draftRepository.loadOrderDraft();
+    expect(savedDraft.hasCombinationSelections, isTrue);
+    expect(savedDraft.input.isEmpty, isTrue);
+    expect(savedDraft.inputUpdatedAt, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T08 reconciles paid checkout when the app resumes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    final launchedSessions = <CheckoutSession>[];
+    final checkedOrderIds = <String>[];
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      openCheckoutUrl: (session) async => launchedSessions.add(session),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+      fetchOrderStatus: (orderId) {
+        checkedOrderIds.add(orderId);
+        return _successfulFetchOrderStatus(orderId);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    expect(launchedSessions, hasLength(1));
+    expect(find.text('Secure Payment'), findsOneWidget);
+    expect(find.text('Complete payment in Stripe Checkout'), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(checkedOrderIds, ['ord_001']);
+    expect(find.text('Order Complete'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(find.text('Open Stripe Checkout'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -2739,6 +3299,10 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      find.textContaining('Webhook confirmation may take a moment'),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -2777,14 +3341,14 @@ void main() {
     expect(find.text('HF-20260521-0001'), findsOneWidget);
     expect(find.text('Payment received'), findsOneWidget);
     expect(find.text('Order summary'), findsOneWidget);
-    expect(find.text('Confirmation email sent'), findsOneWidget);
+    expect(find.text('Stripe payment email'), findsOneWidget);
     expect(
       find.text(
-        'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
+        'Stripe sends the payment receipt to the email address on the order. Please check your inbox and spam folder.',
       ),
       findsOneWidget,
     );
-    expect(find.text("Can't find your email?"), findsOneWidget);
+    expect(find.text("Can't find the Stripe email?"), findsOneWidget);
     expect(find.text('Here are a few quick things to check.'), findsOneWidget);
     expect(find.text('Check your spam or junk folder.'), findsOneWidget);
     expect(
@@ -2818,7 +3382,7 @@ void main() {
 
     expect(find.text('Order Lookup'), findsOneWidget);
     expect(find.text('HF-20260521-0001'), findsOneWidget);
-    expect(find.text('customer@example.test'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -3283,10 +3847,10 @@ void main() {
       find.text("Here's the latest update on your order."),
       findsOneWidget,
     );
-    expect(find.text('Confirmation email sent'), findsOneWidget);
+    expect(find.text('Stripe payment email'), findsOneWidget);
     expect(
       find.text(
-        'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
+        'Stripe sends the payment receipt to the email address on the order. Please check your inbox and spam folder.',
       ),
       findsOneWidget,
     );
@@ -3365,9 +3929,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(capturedQuery?.locale, 'en');
-    expect(capturedQuery?.status, 'published');
+    expect(capturedQuery?.status, isNull);
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
     expect(find.text('Select Stone'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-001 clears unavailable saved stone from the order draft', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final draftRepository = InMemoryLocalOrderDraftRepository(
+      OrderDraft.empty().withStoneSelection(
+        const OrderDraftStoneSelection(
+          listingId: 'stone_listing_001',
+          code: 'RQZ-0001',
+          materialKey: 'rose_quartz',
+          materialLabel: 'Rose Quartz',
+          sizeLabel: '24x24x60 mm',
+          title: 'Soft Pink Rose Quartz Seal Stone',
+          price: Money(amount: 18000, currency: 'JPY'),
+          status: 'published',
+          isOrderable: true,
+          primaryPhotoUrl: '',
+        ),
+      ),
+    );
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(
+        listings: [_stoneListing(status: 'reserved', isOrderable: false)],
+      ),
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unavailable'), findsWidgets);
+    expect(find.text('Selected for Order'), findsNothing);
+    expect(find.text('Select Stone'), findsOneWidget);
+
+    final savedDraft = await draftRepository.loadOrderDraft();
+    expect(savedDraft.stoneSelection, isNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -3550,6 +4160,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('COM-004 switches the app language from settings', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Locale? savedLocale;
+
+    await pumpLaunchedApp(
+      tester,
+      loadPreferredLocale: () async => null,
+      savePreferredLocale: (locale) async => savedLocale = locale,
+    );
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('App language'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('Japanese'), findsOneWidget);
+
+    await tester.tap(find.text('Japanese'));
+    await tester.pumpAndSettle();
+
+    expect(savedLocale?.languageCode, 'ja');
+    expect(find.text('アプリの言語'), findsOneWidget);
+    expect(find.text('英語'), findsOneWidget);
+    expect(find.text('日本語'), findsOneWidget);
+
+    await tester.tap(find.text('英語'));
+    await tester.pumpAndSettle();
+
+    expect(savedLocale?.languageCode, 'en');
+    expect(find.text('App language'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('Japanese'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('switches major labels with the app locale', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
     tester.view.devicePixelRatio = 1;
@@ -3578,6 +4231,12 @@ void main() {
     expect(find.text('マイ印影'), findsOneWidget);
     expect(find.text('石'), findsOneWidget);
     expect(find.text('Design'), findsNothing);
+
+    await tester.tap(find.text('作成をはじめる'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('名前を入力'), findsOneWidget);
+    expect(find.text('あなたの希望に合わせた漢字を提案します。'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -3692,6 +4351,7 @@ void main() {
       String rowLabel,
       Finder expectedFinder, {
       bool useSystemBack = false,
+      List<Finder> additionalExpectedFinders = const [],
     }) async {
       await tester.ensureVisible(find.text(rowLabel));
       await tester.pump();
@@ -3699,6 +4359,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(expectedFinder, findsOneWidget);
+      for (final finder in additionalExpectedFinders) {
+        expect(finder, findsOneWidget);
+      }
 
       if (useSystemBack) {
         await tester.binding.handlePopRoute();
@@ -3729,6 +4392,7 @@ void main() {
     await openAndReturn(
       'Contact',
       find.textContaining('https://finitefield.org/en/contact/'),
+      additionalExpectedFinders: [find.text('dev@finitefield.org')],
     );
     await openAndReturn('Version', find.text('Version 1.0.4+10'));
 
@@ -3770,7 +4434,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('M13-T02 renders DES-006 fixed style selection controls', (
+  testWidgets('M13-T02 renders DES-006 style selection controls', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(432, 912);
@@ -3805,6 +4469,7 @@ void main() {
 
     expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
     expect(find.text('Seal Style'), findsOneWidget);
+    expect(find.text('Customize your seal style.'), findsOneWidget);
     expect(find.text('Selected kanji'), findsOneWidget);
     expect(find.text('Shape'), findsWidgets);
     expect(find.text('Square'), findsWidgets);
@@ -3843,6 +4508,40 @@ void main() {
     expect(generatedSelection?.style, SealStyleName.traditional);
     expect(generatedSelection?.strokeWeight, SealStrokeWeight.standard);
     expect(generatedSelection?.balance, SealBalance.airy);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-006 localizes style customization message in Japanese', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ja'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: Scaffold(
+          body: SealStyleSelectionScreen(
+            candidate: const KanjiCandidate(
+              kanji: '美空',
+              reading: 'Misora',
+              meaning: '美しい空',
+              reason: '穏やかな印象です。',
+            ),
+            onBack: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('印影スタイル'), findsOneWidget);
+    expect(find.text('印影スタイルをカスタマイズしてください。'), findsOneWidget);
+    expect(find.textContaining('固定スタイル'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -4348,7 +5047,10 @@ LocalSealDesign _localSealDesign({
   String id = 'local_seal_001',
   String selectedKanji = '美空',
   String? meaning = 'Beautiful sky',
+  String shape = 'square',
   String style = 'elegant',
+  String strokeWeight = 'standard',
+  String balance = 'balanced',
   bool isFavorite = false,
 }) {
   return LocalSealDesign(
@@ -4361,10 +5063,10 @@ LocalSealDesign _localSealDesign({
     characterCount: selectedKanji.runes.length,
     strokeComplexity: 'medium',
     engravingSuitability: 'high',
-    shape: 'square',
+    shape: shape,
     style: style,
-    strokeWeight: 'standard',
-    balance: 'balanced',
+    strokeWeight: strokeWeight,
+    balance: balance,
     aiGenerationId: 'seal_request_001',
     aiVariantId: 'seal_variant_001',
     previewImageStoragePath:
@@ -4374,6 +5076,66 @@ LocalSealDesign _localSealDesign({
     isFavorite: isFavorite,
     createdAt: DateTime(2026, 5, 21, 11),
     updatedAt: DateTime(2026, 5, 21, 11, 10),
+  );
+}
+
+OrderDraftSealSelection _orderDraftSealSelection() {
+  return const OrderDraftSealSelection(
+    localSealDesignId: 'local_seal_001',
+    selectedKanji: '美空',
+    reading: 'Misora',
+    shape: 'square',
+    style: 'elegant',
+    strokeWeight: 'standard',
+    balance: 'balanced',
+    aiGenerationId: 'seal_request_001',
+    aiVariantId: 'seal_variant_001',
+    previewImageStoragePath:
+        'seal_designs/seal_request_001/seal_variant_001.png',
+    previewImageDownloadUrl: '',
+    localImagePath: '',
+  );
+}
+
+OrderDraftStoneSelection _orderDraftStoneSelection({
+  Money price = const Money(amount: 18000, currency: 'JPY'),
+}) {
+  return OrderDraftStoneSelection(
+    listingId: 'stone_listing_001',
+    code: 'RQZ-0001',
+    materialKey: 'rose_quartz',
+    materialLabel: 'Rose Quartz',
+    sizeLabel: '24x24x60 mm',
+    title: 'Soft Pink Rose Quartz Seal Stone',
+    price: price,
+    status: 'published',
+    isOrderable: true,
+    primaryPhotoUrl: 'https://example.test/1.png',
+  );
+}
+
+OrderDraftInput _checkoutInput() {
+  return const OrderDraftInput(
+    contact: OrderDraftContactInput(
+      email: 'old@example.test',
+      preferredLocale: 'en',
+    ),
+    shipping: OrderDraftShippingInput(
+      countryCode: 'US',
+      recipientName: 'Old Recipient',
+      phone: '+1 555 0000',
+      postalCode: '99999',
+      state: 'CA',
+      city: 'Old City',
+      addressLine1: '999 Expired Street',
+      addressLine2: '',
+    ),
+    orderNote: 'Old order note',
+    termsAgreed: true,
+    customerConfirmation: OrderDraftCustomerConfirmationInput(
+      kanjiAndDesign: true,
+      customMadePolicy: true,
+    ),
   );
 }
 

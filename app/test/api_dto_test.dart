@@ -156,6 +156,7 @@ void main() {
     expect(transport.singleRequest.body?['stroke_weight'], 'standard');
     expect(transport.singleRequest.body?['balance'], 'balanced');
     expect(transport.singleRequest.body?['variant_count'], 3);
+    expect(transport.singleRequest.body?['attempt_number'], 1);
     final rules = transport.singleRequest.body?['generation_rules'];
     expect(rules, isA<Map>());
     expect((rules! as Map)['plain_background'], isTrue);
@@ -220,6 +221,54 @@ void main() {
       expect(recipe.spacing, 'balanced');
       expect(recipe.texture, 'none');
       expect(recipe.frame, 'square_standard');
+    },
+  );
+
+  test(
+    'SealGenerationRepository posts previous recipes for regeneration',
+    () async {
+      final transport = FakeTransport([
+        HankoApiResponse(
+          statusCode: 200,
+          body: jsonEncode({'request_id': 'seal_request_002', 'variants': []}),
+        ),
+      ]);
+      final repo = SealGenerationRepository(_client(transport));
+
+      await repo.generateSealDesigns(
+        const SealGenerationRequest(
+          inputName: 'Michael',
+          candidate: KanjiCandidate(
+            kanji: '美空',
+            reading: 'Misora',
+            reason: 'A graceful two-character option.',
+          ),
+          style: SealStyleSelection(),
+          attemptNumber: 2,
+          previousRecipes: [
+            SealDesignRecipe(
+              fontProfile: 'formal_serif',
+              impression: 'elegant',
+              weight: 'standard',
+              spacing: 'balanced',
+              texture: 'none',
+              frame: 'square_standard',
+            ),
+          ],
+        ),
+      );
+
+      expect(transport.singleRequest.body?['attempt_number'], 2);
+      final previousRecipes =
+          transport.singleRequest.body?['previous_recipes'] as List<Object?>;
+      expect(previousRecipes, hasLength(1));
+      final previousRecipe = previousRecipes.single as Map<Object?, Object?>;
+      expect(previousRecipe['font_profile'], 'formal_serif');
+      expect(previousRecipe['impression'], 'elegant');
+      expect(previousRecipe['weight'], 'standard');
+      expect(previousRecipe['spacing'], 'balanced');
+      expect(previousRecipe['texture'], 'none');
+      expect(previousRecipe['frame'], 'square_standard');
     },
   );
 
@@ -429,7 +478,7 @@ void main() {
 
     final created = await repo.createOrder(_draft());
     final checkout = await repo.createCheckoutSession(
-      const CheckoutSessionRequest(orderId: 'ord_001'),
+      const CheckoutSessionRequest(orderId: 'ord_001', returnToApp: true),
     );
 
     expect(transport.requests.first.body?['idempotency_key'], 'idem_001');
@@ -455,6 +504,7 @@ void main() {
       transport.requests.last.uri.path,
       '/v1/payments/stripe/checkout-session',
     );
+    expect(transport.requests.last.body?['return_to_app'], isTrue);
     expect(checkout.sessionId, 'cs_test_001');
   });
 
@@ -621,6 +671,17 @@ void main() {
             .having((error) => error.statusCode, 'statusCode', 400)
             .having((error) => error.code, 'code', 'validation_error'),
       ),
+    );
+  });
+
+  test('default API base URL targets the host from mobile simulators', () {
+    expect(
+      resolveDefaultHankoApiBaseUrl(isAndroid: false),
+      'http://127.0.0.1:3050',
+    );
+    expect(
+      resolveDefaultHankoApiBaseUrl(isAndroid: true),
+      'http://10.0.2.2:3050',
     );
   });
 

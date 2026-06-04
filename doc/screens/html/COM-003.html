@@ -109,6 +109,20 @@
         padding: 44px 24px 0;
       }
 
+      .brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-logo {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        object-fit: contain;
+        filter: drop-shadow(0 7px 11px rgba(76, 47, 28, 0.13));
+      }
+
       .brand-title {
         color: var(--wine);
         font-family: "Cormorant Garamond", "Times New Roman", serif;
@@ -478,6 +492,11 @@
           font-size: 39px;
         }
 
+        .brand-logo {
+          width: 34px;
+          height: 34px;
+        }
+
         .hero-card {
           height: 371px;
           margin-right: 14px;
@@ -567,7 +586,10 @@
       aria-label="Design home screen preview"
     >
       <header class="app-header">
-        <div class="brand-title">Design</div>
+        <div class="brand-lockup">
+          <img class="brand-logo" src="../../../web/static/site-logo.png" alt="Stone Signature" />
+          <div class="brand-title">Design</div>
+        </div>
         <a class="settings-button" href="#" aria-label="Settings">
           <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <path

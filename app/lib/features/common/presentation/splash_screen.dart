@@ -73,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Column(
                 children: [
                   const Spacer(flex: 26),
-                  const _SplashSealMark(),
+                  const _SplashLogo(),
                   const SizedBox(height: 38),
                   const _SplashBrandTitle(),
                   const SizedBox(height: 24),
@@ -108,73 +108,27 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-class _SplashSealMark extends StatelessWidget {
-  const _SplashSealMark();
+class _SplashLogo extends StatelessWidget {
+  const _SplashLogo();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 146,
-      height: 146,
+    return DecoratedBox(
       decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          center: Alignment(-0.24, -0.34),
-          radius: 0.86,
-          colors: [Color(0xFFB92B25), Color(0xFF821111), Color(0xFF300606)],
-          stops: [0.0, 0.58, 1.0],
-        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x3D39160E),
+            color: Color(0x2639160E),
             blurRadius: 24,
             offset: Offset(0, 16),
           ),
-          BoxShadow(color: Color(0xFFE8C98D), spreadRadius: 7, blurRadius: 0),
-          BoxShadow(color: Color(0xFF7C491E), spreadRadius: 3, blurRadius: 0),
         ],
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 106,
-            height: 106,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0x8FF6C46C), width: 2),
-            ),
-          ),
-          Text(
-            'SS',
-            style: TextStyle(
-              color: const Color(0xFFF6D68F),
-              fontFamily: HankoFonts.serif,
-              fontSize: 66,
-              fontWeight: FontWeight.w500,
-              height: 0.9,
-              letterSpacing: 0,
-              shadows: const [
-                Shadow(color: Color(0xFF6C270F), offset: Offset(0, 2)),
-                Shadow(
-                  color: Color(0x85200402),
-                  blurRadius: 8,
-                  offset: Offset(0, 5),
-                ),
-              ],
-            ),
-          ),
-          const Positioned(
-            top: 40,
-            right: 31,
-            child: Icon(Icons.auto_awesome, size: 20, color: Color(0xFFF4D58D)),
-          ),
-          const Positioned(
-            bottom: 36,
-            left: 31,
-            child: Icon(Icons.auto_awesome, size: 16, color: Color(0xFFF4D58D)),
-          ),
-        ],
+      child: Image.asset(
+        'assets/site-logo.png',
+        width: 146,
+        height: 146,
+        fit: BoxFit.contain,
+        excludeFromSemantics: true,
       ),
     );
   }

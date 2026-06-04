@@ -21,6 +21,8 @@ class HankoApp extends StatefulWidget {
   const HankoApp({
     super.key,
     this.locale,
+    this.loadPreferredLocale = _defaultLoadPreferredLocale,
+    this.savePreferredLocale = _defaultSavePreferredLocale,
     this.hasSeenOnboardingResolver = _defaultHasSeenOnboardingResolver,
     this.markOnboardingSeen = _defaultMarkOnboardingSeen,
     this.splashMinimumDuration = const Duration(milliseconds: 700),
@@ -40,6 +42,8 @@ class HankoApp extends StatefulWidget {
   });
 
   final Locale? locale;
+  final PreferredLocaleLoader loadPreferredLocale;
+  final PreferredLocaleWriter savePreferredLocale;
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
   final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
@@ -63,11 +67,13 @@ class HankoApp extends StatefulWidget {
 
 class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
   final _checkoutRouteNotifier = ValueNotifier<String?>(null);
+  Locale? _preferredLocale;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_loadPreferredLocale());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -107,7 +113,7 @@ class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
     return MaterialApp(
       onGenerateTitle: (context) => context.l10n.appTitle,
       debugShowCheckedModeBanner: false,
-      locale: widget.locale,
+      locale: widget.locale ?? _preferredLocale,
       supportedLocales: HankoLocalizations.supportedLocales,
       localizationsDelegates: HankoLocalizations.localizationsDelegates,
       theme: HankoTheme.light(),
@@ -129,10 +135,45 @@ class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
         checkoutRouteListenable: _checkoutRouteNotifier,
         localSealDesignRepository: widget.localSealDesignRepository,
         localOrderDraftRepository: widget.localOrderDraftRepository,
+        onLocaleSelected: _selectPreferredLocale,
       ),
     );
   }
+
+  Future<void> _loadPreferredLocale() async {
+    try {
+      final locale = await widget.loadPreferredLocale();
+      if (!mounted || widget.locale != null) {
+        return;
+      }
+      setState(() => _preferredLocale = _supportedLocale(locale));
+    } catch (error) {
+      debugPrint('failed to load preferred locale: $error');
+    }
+  }
+
+  void _selectPreferredLocale(Locale locale) {
+    final supportedLocale = _supportedLocale(locale);
+    if (supportedLocale == null) {
+      return;
+    }
+    if (widget.locale == null) {
+      setState(() => _preferredLocale = supportedLocale);
+    }
+    unawaited(_savePreferredLocale(supportedLocale));
+  }
+
+  Future<void> _savePreferredLocale(Locale locale) async {
+    try {
+      await widget.savePreferredLocale(locale);
+    } catch (error) {
+      debugPrint('failed to save preferred locale: $error');
+    }
+  }
 }
+
+typedef PreferredLocaleLoader = Future<Locale?> Function();
+typedef PreferredLocaleWriter = Future<void> Function(Locale locale);
 
 Future<bool> _defaultHasSeenOnboardingResolver() async {
   return const AppLaunchStore().hasSeenOnboarding();
@@ -140,6 +181,35 @@ Future<bool> _defaultHasSeenOnboardingResolver() async {
 
 Future<void> _defaultMarkOnboardingSeen() {
   return const AppLaunchStore().setHasSeenOnboarding(true);
+}
+
+Future<Locale?> _defaultLoadPreferredLocale() async {
+  final languageCode = await const AppLaunchStore().preferredLanguageCode();
+  return _supportedLocaleForLanguageCode(languageCode);
+}
+
+Future<void> _defaultSavePreferredLocale(Locale locale) {
+  return const AppLaunchStore().setPreferredLanguageCode(locale.languageCode);
+}
+
+Locale? _supportedLocale(Locale? locale) {
+  if (locale == null) {
+    return null;
+  }
+  return _supportedLocaleForLanguageCode(locale.languageCode);
+}
+
+Locale? _supportedLocaleForLanguageCode(String? languageCode) {
+  final normalized = languageCode?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty) {
+    return null;
+  }
+  for (final locale in HankoLocalizations.supportedLocales) {
+    if (locale.languageCode == normalized) {
+      return locale;
+    }
+  }
+  return null;
 }
 
 enum _AppLaunchStage { splash, onboarding, shell }
@@ -163,6 +233,7 @@ class _AppLaunchGate extends StatefulWidget {
     required this.checkoutRouteListenable,
     required this.localSealDesignRepository,
     required this.localOrderDraftRepository,
+    required this.onLocaleSelected,
   });
 
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
@@ -182,6 +253,7 @@ class _AppLaunchGate extends StatefulWidget {
   final ValueListenable<String?> checkoutRouteListenable;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
+  final ValueChanged<Locale> onLocaleSelected;
 
   @override
   State<_AppLaunchGate> createState() => _AppLaunchGateState();
@@ -216,6 +288,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         checkoutRouteListenable: widget.checkoutRouteListenable,
         localSealDesignRepository: widget.localSealDesignRepository,
         localOrderDraftRepository: widget.localOrderDraftRepository,
+        onLocaleSelected: widget.onLocaleSelected,
       ),
     };
   }
@@ -255,6 +328,7 @@ class BottomNavigationShell extends StatefulWidget {
     this.checkoutRouteListenable,
     this.localSealDesignRepository,
     this.localOrderDraftRepository,
+    required this.onLocaleSelected,
   });
 
   final KanjiCandidatesGenerator generateKanjiCandidates;
@@ -271,6 +345,7 @@ class BottomNavigationShell extends StatefulWidget {
   final ValueListenable<String?>? checkoutRouteListenable;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
+  final ValueChanged<Locale> onLocaleSelected;
 
   @override
   State<BottomNavigationShell> createState() => _BottomNavigationShellState();
@@ -287,10 +362,12 @@ class _KanjiCandidateSelection {
   const _KanjiCandidateSelection({
     required this.result,
     required this.candidate,
+    this.initialStyleSelection = const SealStyleSelection(),
   });
 
   final KanjiCandidatesResult result;
   final KanjiCandidate candidate;
+  final SealStyleSelection initialStyleSelection;
 }
 
 class _SealGenerationFailure {
@@ -331,6 +408,8 @@ class _StoneImageGallerySelection {
 
 class _BottomNavigationShellState extends State<BottomNavigationShell>
     with WidgetsBindingObserver {
+  static const _checkoutInputRetentionDuration = Duration(hours: 24);
+
   static const _shellPage = PageEntry(
     key: 'COM-003-bottom-navigation-shell',
     name: '/shell',
@@ -450,6 +529,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   var _localSealDesignsLoaded = false;
   Object? _localSealDesignsLoadError;
   var _orderDraft = OrderDraft.empty();
+  OrderDraft? _completedOrderDraft;
   var _orderDraftHasLocalChanges = false;
   StoneListingsResult? _stoneListingsResult;
   var _stoneListingsLoaded = false;
@@ -472,7 +552,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   String? _lastHandledCheckoutRoute;
   final _savingLocalSealKeys = <String>{};
   final _deletingLocalSealIds = <String>{};
+  final _updatingLocalSealFavoriteIds = <String>{};
   HankoAppTab? _requestedTab;
+  List<PageEntry>? _requestedTabPages;
   var _pages = const <PageEntry>[_shellPage];
 
   @override
@@ -527,6 +609,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   @override
   Future<bool> didPushRouteInformation(RouteInformation routeInformation) {
     return _handleIncomingCheckoutRoute(routeInformation.uri.toString());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+    _beginCheckoutResumeStatusCheck();
   }
 
   @override
@@ -599,6 +689,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
           child: HankoTabNavigationShell(
             tabs: _navigationTabs,
             selectedTab: _requestedTab,
+            selectedTabPages: _requestedTabPages,
             buildPage: _buildTabPage,
             buildBottomNavigation: (context, selectedIndex, onSelected) {
               return _BottomTabs(
@@ -626,6 +717,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
           child: SettingsScreen(
             onClose: _closeTopPage,
             initialDestination: initialDestination,
+            onLocaleSelected: widget.onLocaleSelected,
           ),
         ),
       ),
@@ -773,7 +865,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 432),
           child: OrderCompleteScreen(
-            draft: _orderDraft,
+            draft: _completedOrderDraft ?? _orderDraft,
             status: _paymentStatus,
             createdOrder: _checkoutCreatedOrder,
             onOpenOrderLookup: _openOrderLookup,
@@ -863,6 +955,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         isSelectedForOrder:
             _orderDraft.sealSelection?.localSealDesignId == pageData.id,
         onChooseForOrder: _chooseLocalSealForOrder,
+        onEditRegenerate: _openRegenerateLocalSealDesign,
         onDelete: (design) => _deleteLocalSealDesign(design, stack),
         onBack: stack.pop,
       );
@@ -875,6 +968,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       onStartDesigning: () => stack.selectTab(HankoAppTab.design),
       onExploreStones: () => stack.selectTab(HankoAppTab.stones),
       onChooseSeal: (design) => stack.push(_mySealsDetailPage(design)),
+      onToggleFavorite: _toggleLocalSealFavorite,
     );
   }
 
@@ -935,6 +1029,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       return SealStyleSelectionScreen(
         candidate: pageData.candidate,
         onBack: stack.pop,
+        initialSelection: pageData.initialStyleSelection,
         onGenerate: (selection) {
           stack.push(
             _sealGenerationLoadingPage(
@@ -975,6 +1070,18 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         onSelected: (variant) {
           stack.push(_sealPreviewDetailPage(pageData, variant));
         },
+        onRegenerate: pageData.request.hasReachedLimit
+            ? null
+            : () {
+                final previousRecipes = pageData.variants
+                    .map((variant) => variant.recipe)
+                    .whereType<SealDesignRecipe>();
+                stack.replaceTop(
+                  _sealGenerationLoadingPage(
+                    pageData.request.nextAttempt(avoidRecipes: previousRecipes),
+                  ),
+                );
+              },
         onBack: stack.pop,
       );
     }
@@ -993,7 +1100,11 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             ),
           );
         },
-        onChooseStone: () => stack.selectTab(HankoAppTab.stones),
+        onChooseStone: () => _chooseGeneratedSealForOrder(
+          result: pageData.result,
+          variant: pageData.variant,
+          stack: stack,
+        ),
         onBack: stack.pop,
       );
     }
@@ -1076,6 +1187,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     return DesignHomeScreen(
       onOpenSettings: _openSettings,
       onStartDesign: () => stack.push(_designNameInputPage),
+      onOpenMySeals: () => stack.selectTab(HankoAppTab.mySeals),
+      onOpenStones: () => stack.selectTab(HankoAppTab.stones),
     );
   }
 
@@ -1110,7 +1223,25 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       if (_orderDraftHasLocalChanges) {
         return;
       }
-      setState(() => _orderDraft = draft);
+      final freshDraft = _discardExpiredCheckoutInput(
+        draft,
+        now: DateTime.now(),
+      );
+      final nextDraft = _validateOrderDraftStoneSelection(
+        freshDraft,
+        _stoneListingsResult,
+      );
+      final shouldPersistDraft =
+          !identical(freshDraft, draft) || !identical(nextDraft, freshDraft);
+      setState(() {
+        _orderDraft = nextDraft;
+        if (shouldPersistDraft) {
+          _orderDraftHasLocalChanges = true;
+        }
+      });
+      if (shouldPersistDraft) {
+        unawaited(_saveReconciledOrderDraft(nextDraft));
+      }
     } catch (_) {
       if (!mounted) {
         return;
@@ -1132,17 +1263,26 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     });
     try {
       final result = await widget.listStoneListings(
-        StoneListingsQuery(locale: locale, status: 'published'),
+        StoneListingsQuery(locale: locale),
       );
       if (!mounted) {
         return;
       }
+      final nextDraft = _validateOrderDraftStoneSelection(_orderDraft, result);
+      final shouldPersistDraft = !identical(nextDraft, _orderDraft);
       setState(() {
+        _orderDraft = nextDraft;
+        if (shouldPersistDraft) {
+          _orderDraftHasLocalChanges = true;
+        }
         _stoneListingsResult = result;
         _stoneListingsLoaded = true;
         _stoneListingsLoading = false;
         _stoneListingsLoadError = null;
       });
+      if (shouldPersistDraft) {
+        unawaited(_saveReconciledOrderDraft(nextDraft));
+      }
     } catch (error) {
       if (!mounted) {
         return;
@@ -1159,6 +1299,49 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     final locale =
         _stoneListingsLocale ?? Localizations.localeOf(context).languageCode;
     unawaited(_loadStoneListings(locale: locale));
+  }
+
+  OrderDraft _validateOrderDraftStoneSelection(
+    OrderDraft draft,
+    StoneListingsResult? result,
+  ) {
+    final stoneSelection = draft.stoneSelection;
+    if (stoneSelection == null || result == null) {
+      return draft;
+    }
+
+    for (final listing in result.listings) {
+      if (listing.id == stoneSelection.listingId) {
+        return listing.isOrderable ? draft : draft.withoutStoneSelection();
+      }
+    }
+
+    return draft.withoutStoneSelection();
+  }
+
+  OrderDraft _discardExpiredCheckoutInput(
+    OrderDraft draft, {
+    required DateTime now,
+  }) {
+    if (draft.input.isEmpty) {
+      return draft;
+    }
+    final inputUpdatedAt = draft.inputUpdatedAt ?? draft.updatedAt;
+    if (inputUpdatedAt.isAfter(now)) {
+      return draft;
+    }
+    if (now.difference(inputUpdatedAt) < _checkoutInputRetentionDuration) {
+      return draft;
+    }
+    return draft.withoutInput(updatedAt: now);
+  }
+
+  Future<void> _saveReconciledOrderDraft(OrderDraft draft) async {
+    try {
+      await _localOrderDraftRepository.saveOrderDraft(draft);
+    } catch (_) {
+      // Keep the in-memory draft reconciled even if persistence is temporarily unavailable.
+    }
   }
 
   Future<void> _saveLocalSealDesign({
@@ -1226,6 +1409,57 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     _openOrderReview();
   }
 
+  void _chooseGeneratedSealForOrder({
+    required SealGenerationResult result,
+    required SealDesignVariant variant,
+    required HankoTabStackController stack,
+  }) {
+    final nextDraft = _orderDraft.withSealSelection(
+      _orderDraftSealSelectionFromGeneratedSeal(result, variant),
+    );
+    unawaited(_applyOrderDraft(nextDraft));
+    stack.selectTab(HankoAppTab.stones);
+  }
+
+  Future<void> _toggleLocalSealFavorite(LocalSealDesign design) async {
+    if (_updatingLocalSealFavoriteIds.contains(design.id)) {
+      return;
+    }
+    _updatingLocalSealFavoriteIds.add(design.id);
+
+    final updatedDesign = design.copyWith(isFavorite: !design.isFavorite);
+    try {
+      await _localSealDesignRepository.saveLocalSealDesign(updatedDesign);
+    } catch (error) {
+      _updatingLocalSealFavoriteIds.remove(design.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _localSealDesignsLoaded = true;
+        _localSealDesignsLoadError = error;
+      });
+      return;
+    }
+
+    _updatingLocalSealFavoriteIds.remove(design.id);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _localSealDesigns = List.unmodifiable(
+        _localSealDesigns.map((savedDesign) {
+          return savedDesign.id == updatedDesign.id
+              ? updatedDesign
+              : savedDesign;
+        }),
+      );
+      _localSealDesignsLoaded = true;
+      _localSealDesignsLoadError = null;
+    });
+  }
+
   void _chooseStoneForOrder(StoneListing listing) {
     if (!listing.isOrderable) {
       return;
@@ -1238,14 +1472,18 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   }
 
   Future<void> _applyOrderDraft(OrderDraft draft) async {
+    final now = DateTime.now();
     final nextDraft = OrderDraft(
       sealSelection: draft.sealSelection,
       stoneSelection: draft.stoneSelection,
       input: draft.input,
+      updatedAt: now,
+      inputUpdatedAt: draft.input.isEmpty ? null : draft.inputUpdatedAt ?? now,
     );
     if (mounted) {
       setState(() {
         _orderDraft = nextDraft;
+        _completedOrderDraft = null;
         _orderDraftHasLocalChanges = true;
       });
     }
@@ -1464,12 +1702,31 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   }
 
   void _openCheckoutInput() {
+    final freshDraft = _discardExpiredCheckoutInput(
+      _orderDraft,
+      now: DateTime.now(),
+    );
+    final shouldPersistDraft = !identical(freshDraft, _orderDraft);
     if (_pages.last.key == _checkoutInputPage.key) {
+      if (shouldPersistDraft) {
+        setState(() {
+          _orderDraft = freshDraft;
+          _orderDraftHasLocalChanges = true;
+        });
+        unawaited(_saveReconciledOrderDraft(freshDraft));
+      }
       return;
     }
-    setState(
-      () => _pages = const [_shellPage, _orderReviewPage, _checkoutInputPage],
-    );
+    setState(() {
+      _orderDraft = freshDraft;
+      if (shouldPersistDraft) {
+        _orderDraftHasLocalChanges = true;
+      }
+      _pages = const [_shellPage, _orderReviewPage, _checkoutInputPage];
+    });
+    if (shouldPersistDraft) {
+      unawaited(_saveReconciledOrderDraft(freshDraft));
+    }
   }
 
   Future<void> _saveCheckoutInput(OrderDraftInput input) {
@@ -1522,6 +1779,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _stripeCheckoutLaunchError = null;
       _checkoutDeepLinkError = null;
       _checkoutReturnResult = null;
+      _completedOrderDraft = null;
       _paymentStatusStep = PaymentStatusStep.checking;
       _paymentStatus = null;
       _paymentStatusError = null;
@@ -1550,6 +1808,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         CheckoutSessionRequest(
           orderId: order.orderId,
           customerEmail: draft.input.contact.email.trim(),
+          returnToApp: true,
         ),
       );
       if (!mounted) {
@@ -1618,6 +1877,41 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         _pages = const [_shellPage, _stripeCheckoutFailedPage];
       });
     }
+  }
+
+  void _beginCheckoutResumeStatusCheck() {
+    final order = _checkoutCreatedOrder;
+    final session = _checkoutSession;
+    if (order == null || session == null || _checkoutReturnResult != null) {
+      return;
+    }
+    if (_stripeCheckoutStep != StripeCheckoutExternalStep.opening &&
+        _stripeCheckoutStep != StripeCheckoutExternalStep.waitingForReturn) {
+      return;
+    }
+    if (!_pages.any((page) => page.key == _stripeCheckoutTransitionPage.key)) {
+      return;
+    }
+
+    final sourceUri = Uri(
+      scheme: 'hankofield',
+      host: 'checkout',
+      path: '/success',
+      queryParameters: {
+        'order_id': order.orderId,
+        'session_id': session.sessionId,
+        'lang': Localizations.localeOf(context).languageCode,
+      },
+    );
+    _beginPaymentStatusCheck(
+      CheckoutReturnResult(
+        outcome: CheckoutReturnOutcome.success,
+        sourceUri: sourceUri,
+        orderId: order.orderId,
+        sessionId: session.sessionId,
+        locale: Localizations.localeOf(context).languageCode,
+      ),
+    );
   }
 
   Future<bool> _handleIncomingCheckoutRoute(String route) async {
@@ -1722,11 +2016,16 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         lastError = null;
         setState(() => _paymentStatus = status);
         if (_isPaidOrderStatus(status)) {
+          final completedDraft = _orderDraft;
+          final clearedDraft = _orderDraft.withoutInput();
           setState(() {
+            _completedOrderDraft = completedDraft;
+            _orderDraft = clearedDraft;
             _paymentStatusStep = PaymentStatusStep.paid;
             _paymentStatusError = null;
             _pages = const [_shellPage, _orderCompletePage];
           });
+          unawaited(_saveReconciledOrderDraft(clearedDraft));
           return;
         }
       } catch (error) {
@@ -1764,13 +2063,44 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   void _showTabFromOrder(HankoAppTab tab) {
     setState(() {
       _requestedTab = tab;
+      _requestedTabPages = null;
       _pages = const [_shellPage];
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _requestedTab != tab) {
         return;
       }
-      setState(() => _requestedTab = null);
+      setState(() {
+        _requestedTab = null;
+        _requestedTabPages = null;
+      });
+    });
+  }
+
+  void _openRegenerateLocalSealDesign(LocalSealDesign design) {
+    final designTab = _navigationTabs.firstWhere(
+      (tab) => tab.tab == HankoAppTab.design,
+    );
+    final selection = _kanjiCandidateSelectionFromLocalSealDesign(
+      design,
+      reasonLanguage: _reasonLanguageForCurrentLocale(context),
+    );
+    setState(() {
+      _requestedTab = HankoAppTab.design;
+      _requestedTabPages = [
+        designTab.rootPage,
+        _sealStyleSelectionPage(selection),
+      ];
+      _pages = const [_shellPage];
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _requestedTab != HankoAppTab.design) {
+        return;
+      }
+      setState(() {
+        _requestedTab = null;
+        _requestedTabPages = null;
+      });
     });
   }
 
@@ -1799,6 +2129,83 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     }
     setState(() => _pages = List.unmodifiable(_pages.take(_pages.length - 1)));
   }
+}
+
+_KanjiCandidateSelection _kanjiCandidateSelectionFromLocalSealDesign(
+  LocalSealDesign design, {
+  required String reasonLanguage,
+}) {
+  final meaning = design.meaning?.trim();
+  final reason = meaning != null && meaning.isNotEmpty
+      ? meaning
+      : design.impression.join(', ');
+  final candidate = KanjiCandidate(
+    kanji: design.selectedKanji,
+    reading: design.reading,
+    meaning: meaning,
+    impression: design.impression,
+    characterCount: design.characterCount,
+    strokeComplexity: design.strokeComplexity,
+    engravingSuitability: design.engravingSuitability,
+    reason: reason,
+  );
+  return _KanjiCandidateSelection(
+    result: KanjiCandidatesResult(
+      realName: design.inputName,
+      reasonLanguage: reasonLanguage,
+      gender: KanjiCandidateGender.unspecified,
+      kanjiStyle: KanjiNameStyle.japanese,
+      candidates: [candidate],
+    ),
+    candidate: candidate,
+    initialStyleSelection: _sealStyleSelectionFromLocalSealDesign(design),
+  );
+}
+
+SealStyleSelection _sealStyleSelectionFromLocalSealDesign(
+  LocalSealDesign design,
+) {
+  return SealStyleSelection(
+    shape: _sealShapeFromApiValue(design.shape),
+    style: _sealStyleNameFromApiValue(design.style),
+    strokeWeight: _sealStrokeWeightFromApiValue(design.strokeWeight),
+    balance: _sealBalanceFromApiValue(design.balance),
+  );
+}
+
+String _reasonLanguageForCurrentLocale(BuildContext context) {
+  return Localizations.localeOf(context).languageCode == 'ja' ? 'ja' : 'en';
+}
+
+SealShape _sealShapeFromApiValue(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'round' => SealShape.round,
+    _ => SealShape.square,
+  };
+}
+
+SealStyleName _sealStyleNameFromApiValue(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'traditional' => SealStyleName.traditional,
+    'soft' => SealStyleName.soft,
+    'bold' => SealStyleName.bold,
+    _ => SealStyleName.elegant,
+  };
+}
+
+SealStrokeWeight _sealStrokeWeightFromApiValue(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'bold' => SealStrokeWeight.bold,
+    _ => SealStrokeWeight.standard,
+  };
+}
+
+SealBalance _sealBalanceFromApiValue(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'airy' => SealBalance.airy,
+    'dense' => SealBalance.dense,
+    _ => SealBalance.balanced,
+  };
 }
 
 LocalSealDesign _localSealDesignFromSelection(
@@ -1935,6 +2342,34 @@ OrderDraftSealSelection _orderDraftSealSelectionFromLocalSealDesign(
     previewImageDownloadUrl: design.previewImageDownloadUrl,
     localImagePath: design.localImagePath,
   );
+}
+
+OrderDraftSealSelection _orderDraftSealSelectionFromGeneratedSeal(
+  SealGenerationResult result,
+  SealDesignVariant variant,
+) {
+  final candidate = result.request.candidate;
+  final style = result.request.style;
+
+  return OrderDraftSealSelection(
+    localSealDesignId: _generatedSealDraftId(result.requestId, variant.id),
+    selectedKanji: candidate.kanji,
+    reading: candidate.reading,
+    shape: style.shape.apiValue,
+    style: style.style.apiValue,
+    strokeWeight: style.strokeWeight.apiValue,
+    balance: style.balance.apiValue,
+    aiGenerationId: result.requestId,
+    aiVariantId: variant.id,
+    previewImageStoragePath: variant.storagePath,
+    previewImageDownloadUrl: variant.downloadUrl,
+    localImagePath: '',
+  );
+}
+
+String _generatedSealDraftId(String requestId, String variantId) {
+  final rawId = 'generated_${requestId}_$variantId';
+  return rawId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
 }
 
 OrderDraftStoneSelection _orderDraftStoneSelectionFromStoneListing(

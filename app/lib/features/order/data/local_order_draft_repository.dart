@@ -148,6 +148,8 @@ class _OrderDraftRecord {
 Map<String, Object?> _orderDraftToJson(OrderDraft draft) {
   return {
     'updated_at': draft.updatedAt.toIso8601String(),
+    if (draft.inputUpdatedAt != null)
+      'input_updated_at': draft.inputUpdatedAt!.toIso8601String(),
     'seal_selection': _sealSelectionToJson(draft.sealSelection),
     'stone_selection': _stoneSelectionToJson(draft.stoneSelection),
     'input': _inputToJson(draft.input),
@@ -155,11 +157,20 @@ Map<String, Object?> _orderDraftToJson(OrderDraft draft) {
 }
 
 OrderDraft _orderDraftFromJson(Map<String, Object?> json) {
+  final updatedAt = DateTime.parse(_readString(json, 'updated_at'));
+  final input = _inputFromJson(json['input']);
+  final rawInputUpdatedAt = _readOptionalString(json, 'input_updated_at');
+  final inputUpdatedAt = rawInputUpdatedAt.isNotEmpty
+      ? DateTime.parse(rawInputUpdatedAt)
+      : input.isEmpty
+      ? null
+      : updatedAt;
   return OrderDraft(
     sealSelection: _sealSelectionFromJson(json['seal_selection']),
     stoneSelection: _stoneSelectionFromJson(json['stone_selection']),
-    input: _inputFromJson(json['input']),
-    updatedAt: DateTime.parse(_readString(json, 'updated_at')),
+    input: input,
+    updatedAt: updatedAt,
+    inputUpdatedAt: inputUpdatedAt,
   );
 }
 

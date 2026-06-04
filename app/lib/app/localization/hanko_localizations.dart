@@ -75,7 +75,6 @@ class HankoLocalizations {
   String get editName => _strings.editName;
   String get designLoadingTitle => _strings.designLoadingTitle;
   String get designLoadingMessage => _strings.designLoadingMessage;
-  String get designLoadingDetail => _strings.designLoadingDetail;
   String get designInvalidNameSummary => _strings.designInvalidNameSummary;
   String get designInvalidNameMessage => _strings.designInvalidNameMessage;
   String get designSuggestionErrorTitle => _strings.designSuggestionErrorTitle;
@@ -109,8 +108,6 @@ class HankoLocalizations {
   String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
   String get kanjiSuggestionsMessage => _strings.kanjiSuggestionsMessage;
   String get kanjiCandidateDetailTitle => _strings.kanjiCandidateDetailTitle;
-  String get kanjiCandidateDetailMessage =>
-      _strings.kanjiCandidateDetailMessage;
   String get kanjiReadingLabel => _strings.kanjiReadingLabel;
   String get kanjiMeaningLabel => _strings.kanjiMeaningLabel;
   String get kanjiImpressionLabel => _strings.kanjiImpressionLabel;
@@ -163,15 +160,13 @@ class HankoLocalizations {
   String get sealVariantSelectionTitle => _strings.sealVariantSelectionTitle;
   String get sealVariantSelectionMessage =>
       _strings.sealVariantSelectionMessage;
-  String get sealVariantSelectionDetail => _strings.sealVariantSelectionDetail;
   String get sealVariantSelectedBadge => _strings.sealVariantSelectedBadge;
   String get sealVariantSelectedTitle => _strings.sealVariantSelectedTitle;
   String get sealVariantSelectedMessage => _strings.sealVariantSelectedMessage;
+  String get regenerateSeal => _strings.regenerateSeal;
   String get sealPreviewTitle => _strings.sealPreviewTitle;
   String get sealPreviewMessage => _strings.sealPreviewMessage;
-  String get sealPreviewRulesNote => _strings.sealPreviewRulesNote;
   String get sealPreviewVariantLabel => _strings.sealPreviewVariantLabel;
-  String get sealPreviewStorageLabel => _strings.sealPreviewStorageLabel;
   String get saveSeal => _strings.saveSeal;
   String get chooseStone => _strings.chooseStone;
   String get sealSavedTitle => _strings.sealSavedTitle;
@@ -188,6 +183,8 @@ class HankoLocalizations {
   String get savedSealsLoadErrorMessage => _strings.savedSealsLoadErrorMessage;
   String get chooseSavedSeal => _strings.chooseSavedSeal;
   String get viewSealDetails => _strings.viewSealDetails;
+  String get favoriteSeal => _strings.favoriteSeal;
+  String get removeFavoriteSeal => _strings.removeFavoriteSeal;
   String get sealDetailTitle => _strings.sealDetailTitle;
   String get kanjiLabel => _strings.kanjiLabel;
   String get createdAtLabel => _strings.createdAtLabel;
@@ -562,7 +559,6 @@ class _HankoStrings {
     required this.editName,
     required this.designLoadingTitle,
     required this.designLoadingMessage,
-    required this.designLoadingDetail,
     required this.designInvalidNameSummary,
     required this.designInvalidNameMessage,
     required this.designSuggestionErrorTitle,
@@ -594,7 +590,6 @@ class _HankoStrings {
     required this.kanjiSuggestionsTitle,
     required this.kanjiSuggestionsMessage,
     required this.kanjiCandidateDetailTitle,
-    required this.kanjiCandidateDetailMessage,
     required this.kanjiReadingLabel,
     required this.kanjiMeaningLabel,
     required this.kanjiImpressionLabel,
@@ -642,15 +637,13 @@ class _HankoStrings {
     required this.adjustStyle,
     required this.sealVariantSelectionTitle,
     required this.sealVariantSelectionMessage,
-    required this.sealVariantSelectionDetail,
     required this.sealVariantSelectedBadge,
     required this.sealVariantSelectedTitle,
     required this.sealVariantSelectedMessage,
+    required this.regenerateSeal,
     required this.sealPreviewTitle,
     required this.sealPreviewMessage,
-    required this.sealPreviewRulesNote,
     required this.sealPreviewVariantLabel,
-    required this.sealPreviewStorageLabel,
     required this.saveSeal,
     required this.chooseStone,
     required this.sealSavedTitle,
@@ -667,6 +660,8 @@ class _HankoStrings {
     required this.savedSealsLoadErrorMessage,
     required this.chooseSavedSeal,
     required this.viewSealDetails,
+    required this.favoriteSeal,
+    required this.removeFavoriteSeal,
     required this.sealDetailTitle,
     required this.kanjiLabel,
     required this.createdAtLabel,
@@ -954,7 +949,6 @@ class _HankoStrings {
   final String editName;
   final String designLoadingTitle;
   final String designLoadingMessage;
-  final String designLoadingDetail;
   final String designInvalidNameSummary;
   final String designInvalidNameMessage;
   final String designSuggestionErrorTitle;
@@ -986,7 +980,6 @@ class _HankoStrings {
   final String kanjiSuggestionsTitle;
   final String kanjiSuggestionsMessage;
   final String kanjiCandidateDetailTitle;
-  final String kanjiCandidateDetailMessage;
   final String kanjiReadingLabel;
   final String kanjiMeaningLabel;
   final String kanjiImpressionLabel;
@@ -1034,15 +1027,13 @@ class _HankoStrings {
   final String adjustStyle;
   final String sealVariantSelectionTitle;
   final String sealVariantSelectionMessage;
-  final String sealVariantSelectionDetail;
   final String sealVariantSelectedBadge;
   final String sealVariantSelectedTitle;
   final String sealVariantSelectedMessage;
+  final String regenerateSeal;
   final String sealPreviewTitle;
   final String sealPreviewMessage;
-  final String sealPreviewRulesNote;
   final String sealPreviewVariantLabel;
-  final String sealPreviewStorageLabel;
   final String saveSeal;
   final String chooseStone;
   final String sealSavedTitle;
@@ -1059,6 +1050,8 @@ class _HankoStrings {
   final String savedSealsLoadErrorMessage;
   final String chooseSavedSeal;
   final String viewSealDetails;
+  final String favoriteSeal;
+  final String removeFavoriteSeal;
   final String sealDetailTitle;
   final String kanjiLabel;
   final String createdAtLabel;
@@ -1334,8 +1327,7 @@ const _localizedValues = {
           'Turn your name into a\npersonalized gemstone seal.',
       startDesigning: 'Start Designing',
       designNameTitle: 'Enter Your Name',
-      designNameIntro:
-          "We'll suggest engraving-friendly kanji for your personal seal.",
+      designNameIntro: "We'll suggest kanji based on your preferences.",
       designNameLabel: 'Your name',
       designNameHint: 'Michael Smith',
       designNameHelp: '1-2 kanji will be suggested for a small personal seal.',
@@ -1357,9 +1349,7 @@ const _localizedValues = {
       designRequestDetails: 'Request details',
       editName: 'Edit Name',
       designLoadingTitle: 'Finding Kanji',
-      designLoadingMessage: 'Creating engraving-friendly kanji suggestions...',
-      designLoadingDetail:
-          'We are considering sound, meaning, and simplicity for seal engraving.',
+      designLoadingMessage: 'Creating kanji suggestions...',
       designInvalidNameSummary: 'Enter your name to continue.',
       designInvalidNameMessage:
           'Please enter a valid first name or short name.',
@@ -1401,8 +1391,6 @@ const _localizedValues = {
       kanjiSuggestionsTitle: 'Kanji Suggestions',
       kanjiSuggestionsMessage: 'Choose the kanji that best fits your seal.',
       kanjiCandidateDetailTitle: 'Kanji Detail',
-      kanjiCandidateDetailMessage:
-          'Review the meaning and engraving fit before choosing this kanji.',
       kanjiReadingLabel: 'Reading',
       kanjiMeaningLabel: 'Meaning',
       kanjiImpressionLabel: 'Impression',
@@ -1414,7 +1402,7 @@ const _localizedValues = {
       kanjiSelectedTitle: 'Kanji selected',
       kanjiSelectedMessage: 'This kanji is ready for seal style selection.',
       sealStyleTitle: 'Seal Style',
-      sealStyleMessage: 'Choose a fixed style set for AI seal generation.',
+      sealStyleMessage: 'Customize your seal style.',
       sealStyleSelectedKanjiLabel: 'Selected kanji',
       sealShapeLabel: 'Shape',
       sealShapeSquare: 'Square',
@@ -1441,7 +1429,7 @@ const _localizedValues = {
       sealGenerationLoadingMessage:
           'Creating three AI seal design directions...',
       sealGenerationLoadingDetail:
-          'We are checking the kanji, style, and engraving safety before saving previews.',
+          'We are checking the kanji and style before saving previews.',
       sealGenerationErrorTitle: "We couldn't generate seal designs",
       sealGenerationErrorMessage:
           'Something went wrong while creating AI seal previews. Please try again.',
@@ -1457,17 +1445,14 @@ const _localizedValues = {
       adjustStyle: 'Adjust Style',
       sealVariantSelectionTitle: 'Seal Options',
       sealVariantSelectionMessage: 'Choose one AI seal design.',
-      sealVariantSelectionDetail:
-          'Each option is saved with a stable Storage path for later preview and ordering.',
       sealVariantSelectedBadge: 'Selected',
       sealVariantSelectedTitle: 'Seal design selected',
       sealVariantSelectedMessage:
           'This AI seal design is ready for preview and saving.',
+      regenerateSeal: 'Regenerate Seal',
       sealPreviewTitle: 'Seal Preview',
       sealPreviewMessage: 'Review your selected seal design before saving.',
-      sealPreviewRulesNote: 'Created within engraving-friendly design rules.',
       sealPreviewVariantLabel: 'AI Variant',
-      sealPreviewStorageLabel: 'Storage path',
       saveSeal: 'Save Seal',
       chooseStone: 'Choose a Stone',
       sealSavedTitle: 'Seal Saved',
@@ -1486,13 +1471,15 @@ const _localizedValues = {
           'Open My Seals again, or create a new seal design.',
       chooseSavedSeal: 'Choose',
       viewSealDetails: 'View Details',
+      favoriteSeal: 'Favorite seal',
+      removeFavoriteSeal: 'Remove favorite',
       sealDetailTitle: 'Seal Detail',
       kanjiLabel: 'Kanji',
       createdAtLabel: 'Created',
       compareSavedSeals: 'Compare Seals',
       compareSavedSealsTitle: 'Compare saved seals',
       compareSavedSealsMessage:
-          'Open each saved seal to review its preview, kanji, and style details. Side-by-side comparison will be added later.',
+          'Review saved seal previews, kanji meanings, and style choices side by side.',
       editSavedSeal: 'Edit / Regenerate',
       editSavedSealTitle: 'Create a new version from Design',
       editSavedSealMessage:
@@ -1695,26 +1682,25 @@ const _localizedValues = {
       paymentStatusPendingTitle: 'Payment pending',
       paymentStatusPendingMessage:
           'Stripe returned successfully, but payment confirmation is still pending.',
-      paymentStatusPendingNotice:
-          'Webhook confirmation may take a moment. Use Order Lookup later if this screen does not update.',
+      paymentStatusPendingNotice: '',
       paymentStatusFailedTitle: "Couldn't verify payment",
       paymentStatusFailedMessage:
           'Payment status could not be confirmed. Please check Order Lookup later.',
       orderCompleteTitle: 'Order Complete',
       orderCompleteStatusTitle: 'Thank you for your order',
       orderCompleteMessage:
-          'Payment is confirmed. We will start production after the confirmation email is sent.',
+          'Payment is confirmed. Stripe will send the payment receipt to the email address used for checkout.',
       orderCompleteStatusLabel: 'Status',
       orderCompleteStatusValue: 'Payment received',
       orderCompleteEmailMessage:
-          'Please check your confirmation email. Keep the order number for support and order lookup.',
+          'Please check the Stripe payment receipt. Keep the order number for support and order lookup.',
       orderCompleteSummaryTitle: 'Order summary',
       orderCompleteLookupAction: 'Open Order Lookup',
       orderCompleteBackToDesignAction: 'Back to Design',
-      emailSentNoticeTitle: 'Confirmation email sent',
+      emailSentNoticeTitle: 'Stripe payment email',
       emailSentNoticeMessage:
-          'We sent your order confirmation to the email address on the order. Please check your inbox and spam folder.',
-      orderEmailMissingGuideTitle: "Can't find your email?",
+          'Stripe sends the payment receipt to the email address on the order. Please check your inbox and spam folder.',
+      orderEmailMissingGuideTitle: "Can't find the Stripe email?",
       orderEmailMissingGuideMessage: 'Here are a few quick things to check.',
       orderEmailMissingSpamCheck: 'Check your spam or junk folder.',
       orderEmailMissingAddressCheck:
@@ -1768,7 +1754,7 @@ const _localizedValues = {
       version: 'Version',
       settingsLanguageTitle: 'App language',
       settingsLanguageMessage:
-          'Language destinations are available now. Locale switching will be connected after settings persistence is finalized.',
+          'Choose the language used in the app. Before you choose one, the app follows your smartphone language.',
       settingsLanguageEnglish: 'English',
       settingsLanguageJapanese: 'Japanese',
       settingsFaqIntro:
@@ -1806,7 +1792,7 @@ const _localizedValues = {
       customSealDescription: '名前から、あなただけの\n天然石印鑑を作ります。',
       startDesigning: '作成をはじめる',
       designNameTitle: '名前を入力',
-      designNameIntro: '印鑑に合う彫刻しやすい漢字を提案します。',
+      designNameIntro: 'あなたの希望に合わせた漢字を提案します。',
       designNameLabel: 'お名前',
       designNameHint: '山田 太郎',
       designNameHelp: '小さな印鑑に合う1-2文字の漢字を提案します。',
@@ -1826,8 +1812,7 @@ const _localizedValues = {
       designRequestDetails: '入力内容',
       editName: '名前を修正',
       designLoadingTitle: '漢字を検索中',
-      designLoadingMessage: '彫刻しやすい漢字候補を作成しています...',
-      designLoadingDetail: '音、意味、字形の簡潔さを確認しています。',
+      designLoadingMessage: '漢字候補を作成しています...',
       designInvalidNameSummary: '名前を入力してください。',
       designInvalidNameMessage: '短いお名前またはニックネームを入力してください。',
       designSuggestionErrorTitle: '漢字候補を提案できませんでした',
@@ -1863,7 +1848,6 @@ const _localizedValues = {
       kanjiSuggestionsTitle: '漢字候補',
       kanjiSuggestionsMessage: '印鑑に使う漢字を選んでください。',
       kanjiCandidateDetailTitle: '漢字の詳細',
-      kanjiCandidateDetailMessage: '意味と彫刻適性を確認して、この漢字を選択します。',
       kanjiReadingLabel: '読み',
       kanjiMeaningLabel: '意味',
       kanjiImpressionLabel: '印象',
@@ -1875,7 +1859,7 @@ const _localizedValues = {
       kanjiSelectedTitle: '漢字を選択しました',
       kanjiSelectedMessage: 'この漢字で印影スタイル選択へ進めます。',
       sealStyleTitle: '印影スタイル',
-      sealStyleMessage: 'AI印影生成に使う固定スタイルを選択してください。',
+      sealStyleMessage: '印影スタイルをカスタマイズしてください。',
       sealStyleSelectedKanjiLabel: '選択中の漢字',
       sealShapeLabel: '形',
       sealShapeSquare: '角印',
@@ -1899,7 +1883,7 @@ const _localizedValues = {
       generateSeal: '印影を生成',
       sealGenerationLoadingTitle: '印影を生成中',
       sealGenerationLoadingMessage: 'AI印影候補を3件作成しています...',
-      sealGenerationLoadingDetail: '漢字、スタイル、彫刻しやすさを確認しながらプレビューを保存しています。',
+      sealGenerationLoadingDetail: '漢字、スタイルを確認しながらプレビューを保存しています。',
       sealGenerationErrorTitle: '印影を生成できませんでした',
       sealGenerationErrorMessage: 'AI印影候補の作成中に問題が発生しました。もう一度お試しください。',
       sealGenerationLimitTitle: '再生成の上限に達しました',
@@ -1912,15 +1896,13 @@ const _localizedValues = {
       adjustStyle: 'スタイルを調整',
       sealVariantSelectionTitle: '印影候補',
       sealVariantSelectionMessage: 'AI印影候補から1件を選択してください。',
-      sealVariantSelectionDetail: '各候補は、プレビューと注文に使えるStorageパスと一緒に保存されています。',
       sealVariantSelectedBadge: '選択中',
       sealVariantSelectedTitle: '印影を選択しました',
       sealVariantSelectedMessage: 'このAI印影をプレビュー確認と保存に進められます。',
+      regenerateSeal: '印影を再生成',
       sealPreviewTitle: '印影プレビュー',
       sealPreviewMessage: '保存前に選択した印影デザインを確認してください。',
-      sealPreviewRulesNote: '彫刻しやすいデザインルール内で作成されています。',
       sealPreviewVariantLabel: 'AI候補',
-      sealPreviewStorageLabel: 'Storageパス',
       saveSeal: '印影を保存',
       chooseStone: '石を選ぶ',
       sealSavedTitle: '保存完了',
@@ -1937,13 +1919,14 @@ const _localizedValues = {
       savedSealsLoadErrorMessage: 'マイ印影を開き直すか、新しい印影を作成してください。',
       chooseSavedSeal: '選択',
       viewSealDetails: '詳細を見る',
+      favoriteSeal: 'お気に入りに追加',
+      removeFavoriteSeal: 'お気に入りを解除',
       sealDetailTitle: '印影詳細',
       kanjiLabel: '漢字',
       createdAtLabel: '作成日',
       compareSavedSeals: '印影を比較',
       compareSavedSealsTitle: '保存済み印影の比較',
-      compareSavedSealsMessage:
-          '今は各印影の詳細を開いて、プレビュー、漢字、スタイルを確認してください。横並び比較は後続で追加します。',
+      compareSavedSealsMessage: '保存済み印影のプレビュー、漢字の意味、スタイルを横並びで比較できます。',
       editSavedSeal: '編集 / 再生成',
       editSavedSealTitle: 'Designから新しい案を作成',
       editSavedSealMessage:
@@ -2112,23 +2095,23 @@ const _localizedValues = {
       paymentStatusPaidMessage: '決済が確認できました。注文完了画面を準備しています。',
       paymentStatusPendingTitle: '決済確認待ち',
       paymentStatusPendingMessage: 'Stripeから正常に戻りましたが、決済確定の反映がまだ完了していません。',
-      paymentStatusPendingNotice:
-          'Webhook反映に時間がかかる場合があります。画面が更新されない場合は後ほど注文照会をご確認ください。',
+      paymentStatusPendingNotice: '',
       paymentStatusFailedTitle: '決済状態を確認できませんでした',
       paymentStatusFailedMessage: '決済状態を確認できませんでした。後ほど注文照会をご確認ください。',
       orderCompleteTitle: '注文完了',
       orderCompleteStatusTitle: 'ご注文ありがとうございます',
-      orderCompleteMessage: '決済が確認できました。確認メール送信後、順次製作を開始します。',
+      orderCompleteMessage: '決済が確認できました。決済完了メールはStripeから注文時のメールアドレスへ送信されます。',
       orderCompleteStatusLabel: '状態',
       orderCompleteStatusValue: '決済を受け付けました',
-      orderCompleteEmailMessage: '確認メールをご確認ください。注文番号はお問い合わせや注文照会で使用します。',
+      orderCompleteEmailMessage:
+          'Stripeの決済完了メールをご確認ください。注文番号はお問い合わせや注文照会で使用します。',
       orderCompleteSummaryTitle: '注文概要',
       orderCompleteLookupAction: '注文照会を開く',
       orderCompleteBackToDesignAction: 'Designへ戻る',
-      emailSentNoticeTitle: '確認メールを送信しました',
+      emailSentNoticeTitle: 'Stripeの決済完了メール',
       emailSentNoticeMessage:
-          '注文確認メールを注文時のメールアドレスへ送信しました。受信箱と迷惑メールフォルダをご確認ください。',
-      orderEmailMissingGuideTitle: 'メールが見つからない場合',
+          '決済完了メールはStripeから注文時のメールアドレスへ送信されます。受信箱と迷惑メールフォルダをご確認ください。',
+      orderEmailMissingGuideTitle: 'Stripeのメールが見つからない場合',
       orderEmailMissingGuideMessage: 'まず次の項目をご確認ください。',
       orderEmailMissingSpamCheck: '迷惑メールフォルダやプロモーションフォルダを確認してください。',
       orderEmailMissingAddressCheck: '注文時のメールアドレスに誤りがないか確認してください。',
@@ -2177,7 +2160,7 @@ const _localizedValues = {
       contact: 'お問い合わせ',
       version: 'バージョン',
       settingsLanguageTitle: 'アプリの言語',
-      settingsLanguageMessage: '言語の遷移先を用意しています。ロケール切り替えは設定保存の確定後に接続します。',
+      settingsLanguageMessage: 'アプリ内で使う言語を選択できます。未選択の場合はスマートフォンの言語に合わせます。',
       settingsLanguageEnglish: '英語',
       settingsLanguageJapanese: '日本語',
       settingsFaqIntro: '漢字選択、製作、配送、注文照会についてのよくある質問です。',

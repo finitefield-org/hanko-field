@@ -63,17 +63,23 @@ void main() {
     expect(confirmed.input.termsAgreed, isTrue);
     expect(confirmed.input.customerConfirmation.isComplete, isTrue);
     expect(confirmed.updatedAt, confirmedAt);
+    expect(confirmed.inputUpdatedAt, confirmedAt);
 
     final withoutSeal = confirmed.withoutSealSelection(updatedAt: confirmedAt);
     expect(withoutSeal.hasSealSelection, isFalse);
     expect(withoutSeal.hasStoneSelection, isTrue);
     expect(withoutSeal.input.customerConfirmation.isComplete, isTrue);
+    expect(withoutSeal.inputUpdatedAt, confirmedAt);
 
     final withoutStone = confirmed.withoutStoneSelection(
       updatedAt: confirmedAt,
     );
     expect(withoutStone.hasSealSelection, isTrue);
     expect(withoutStone.hasStoneSelection, isFalse);
+
+    final withoutInput = confirmed.withoutInput(updatedAt: confirmedAt);
+    expect(withoutInput.input.isEmpty, isTrue);
+    expect(withoutInput.inputUpdatedAt, isNull);
   });
 
   test('saves and reloads order draft selections and checkout input', () async {
@@ -126,6 +132,7 @@ void main() {
     expect(saved.input.contact.email, 'michael@example.test');
     expect(saved.input.shipping.city, 'Chiyoda');
     expect(saved.input.orderNote, 'Please ship on a weekday.');
+    expect(saved.inputUpdatedAt, DateTime.parse('2026-05-22T10:15:00+09:00'));
     expect(saved.input.termsAgreed, isTrue);
     expect(saved.input.customerConfirmation.kanjiAndDesign, isTrue);
     expect(saved.input.customerConfirmation.customMadePolicy, isTrue);
@@ -189,8 +196,35 @@ CREATE TABLE IF NOT EXISTS order_draft (
       expect(saved.input.termsAgreed, isFalse);
       expect(saved.input.customerConfirmation.kanjiAndDesign, isFalse);
       expect(saved.input.customerConfirmation.customMadePolicy, isFalse);
+      expect(saved.inputUpdatedAt, isNull);
     },
   );
+
+  test('treats older draft updated_at as checkout input timestamp', () async {
+    final db = await databaseFactoryFfi.openDatabase(databasePath);
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS order_draft (
+  id TEXT PRIMARY KEY,
+  draft_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+)
+''');
+    await db.insert('order_draft', {
+      'id': 'current',
+      'draft_json':
+          '{"updated_at":"2026-05-22T10:00:00.000+09:00",'
+          '"seal_selection":${_jsonEncodeSealSelection()},'
+          '"stone_selection":${_jsonEncodeStoneSelection()},'
+          '"input":{"contact":{"email":"legacy@example.test"}}}',
+      'updated_at': '2026-05-22T10:00:00.000+09:00',
+    });
+    await db.close();
+
+    final saved = await repository.loadOrderDraft();
+
+    expect(saved.input.contact.email, 'legacy@example.test');
+    expect(saved.inputUpdatedAt, DateTime.parse('2026-05-22T10:00:00+09:00'));
+  });
 }
 
 OrderDraftSealSelection _sealSelection() {

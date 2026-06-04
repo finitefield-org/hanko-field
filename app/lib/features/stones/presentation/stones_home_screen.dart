@@ -93,6 +93,7 @@ class _StonesHomeScreenState extends State<StonesHomeScreen> {
                 listing: sortedListings[index],
                 onOpenStoneDetail: widget.onOpenStoneDetail,
                 isSelectedForOrder:
+                    sortedListings[index].isOrderable &&
                     widget.selectedStoneId == sortedListings[index].id,
                 onSelectStone: widget.onSelectStone,
               ),

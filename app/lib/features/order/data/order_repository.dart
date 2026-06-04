@@ -393,6 +393,7 @@ class CreateCheckoutSessionRequestDto {
   const CreateCheckoutSessionRequestDto({
     required this.orderId,
     this.customerEmail,
+    this.returnToApp = false,
   });
 
   factory CreateCheckoutSessionRequestDto.fromDomain(
@@ -401,16 +402,19 @@ class CreateCheckoutSessionRequestDto {
     return CreateCheckoutSessionRequestDto(
       orderId: request.orderId,
       customerEmail: request.customerEmail,
+      returnToApp: request.returnToApp,
     );
   }
 
   final String orderId;
   final String? customerEmail;
+  final bool returnToApp;
 
   JsonMap toJson() {
     return {
       'order_id': orderId,
       if (customerEmail != null) 'customer_email': customerEmail,
+      if (returnToApp) 'return_to_app': true,
     };
   }
 }

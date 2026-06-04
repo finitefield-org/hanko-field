@@ -489,6 +489,8 @@ struct PaymentSuccessTemplate {
     session_id: String,
     has_order_id: bool,
     order_id: String,
+    has_app_redirect_url: bool,
+    app_redirect_url: String,
     selected_locale: String,
     page_title: String,
     meta_description: String,
@@ -510,6 +512,8 @@ struct PaymentSuccessTemplate {
 struct PaymentFailureTemplate {
     has_order_id: bool,
     order_id: String,
+    has_app_redirect_url: bool,
+    app_redirect_url: String,
     selected_locale: String,
     page_title: String,
     meta_description: String,
@@ -611,6 +615,7 @@ struct PaymentRedirectQuery {
     session_id: Option<String>,
     order_id: Option<String>,
     lang: Option<String>,
+    return_to: Option<String>,
     color_family: Option<String>,
     pattern_primary: Option<String>,
 }
@@ -2796,6 +2801,14 @@ fn checkout_redirect_path(
     {
         params.push(format!("order_id={order_id}"));
     }
+    if let Some(return_to) = query
+        .return_to
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("return_to={return_to}"));
+    }
 
     let query = if params.is_empty() {
         String::new()
@@ -2840,6 +2853,14 @@ fn payment_result_locale_url(
     {
         params.push(format!("order_id={order_id}"));
     }
+    if let Some(return_to) = query
+        .return_to
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("return_to={return_to}"));
+    }
 
     let query = if params.is_empty() {
         String::new()
@@ -2849,6 +2870,64 @@ fn payment_result_locale_url(
 
     let path = localized_page_path(base_path, normalized);
     site_url(base_url, &format!("{path}{query}"))
+}
+
+fn app_checkout_return_url(
+    outcome: &str,
+    query: &PaymentRedirectQuery,
+    locale: &str,
+) -> Option<String> {
+    let return_to = query.return_to.as_deref()?.trim().to_ascii_lowercase();
+    if return_to != "app" {
+        return None;
+    }
+
+    let outcome = match outcome.trim().to_ascii_lowercase().as_str() {
+        "success" | "succeeded" | "paid" => "success",
+        "cancel" | "canceled" | "cancelled" => "cancel",
+        "failed" | "failure" | "error" => "failed",
+        _ => return None,
+    };
+
+    let mut url = reqwest::Url::parse(&format!("hankofield://checkout/{outcome}")).ok()?;
+    {
+        let mut query_pairs = url.query_pairs_mut();
+        query_pairs.append_pair("checkout", outcome);
+        if let Some(order_id) = query
+            .order_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            query_pairs.append_pair("order_id", order_id);
+        }
+        if let Some(session_id) = query
+            .session_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            query_pairs.append_pair("session_id", session_id);
+        }
+        query_pairs.append_pair(
+            "lang",
+            parse_supported_locale(locale).unwrap_or(DEFAULT_LOCALE),
+        );
+    }
+
+    Some(url.to_string())
+}
+
+fn checkout_failure_app_outcome(query: &PaymentRedirectQuery) -> &'static str {
+    match query
+        .checkout
+        .as_deref()
+        .map(str::trim)
+        .map(str::to_lowercase)
+    {
+        Some(value) if value == "cancel" || value == "canceled" || value == "cancelled" => "cancel",
+        _ => "failed",
+    }
 }
 
 #[cfg(test)]
@@ -2884,6 +2963,14 @@ fn payment_result_navigation_url(
         .filter(|value| !value.is_empty())
     {
         params.push(format!("order_id={order_id}"));
+    }
+    if let Some(return_to) = query
+        .return_to
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("return_to={return_to}"));
     }
 
     let query = if params.is_empty() {
@@ -2960,6 +3047,9 @@ async fn render_payment_success_page(
         .unwrap_or_default()
         .trim()
         .to_owned();
+    let app_redirect_url =
+        app_checkout_return_url("success", &query, &selected_locale).unwrap_or_default();
+    let has_app_redirect_url = !app_redirect_url.is_empty();
     let template = PaymentSuccessTemplate {
         contact_url: inquiry_url(site_base_url, &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
@@ -2974,8 +3064,8 @@ async fn render_payment_success_page(
         ),
         meta_description: localized_text(
             &selected_locale,
-            "ご注文の支払いが完了しました。確認メールをご確認ください。",
-            "Your payment was received. Check your confirmation email for order details and next steps.",
+            "ご注文の支払いが完了しました。Stripeの決済完了メールをご確認ください。",
+            "Your payment was received. Check your Stripe payment receipt for order details and next steps.",
         ),
         robots_meta: "noindex,follow".to_owned(),
         canonical_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "en"),
@@ -2983,6 +3073,8 @@ async fn render_payment_success_page(
         order_id,
         has_session_id: !session_id.is_empty(),
         session_id,
+        has_app_redirect_url,
+        app_redirect_url,
         lang_en_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "en"),
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "ja"),
         company_url: company_url(site_base_url),
@@ -3038,6 +3130,13 @@ async fn render_payment_failure_page(
         .unwrap_or_default()
         .trim()
         .to_owned();
+    let app_redirect_url = app_checkout_return_url(
+        checkout_failure_app_outcome(&query),
+        &query,
+        &selected_locale,
+    )
+    .unwrap_or_default();
+    let has_app_redirect_url = !app_redirect_url.is_empty();
     let template = PaymentFailureTemplate {
         contact_url: inquiry_url(site_base_url, &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
@@ -3059,6 +3158,8 @@ async fn render_payment_failure_page(
         canonical_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "en"),
         has_order_id: !order_id.is_empty(),
         order_id,
+        has_app_redirect_url,
+        app_redirect_url,
         lang_en_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "en"),
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "ja"),
         company_url: company_url(site_base_url),
@@ -5847,9 +5948,11 @@ mod tests {
             session_id: "sess_123".to_owned(),
             has_order_id: true,
             order_id: "ord_456".to_owned(),
+            has_app_redirect_url: false,
+            app_redirect_url: String::new(),
             selected_locale: "en".to_owned(),
             page_title: "Payment complete | STONE SIGNATURE".to_owned(),
-            meta_description: "Your payment was received. Check your confirmation email for order details and next steps.".to_owned(),
+            meta_description: "Your payment was received. Check your Stripe payment receipt for order details and next steps.".to_owned(),
             robots_meta: "noindex,follow".to_owned(),
             canonical_url: payment_result_locale_url(
                 TEST_SITE_BASE_URL,
@@ -5885,6 +5988,8 @@ mod tests {
         let failure_template = PaymentFailureTemplate {
             has_order_id: true,
             order_id: "ord_456".to_owned(),
+            has_app_redirect_url: false,
+            app_redirect_url: String::new(),
             selected_locale: "en".to_owned(),
             page_title: "Payment incomplete | STONE SIGNATURE".to_owned(),
             meta_description: "Payment did not complete. Check your card details and return to the purchase page to try again.".to_owned(),
@@ -6134,6 +6239,58 @@ mod tests {
             payment_result_locale_url(TEST_SITE_BASE_URL, "/payment/success", &query, "ja"),
             "https://finitefield.org/ja/payment/success?checkout=success&session_id=sess_123&order_id=ord_456"
         );
+    }
+
+    #[test]
+    fn payment_result_urls_preserve_app_return_marker() {
+        let query = PaymentRedirectQuery {
+            checkout: Some("success".to_owned()),
+            session_id: Some("sess_123".to_owned()),
+            order_id: Some("ord_456".to_owned()),
+            return_to: Some("app".to_owned()),
+            ..PaymentRedirectQuery::default()
+        };
+
+        assert_eq!(
+            payment_result_locale_url(TEST_SITE_BASE_URL, "/payment/success", &query, "en"),
+            "https://finitefield.org/payment/success?checkout=success&session_id=sess_123&order_id=ord_456&return_to=app"
+        );
+        assert_eq!(
+            app_checkout_return_url("success", &query, "ja").as_deref(),
+            Some(
+                "hankofield://checkout/success?checkout=success&order_id=ord_456&session_id=sess_123&lang=ja"
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn app_checkout_success_page_does_not_auto_redirect_to_custom_scheme() {
+        let response = handle_payment_success(
+            State(mock_state()),
+            Query(PaymentRedirectQuery {
+                checkout: Some("success".to_owned()),
+                session_id: Some("cs_test_001".to_owned()),
+                order_id: Some("ord_001".to_owned()),
+                lang: Some("ja".to_owned()),
+                return_to: Some("app".to_owned()),
+                ..PaymentRedirectQuery::default()
+            }),
+        )
+        .await;
+
+        let html = String::from_utf8(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("payment success body should be readable")
+                .to_vec(),
+        )
+        .expect("payment success body should be utf-8");
+
+        assert!(!html.contains("http-equiv=\"refresh\""));
+        assert!(!html.contains("window.location.replace"));
+        assert!(html.contains("hankofield://checkout/success"));
+        assert!(html.contains("order_id=ord_001"));
+        assert!(html.contains("session_id=cs_test_001"));
     }
 
     #[tokio::test]

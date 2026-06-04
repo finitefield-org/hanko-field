@@ -6,6 +6,7 @@ class OrderDraft {
     required this.stoneSelection,
     required this.input,
     DateTime? updatedAt,
+    this.inputUpdatedAt,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   factory OrderDraft.empty({DateTime? updatedAt}) {
@@ -14,6 +15,7 @@ class OrderDraft {
       stoneSelection: null,
       input: const OrderDraftInput.empty(),
       updatedAt: updatedAt,
+      inputUpdatedAt: null,
     );
   }
 
@@ -21,6 +23,7 @@ class OrderDraft {
   final OrderDraftStoneSelection? stoneSelection;
   final OrderDraftInput input;
   final DateTime updatedAt;
+  final DateTime? inputUpdatedAt;
 
   bool get hasSealSelection => sealSelection != null;
   bool get hasStoneSelection => stoneSelection != null;
@@ -35,6 +38,7 @@ class OrderDraft {
       stoneSelection: stoneSelection,
       input: input,
       updatedAt: updatedAt,
+      inputUpdatedAt: inputUpdatedAt,
     );
   }
 
@@ -44,6 +48,7 @@ class OrderDraft {
       stoneSelection: stoneSelection,
       input: input,
       updatedAt: updatedAt,
+      inputUpdatedAt: inputUpdatedAt,
     );
   }
 
@@ -56,6 +61,7 @@ class OrderDraft {
       stoneSelection: selection,
       input: input,
       updatedAt: updatedAt,
+      inputUpdatedAt: inputUpdatedAt,
     );
   }
 
@@ -65,15 +71,28 @@ class OrderDraft {
       stoneSelection: null,
       input: input,
       updatedAt: updatedAt,
+      inputUpdatedAt: inputUpdatedAt,
     );
   }
 
   OrderDraft withInput(OrderDraftInput input, {DateTime? updatedAt}) {
+    final nextUpdatedAt = updatedAt ?? DateTime.now();
     return OrderDraft(
       sealSelection: sealSelection,
       stoneSelection: stoneSelection,
       input: input,
+      updatedAt: nextUpdatedAt,
+      inputUpdatedAt: input.isEmpty ? null : nextUpdatedAt,
+    );
+  }
+
+  OrderDraft withoutInput({DateTime? updatedAt}) {
+    return OrderDraft(
+      sealSelection: sealSelection,
+      stoneSelection: stoneSelection,
+      input: const OrderDraftInput.empty(),
       updatedAt: updatedAt,
+      inputUpdatedAt: null,
     );
   }
 }
@@ -157,6 +176,14 @@ class OrderDraftInput {
   final bool termsAgreed;
   final OrderDraftCustomerConfirmationInput customerConfirmation;
 
+  bool get isEmpty {
+    return contact.isEmpty &&
+        shipping.isEmpty &&
+        orderNote.isEmpty &&
+        !termsAgreed &&
+        customerConfirmation.isEmpty;
+  }
+
   OrderDraftInput copyWith({
     OrderDraftContactInput? contact,
     OrderDraftShippingInput? shipping,
@@ -188,6 +215,7 @@ class OrderDraftCustomerConfirmationInput {
   final bool customMadePolicy;
 
   bool get isComplete => kanjiAndDesign && customMadePolicy;
+  bool get isEmpty => !kanjiAndDesign && !customMadePolicy;
 
   OrderDraftCustomerConfirmationInput copyWith({
     bool? kanjiAndDesign,
@@ -210,6 +238,8 @@ class OrderDraftContactInput {
 
   final String email;
   final String preferredLocale;
+
+  bool get isEmpty => email.isEmpty && preferredLocale.isEmpty;
 
   OrderDraftContactInput copyWith({String? email, String? preferredLocale}) {
     return OrderDraftContactInput(
@@ -249,6 +279,17 @@ class OrderDraftShippingInput {
   final String city;
   final String addressLine1;
   final String addressLine2;
+
+  bool get isEmpty {
+    return countryCode.isEmpty &&
+        recipientName.isEmpty &&
+        phone.isEmpty &&
+        postalCode.isEmpty &&
+        state.isEmpty &&
+        city.isEmpty &&
+        addressLine1.isEmpty &&
+        addressLine2.isEmpty;
+  }
 
   OrderDraftShippingInput copyWith({
     String? countryCode,

@@ -293,7 +293,7 @@ const _enContent = SettingsContentBundle(
         title: 'Email support',
         body:
             'If your mail app is easier, include your order number, email address used at checkout, and a short description.',
-        value: 'support@stonesignature.com',
+        value: 'dev@finitefield.org',
       ),
       SettingsContactOption(
         title: 'Before contacting us',
@@ -456,7 +456,7 @@ const _jaContent = SettingsContentBundle(
       SettingsContactOption(
         title: 'メールサポート',
         body: 'メールアプリから連絡する場合は、注文番号、Checkoutで使用したメールアドレス、問い合わせ内容を記載してください。',
-        value: 'support@stonesignature.com',
+        value: 'dev@finitefield.org',
       ),
       SettingsContactOption(
         title: '問い合わせ前に',

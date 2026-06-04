@@ -78,6 +78,13 @@
               <p class="legal-note__text">{% if selected_locale == "ja" %}購入画面からもう一度お試しください。{% else %}Please return to the purchase page and try again.{% endif %}</p>
             </div>
           </div>
+          {% if has_app_redirect_url %}
+          <div class="legal-actions">
+            <a class="legal-button legal-button--primary" href="{{ app_redirect_url }}" data-app-return-link>
+              {% if selected_locale == "ja" %}アプリに戻る{% else %}Return to app{% endif %}
+            </a>
+          </div>
+          {% endif %}
         </div>
       </section>
 

@@ -10,6 +10,7 @@ class AppLaunchStore {
   static const _keyColumn = 'key';
   static const _valueColumn = 'value';
   static const _hasSeenOnboardingKey = 'has_seen_onboarding';
+  static const _preferredLanguageCodeKey = 'preferred_language_code';
 
   Future<bool> hasSeenOnboarding() async {
     final db = await _openDatabase();
@@ -33,6 +34,32 @@ class AppLaunchStore {
     await db.insert(_settingsTable, {
       _keyColumn: _hasSeenOnboardingKey,
       _valueColumn: value ? 'true' : 'false',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<String?> preferredLanguageCode() async {
+    final db = await _openDatabase();
+    final rows = await db.query(
+      _settingsTable,
+      columns: [_valueColumn],
+      where: '$_keyColumn = ?',
+      whereArgs: [_preferredLanguageCodeKey],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return rows.first[_valueColumn]?.toString();
+  }
+
+  Future<void> setPreferredLanguageCode(String languageCode) async {
+    final normalized = languageCode.trim().toLowerCase();
+    final db = await _openDatabase();
+    await db.insert(_settingsTable, {
+      _keyColumn: _preferredLanguageCodeKey,
+      _valueColumn: normalized,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

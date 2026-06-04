@@ -10,25 +10,43 @@ import '../domain/seal_generation.dart';
 import '../domain/seal_style_selection.dart';
 
 class DesignHomeScreen extends StatelessWidget {
-  const DesignHomeScreen({super.key, this.onOpenSettings, this.onStartDesign});
+  const DesignHomeScreen({
+    super.key,
+    this.onOpenSettings,
+    this.onStartDesign,
+    this.onOpenMySeals,
+    this.onOpenStones,
+  });
 
   final VoidCallback? onOpenSettings;
   final VoidCallback? onStartDesign;
+  final VoidCallback? onOpenMySeals;
+  final VoidCallback? onOpenStones;
 
   @override
   Widget build(BuildContext context) {
     return DesignStartScreen(
       onOpenSettings: onOpenSettings,
       onStartDesign: onStartDesign,
+      onOpenMySeals: onOpenMySeals,
+      onOpenStones: onOpenStones,
     );
   }
 }
 
 class DesignStartScreen extends StatelessWidget {
-  const DesignStartScreen({super.key, this.onOpenSettings, this.onStartDesign});
+  const DesignStartScreen({
+    super.key,
+    this.onOpenSettings,
+    this.onStartDesign,
+    this.onOpenMySeals,
+    this.onOpenStones,
+  });
 
   final VoidCallback? onOpenSettings;
   final VoidCallback? onStartDesign;
+  final VoidCallback? onOpenMySeals;
+  final VoidCallback? onOpenStones;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +98,7 @@ class DesignStartScreen extends StatelessWidget {
                             imageRight: -2,
                             imageWidth: 108,
                             height: featureCardHeight,
+                            onTap: onOpenMySeals,
                           ),
                         ),
                         SizedBox(width: cardGap),
@@ -93,6 +112,7 @@ class DesignStartScreen extends StatelessWidget {
                             imageRight: 0,
                             imageWidth: 123,
                             height: featureCardHeight,
+                            onTap: onOpenStones,
                           ),
                         ),
                       ],
@@ -352,12 +372,6 @@ class _KanjiSuggestionLoadingScreenState
                 textAlign: TextAlign.center,
                 style: HankoTextStyles.sectionTitle,
               ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.designLoadingDetail,
-                textAlign: TextAlign.center,
-                style: HankoTextStyles.body,
-              ),
               const SizedBox(height: 26),
               const Center(
                 child: SizedBox.square(
@@ -464,7 +478,6 @@ class _KanjiCandidateDetailScreenState
     final meaning = candidate.meaning?.trim();
     final reason = candidate.reason.trim();
     final impressions = _candidateImpressions(candidate);
-    final metrics = _candidateMetricItems(context, candidate);
 
     return _DesignStepScaffold(
       title: l10n.kanjiCandidateDetailTitle,
@@ -498,12 +511,6 @@ class _KanjiCandidateDetailScreenState
               ),
               const SizedBox(height: 24),
               const Center(child: _DividerMark()),
-              const SizedBox(height: 26),
-              Text(
-                l10n.kanjiCandidateDetailMessage,
-                textAlign: TextAlign.center,
-                style: HankoTextStyles.sectionTitle,
-              ),
               const SizedBox(height: 24),
               _CandidateDetailLine(
                 label: l10n.kanjiReadingLabel,
@@ -535,10 +542,6 @@ class _KanjiCandidateDetailScreenState
                   label: l10n.kanjiReasonLabel,
                   value: reason,
                 ),
-              ],
-              if (metrics.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                _CandidateMetrics(metrics: metrics),
               ],
               if (_isSelected) ...[
                 const SizedBox(height: 22),
@@ -851,11 +854,13 @@ class SealVariantSelectionScreen extends StatefulWidget {
     required this.result,
     required this.onSelected,
     required this.onBack,
+    this.onRegenerate,
   });
 
   final SealGenerationResult result;
   final ValueChanged<SealDesignVariant> onSelected;
   final VoidCallback onBack;
+  final VoidCallback? onRegenerate;
 
   @override
   State<SealVariantSelectionScreen> createState() =>
@@ -895,12 +900,6 @@ class _SealVariantSelectionScreenState
                 textAlign: TextAlign.center,
                 style: HankoTextStyles.sectionTitle,
               ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.sealVariantSelectionDetail,
-                textAlign: TextAlign.center,
-                style: HankoTextStyles.body,
-              ),
               const SizedBox(height: 24),
               _SealGenerationSummaryCard(request: widget.result.request),
             ],
@@ -915,10 +914,17 @@ class _SealVariantSelectionScreenState
           ),
           const SizedBox(height: 14),
         ],
-        if (selectedVariant != null)
+        if (selectedVariant != null) ...[
           _InlineConfirmation(
             title: l10n.sealVariantSelectedTitle,
             message: l10n.sealVariantSelectedMessage,
+          ),
+          const SizedBox(height: 14),
+        ],
+        if (widget.onRegenerate != null)
+          _SecondaryActionButton(
+            label: l10n.regenerateSeal,
+            onPressed: widget.onRegenerate!,
           ),
       ],
     );
@@ -964,8 +970,6 @@ class SealPreviewDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 22),
               _SealPreviewFrame(variant: variant, shape: style.shape),
-              const SizedBox(height: 20),
-              _SealPreviewRulesNote(message: l10n.sealPreviewRulesNote),
             ],
           ),
         ),
@@ -1006,11 +1010,6 @@ class SealPreviewDetailScreen extends StatelessWidget {
               icon: Icons.balance_outlined,
               label: l10n.sealBalanceLabel,
               value: _sealBalanceLabel(l10n, style.balance),
-            ),
-            (
-              icon: Icons.folder_outlined,
-              label: l10n.sealPreviewStorageLabel,
-              value: variant.storagePath,
             ),
           ],
         ),
@@ -1275,7 +1274,6 @@ class _KanjiCandidateCard extends StatelessWidget {
     final reason = candidate.reason.trim();
     final meaning = candidate.meaning?.trim();
     final impressions = _candidateImpressions(candidate);
-    final metrics = _candidateMetricItems(context, candidate);
 
     return Material(
       color: Colors.transparent,
@@ -1367,10 +1365,6 @@ class _KanjiCandidateCard extends StatelessWidget {
                     value: reason,
                   ),
                 ],
-                if (metrics.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _CandidateMetrics(metrics: metrics),
-                ],
               ],
             ),
           ),
@@ -1388,15 +1382,19 @@ class _CandidateDetailLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$label: ',
-          style: HankoTextStyles.label.copyWith(color: HankoColors.gold),
-        ),
-        Expanded(child: Text(value, style: HankoTextStyles.compactBody)),
-      ],
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: HankoTextStyles.compactBody.copyWith(
+              color: HankoColors.gold,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          TextSpan(text: value, style: HankoTextStyles.compactBody),
+        ],
+      ),
     );
   }
 }
@@ -1439,36 +1437,6 @@ class _CandidatePill extends StatelessWidget {
           style: HankoTextStyles.compactBody.copyWith(color: HankoColors.ink),
         ),
       ),
-    );
-  }
-}
-
-class _CandidateMetrics extends StatelessWidget {
-  const _CandidateMetrics({required this.metrics});
-
-  final List<({String label, String value})> metrics;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Divider(color: HankoColors.surfaceBorder, height: 1),
-        const SizedBox(height: 10),
-        for (final metric in metrics)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(metric.label, style: HankoTextStyles.compactBody),
-                ),
-                const SizedBox(width: 12),
-                Text(metric.value, style: HankoTextStyles.label),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }
@@ -1942,24 +1910,6 @@ class _SealPreviewFrame extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SealPreviewRulesNote extends StatelessWidget {
-  const _SealPreviewRulesNote({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const _SmallBadge(icon: Icons.verified_user_outlined),
-        const SizedBox(width: 14),
-        Expanded(child: Text(message, style: HankoTextStyles.compactBody)),
-      ],
     );
   }
 }
@@ -2667,52 +2617,12 @@ List<String> _candidateImpressions(KanjiCandidate candidate) {
       .toList(growable: false);
 }
 
-List<({String label, String value})> _candidateMetricItems(
-  BuildContext context,
-  KanjiCandidate candidate,
-) {
-  final l10n = context.l10n;
-  final strokeComplexity = candidate.strokeComplexity?.trim();
-  final engravingSuitability = candidate.engravingSuitability?.trim();
-
-  return [
-    if (candidate.characterCount != null)
-      (
-        label: l10n.kanjiCharacterCountLabel,
-        value: candidate.characterCount.toString(),
-      ),
-    if (strokeComplexity != null && strokeComplexity.isNotEmpty)
-      (
-        label: l10n.kanjiStrokeComplexityLabel,
-        value: _candidateMetricLabel(context, strokeComplexity),
-      ),
-    if (engravingSuitability != null && engravingSuitability.isNotEmpty)
-      (
-        label: l10n.kanjiEngravingSuitabilityLabel,
-        value: _candidateMetricLabel(context, engravingSuitability),
-      ),
-  ];
-}
-
 String _previewDetailValue(String? value, String fallback) {
   final trimmed = value?.trim();
   if (trimmed == null || trimmed.isEmpty) {
     return fallback;
   }
   return trimmed;
-}
-
-String _candidateMetricLabel(BuildContext context, String value) {
-  final normalized = value.trim().toLowerCase().replaceAll('_', ' ');
-  final isJapanese = context.l10n.locale.languageCode == 'ja';
-  return switch (normalized) {
-    'high' => isJapanese ? '高い' : 'High',
-    'medium' => isJapanese ? '中' : 'Medium',
-    'low' => isJapanese ? '低い' : 'Low',
-    'simple' => isJapanese ? 'シンプル' : 'Simple',
-    'complex' => isJapanese ? '複雑' : 'Complex',
-    _ => normalized.isEmpty ? value : normalized,
-  };
 }
 
 class _DesignHeader extends StatelessWidget {
@@ -2838,6 +2748,7 @@ class _FeatureCard extends StatelessWidget {
     required this.imageRight,
     required this.imageWidth,
     required this.height,
+    this.onTap,
   });
 
   final String title;
@@ -2848,51 +2759,63 @@ class _FeatureCard extends StatelessWidget {
   final double imageRight;
   final double imageWidth;
   final double height;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return HankoSurfaceCard(
-      height: height,
-      radius: HankoRadii.md,
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          Positioned(
-            top: imageTop,
-            right: imageRight,
-            width: imageWidth,
-            child: _FadedAssetImage(assetPath: assetPath),
+    return Semantics(
+      button: onTap != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: HankoSurfaceCard(
+          height: height,
+          radius: HankoRadii.md,
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              Positioned(
+                top: imageTop,
+                right: imageRight,
+                width: imageWidth,
+                child: _FadedAssetImage(assetPath: assetPath),
+              ),
+              Positioned(
+                left: 28,
+                top: 29,
+                width: 64,
+                height: 64,
+                child: _IconMedallion(icon: icon),
+              ),
+              Positioned(
+                left: 20,
+                right: 13,
+                top: 141,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: HankoTextStyles.cardTitle,
+                ),
+              ),
+              Positioned(
+                left: 20,
+                right: 17,
+                top: 177,
+                child: Text(body, style: HankoTextStyles.compactBody),
+              ),
+              const Positioned(
+                right: 24,
+                bottom: 25,
+                child: Icon(
+                  Icons.chevron_right,
+                  size: 31,
+                  color: HankoColors.gold,
+                ),
+              ),
+            ],
           ),
-          Positioned(
-            left: 28,
-            top: 29,
-            width: 64,
-            height: 64,
-            child: _IconMedallion(icon: icon),
-          ),
-          Positioned(
-            left: 20,
-            right: 13,
-            top: 141,
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: HankoTextStyles.cardTitle,
-            ),
-          ),
-          Positioned(
-            left: 20,
-            right: 17,
-            top: 177,
-            child: Text(body, style: HankoTextStyles.compactBody),
-          ),
-          const Positioned(
-            right: 24,
-            bottom: 25,
-            child: Icon(Icons.chevron_right, size: 31, color: HankoColors.gold),
-          ),
-        ],
+        ),
       ),
     );
   }

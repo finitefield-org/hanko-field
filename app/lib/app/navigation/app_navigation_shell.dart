@@ -74,12 +74,14 @@ class HankoTabNavigationShell extends StatefulWidget {
     required this.buildPage,
     required this.buildBottomNavigation,
     this.selectedTab,
+    this.selectedTabPages,
   }) : assert(tabs.length > 0);
 
   final List<HankoTabDefinition> tabs;
   final HankoTabPageBuilder buildPage;
   final HankoBottomNavigationBuilder buildBottomNavigation;
   final HankoAppTab? selectedTab;
+  final List<PageEntry>? selectedTabPages;
 
   @override
   State<HankoTabNavigationShell> createState() =>
@@ -101,6 +103,12 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
     _pagesByTab = {
       for (final tab in widget.tabs) tab.tab: [tab.rootPage],
     };
+    final selectedPages = widget.selectedTabPages;
+    if (selectedTab != null &&
+        selectedPages != null &&
+        selectedPages.isNotEmpty) {
+      _pagesByTab[selectedTab] = List.unmodifiable(selectedPages);
+    }
   }
 
   @override
@@ -124,7 +132,11 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
       final selectedDefinition = widget.tabs.firstWhere(
         (tab) => tab.tab == selectedTab,
       );
-      pagesByTab[selectedTab] = [selectedDefinition.rootPage];
+      final selectedPages = widget.selectedTabPages;
+      pagesByTab[selectedTab] =
+          selectedPages != null && selectedPages.isNotEmpty
+          ? List.unmodifiable(selectedPages)
+          : [selectedDefinition.rootPage];
     }
     _pagesByTab = pagesByTab;
   }

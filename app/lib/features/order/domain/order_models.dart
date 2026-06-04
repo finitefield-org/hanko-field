@@ -140,10 +140,15 @@ class CreatedOrder {
 }
 
 class CheckoutSessionRequest {
-  const CheckoutSessionRequest({required this.orderId, this.customerEmail});
+  const CheckoutSessionRequest({
+    required this.orderId,
+    this.customerEmail,
+    this.returnToApp = false,
+  });
 
   final String orderId;
   final String? customerEmail;
+  final bool returnToApp;
 }
 
 class CheckoutSession {

@@ -110,50 +110,8 @@
 - [x] `web` のジャーナルに「Personal Seals for Artists, Writers, and Creators」と日本語記事を追加する
 - [x] `web` のジャーナルに「Chinese Chop Seal vs Japanese Hanko: Similarities and Differences」と日本語記事を追加する
 - [x] `web` のジャーナルに「The Beauty of One-of-a-Kind Stone Seals」と日本語記事を追加する
-- [x] App Store Review Guideline 4.2 対応として、Flutterアプリの起動時初期ルートをDesign画面に変更し、起動直後から印影ライブプレビュー・文字入力・書体/形状選択を見せる
-- [x] FlutterのDesign画面ヘッダーにブランド名と短いタグラインを追加し、ホーム画面として自然に見えるUIに調整する
-- [x] 現在のFlutterトップページで使っているブランド画像・主要文言・世界観説明を流用して、About STONE SIGNATURE画面へ移管する
-- [x] Flutterアプリの設定/メニューからAbout、特商法、利用規約、会社情報へアクセスできるようにし、トップページへの通常導線をAbout導線へ置き換える
-- [x] Flutterアプリ内で不要になったトップページ専用Widget・未使用アセット・重複文言を整理する。ただしAboutで流用する画像や文言は残す
-- [x] Flutterアプリでカタログ読み込み中・APIエラー時でも、Design画面の文字入力と印影プレビューが最低限表示されるようにする
-- [x] FlutterアプリをiPhone / iPadシミュレータで確認し、起動直後にDesign画面とAbout画面が崩れず表示されることを検証する
-- [x] App Review Notes用に、Flutterネイティブ実装・WebView不使用・印影ライブプレビュー・Aboutへのブランド情報移管・Stripeの用途を説明する文面を用意する
-- [x] Flutterアプリに、会員登録なしで使える端末内ローカル保存の「保存済み印影案」リストを追加する
-- [x] 保存済み印影案は、既存の注文下書き保存に近い仕組みで実装し、必要に応じて `shared_preferences` / Hive / Isar / sqflite などのローカルストレージを選定する
-- [x] 保存済み印影案の保存内容は、印面テキスト・書体キー・漢字スタイル・丸印/角印・読み方や意味・作成日時・お気に入りフラグなど、個人情報ではないデザイン状態に限定する
-- [x] FlutterアプリのDesign画面から現在の印影プレビューを保存し、保存済み印影案から再表示・編集再開・注文フロー継続ができるようにする
-- [x] 保存済み印影案を複数選んで比較できる画面を追加し、印面テキスト・書体・形状・読み方/意味・お気に入り状態を見比べられるようにする
-- [x] 保存済み印影案は端末内保存のみとし、アプリ削除・別端末・機種変更では引き継がれないことをアプリ内で必要最小限に明示する
-- [x] App Review Notesに、保存済み印影案がFlutterネイティブUIで実装されたローカルデザインライブラリであり、WebView・会員登録・Firebase Authを使わずに複数案の保存/比較/注文継続ができることを追記する
-- [x] `web` の sitemap にページ別 `lastmod` を追加し、URL表記・hreflang・robots.txt の Sitemap 指定を確認する
-- [x] `web` を本番 `hanko-field-prod` プロジェクトの Cloud Run にデプロイする
-- [x] アカウント登録なしの Stone Signature アプリMVP画面デザイン設計を `doc/app-mvp-screen-design.md` に書き出す
-- [x] 初回ダウンロード直後のみ Guided Start を表示し、以後は Design Studio 起点に戻す設計を `doc/app-mvp-screen-design.md` に追記する
-- [x] アプリ全体の画面設計、Gen UI導入方針、AI/API/状態管理/デザインシステムの詳細を `doc/app-mvp-screen-design.md` に追記する
-- [x] Customize Seal の質問設計を4個の選択質問（角印/丸印の質問を含む）と短い自由入力フォームに更新する
-- [ ] Flutterアプリ刷新のDesign Token（Primary / Secondary / Tertiary / Neutral / Surface / Soft Pink）を既存テーマに反映する
-- [ ] `SealPreview` / `KanjiCard` / `StoneCard` / `ChoiceChip` / `PrimaryButton` / `SecondaryButton` / `StepHeader` / `BottomTabBar` / `ScreenHeader` を共通コンポーネントとして整理する
-- [ ] 初回ダウンロード直後のみ Guided Start を出す `FirstLaunchGate` と端末内 `hasSeenGuidedStart` フラグを追加する
-- [ ] Guided Start を通常Flutter UIで実装し、名前入力、性別印象、漢字候補生成、漢字選択、Customize Seal、Preview / Save / Select Stone まで進める
-- [ ] Create Your Seal の入力前プレビューとして、5種類程度の既存漢字サンプル印影が赤系インクのグラデーションで移り変わるアニメーションを実装する
-- [ ] Create Your Seal のサンプル印影は既存漢字だけを使い、ユーザー入力または漢字候補選択後は実際の印影プレビューへ切り替える
-- [ ] Guided Start の完了またはスキップ後に Design Studio へ戻し、作成中の印影状態を注文下書きと保存済み印影導線へ引き継ぐ
-- [ ] Design Studio を刷新し、ライブ印影プレビュー、入力、形状、書体、文字方向、保存、石選択、My Seals導線を一貫したレイアウトにする
-- [ ] `Customize Seal` の状態モデルと `customizeSealProvider` を追加し、4個の選択質問（角印/丸印/AIに任せるを含む）と短い自由入力フォームを通常Flutter UIで仮実装する
-- [ ] `sealProfile` の構造（summary / tags / layout / lineWeight / stylization / regenerateOptions）を定義し、Design Studio、Preview、My Seals、Stonesへ引き継げるようにする
-- [ ] Gen UI導入用のWidget Catalog（`SealQuestionCard` / `ChoiceChipGroup` / `MultiChoiceChipGroup` / `ShortPreferenceInput` / `SealStyleSummaryCard` など）とJSON DSL検証方針をアプリ側に実装する
-- [ ] Customize Seal だけをGen UIに置き換え、名前入力、漢字候補表示、価格、在庫、注文、決済にはGen UIを関与させない
-- [ ] Gen UIの回答から `sealProfile` と `renderStyle` を作り、AIは書体ムード、線の太さ、余白、かすれ、構図だけを提案し、文字そのものは選択済み文字から変更できない契約にする
-- [ ] 印影画像生成の入力文字を `selectedKanji` / `sealLine1` / `sealLine2` に固定し、既存フォント、既存グリフ、または検証済み文字アウトラインを元にレンダリングする仕組みを追加する
-- [ ] AI画像生成またはベクター生成を使う場合でも、生成結果が入力文字列と一致しない場合は破棄し、決定的なフォント描画へフォールバックする検証を追加する
-- [ ] My Seals と Compare Seals を刷新し、保存済み印影の一覧、編集再開、比較、ベスト案選択、石選択導線を新しい共通コンポーネントで統一する
-- [ ] Stones を刷新し、現在の印影プレビューを画面上部に残したまま、石一覧、色/模様/形状フィルタ、選択状態、注文確認導線を表示する
-- [ ] Stonesタブで開くStoneページに、提供スクリーンショットの `Select Stone` ヘッダー、右上設定アイコン、`Stone color` / `Pattern` フィルタチップ、縦型石カード、下部タブの構成を取り入れる
-- [ ] Stonesのフィルタチップは、選択中の `All` を淡い赤背景とチェックアイコンで示し、未選択チップは白背景と薄い枠線で表示する
-- [ ] Stonesの石カードは、角丸写真、濃い赤の商品名、小さなタグチップ、サイズ、説明、赤系価格、全幅アウトラインの `Select This Stone` CTAを持つデザインにする
-- [ ] Stonesの下部タブは `Design` / `My Seals` / `Stones` を維持し、Stones選択中は淡いピンクのピル背景で強調する
-- [ ] Stonesのスクリーンショット由来デザインを採用しても、価格、在庫、対応形状、素材情報はRust API由来のデータだけを表示し、AI/Gen UIでは生成しない
-- [ ] Order Review と Payment Result の表示を新デザインに合わせ、AI/Gen UIを介さずRust API、Firestore、Stripe Checkoutの責務を維持する
-- [ ] アプリ刷新後も `miniriverpod` と `declarative_nav` を維持し、`go_router` など他のナビゲーションライブラリを使わないことを確認する
-- [ ] Flutterアプリ刷新後に iPhone / iPad シミュレータで Guided Start、Design Studio、My Seals、Stones、Order Review、Payment Result の表示崩れを検証する
-- [ ] Flutterアプリ刷新後に既存テストを更新し、注文下書き、保存済み印影、漢字候補、初回表示フラグ、Customize Seal状態のテストを追加または調整する
+- [x] app注文で生成印影画像、AI Variant ID、選択スタイル詳細、顧客確認チェック記録を保存・admin確認できるデータ設計を追加する
+- [x] Stone SignatureアプリMVPの画面一覧を画面コード付き構成へ置き換える
+- [x] `doc/screens` のPNGファイル名を画面コード形式へ変更する
+- [x] 新しいアプリ画面設計と既存Webサイトを比較し、マイルストーン付き実装タスク一覧を追加する
+- [x] 印影生成方針をAIレシピ提案 + 実在フォントのプログラム描画へ更新する

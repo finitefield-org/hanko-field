@@ -10,6 +10,7 @@ class SealGenerationRequest {
     required this.style,
     this.attemptNumber = 1,
     this.maxAttempts = sealGenerationMaxAttempts,
+    this.previousRecipes = const <SealDesignRecipe>[],
   }) : assert(attemptNumber >= 1),
        assert(maxAttempts >= 1);
 
@@ -18,16 +19,23 @@ class SealGenerationRequest {
   final SealStyleSelection style;
   final int attemptNumber;
   final int maxAttempts;
+  final List<SealDesignRecipe> previousRecipes;
 
   bool get hasReachedLimit => attemptNumber >= maxAttempts;
 
-  SealGenerationRequest nextAttempt() {
+  SealGenerationRequest nextAttempt({
+    Iterable<SealDesignRecipe> avoidRecipes = const <SealDesignRecipe>[],
+  }) {
     return SealGenerationRequest(
       inputName: inputName,
       candidate: candidate,
       style: style,
       attemptNumber: attemptNumber + 1,
       maxAttempts: maxAttempts,
+      previousRecipes: List<SealDesignRecipe>.unmodifiable([
+        ...previousRecipes,
+        ...avoidRecipes,
+      ]),
     );
   }
 }

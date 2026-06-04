@@ -1221,12 +1221,10 @@ class PaymentStatusScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: HankoSpacing.md),
-        _OrderNotice(
-          message: step == PaymentStatusStep.pending
-              ? l10n.paymentStatusPendingNotice
-              : l10n.stripeCheckoutSecureNote,
-        ),
+        if (step != PaymentStatusStep.pending) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _OrderNotice(message: l10n.stripeCheckoutSecureNote),
+        ],
         if (seal != null && stone != null) ...[
           const SizedBox(height: HankoSpacing.md),
           _SealSummaryCard(selection: seal),
@@ -2805,12 +2803,21 @@ String _formatMoney(Money money) {
   if (display != null && display.isNotEmpty) {
     return display;
   }
-  final formattedAmount = _formatWholeNumber(money.amount);
-  return switch (money.currency.toUpperCase()) {
-    'JPY' => '¥$formattedAmount',
-    'USD' => '\$$formattedAmount',
-    _ => '${money.currency.toUpperCase()} $formattedAmount',
+
+  final currency = money.currency.toUpperCase();
+  return switch (currency) {
+    'JPY' => 'JPY ${_formatWholeNumber(money.amount)}',
+    'USD' => _formatUsd(money.amount),
+    _ => '$currency ${_formatWholeNumber(money.amount)}',
   };
+}
+
+String _formatUsd(int amountCents) {
+  final sign = amountCents < 0 ? '-' : '';
+  final cents = amountCents.abs();
+  final whole = cents ~/ 100;
+  final fraction = cents % 100;
+  return '${sign}USD ${_formatWholeNumber(whole)}.${fraction.toString().padLeft(2, '0')}';
 }
 
 String _formatWholeNumber(int value) {

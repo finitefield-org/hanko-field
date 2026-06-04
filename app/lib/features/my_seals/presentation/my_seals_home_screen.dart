@@ -16,6 +16,7 @@ class MySealsHomeScreen extends StatelessWidget {
     this.onStartDesigning,
     this.onExploreStones,
     this.onChooseSeal,
+    this.onToggleFavorite,
   });
 
   final List<LocalSealDesign> designs;
@@ -24,10 +25,12 @@ class MySealsHomeScreen extends StatelessWidget {
   final VoidCallback? onStartDesigning;
   final VoidCallback? onExploreStones;
   final ValueChanged<LocalSealDesign>? onChooseSeal;
+  final ValueChanged<LocalSealDesign>? onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final orderedDesigns = _favoriteFirstSavedSeals(designs);
 
     return HankoFeaturePage(
       title: l10n.mySeals,
@@ -44,33 +47,266 @@ class MySealsHomeScreen extends StatelessWidget {
             title: l10n.savedSealsLoadErrorTitle,
             message: l10n.savedSealsLoadErrorMessage,
           )
-        else if (designs.isEmpty)
+        else if (orderedDesigns.isEmpty)
           _MySealsEmptyState(
             onStartDesigning: onStartDesigning,
             onExploreStones: onExploreStones,
           )
         else ...[
-          if (designs.length >= 2) ...[
-            _UnavailableFeatureButton(
-              label: l10n.compareSavedSeals,
-              icon: Icons.compare_arrows,
-              dialogTitle: l10n.compareSavedSealsTitle,
-              dialogMessage: l10n.compareSavedSealsMessage,
-            ),
+          if (orderedDesigns.length >= 2) ...[
+            _CompareSavedSealsButton(designs: orderedDesigns),
             const SizedBox(height: HankoSpacing.md),
           ],
-          for (var index = 0; index < designs.length; index++) ...[
+          for (var index = 0; index < orderedDesigns.length; index++) ...[
             _SavedSealCard(
-              design: designs[index],
+              key: ValueKey(
+                'MYS-001-saved-seal-card-${orderedDesigns[index].id}',
+              ),
+              design: orderedDesigns[index],
               onChoose: onChooseSeal == null
                   ? null
-                  : () => onChooseSeal?.call(designs[index]),
+                  : () => onChooseSeal?.call(orderedDesigns[index]),
+              onToggleFavorite: onToggleFavorite == null
+                  ? null
+                  : () => onToggleFavorite?.call(orderedDesigns[index]),
             ),
-            if (index < designs.length - 1)
+            if (index < orderedDesigns.length - 1)
               const SizedBox(height: HankoSpacing.md),
           ],
         ],
       ],
+    );
+  }
+}
+
+List<LocalSealDesign> _favoriteFirstSavedSeals(List<LocalSealDesign> designs) {
+  final indexedDesigns = <({int index, LocalSealDesign design})>[
+    for (var index = 0; index < designs.length; index++)
+      (index: index, design: designs[index]),
+  ];
+  indexedDesigns.sort((left, right) {
+    if (left.design.isFavorite != right.design.isFavorite) {
+      return left.design.isFavorite ? -1 : 1;
+    }
+    return left.index.compareTo(right.index);
+  });
+  return [for (final indexedDesign in indexedDesigns) indexedDesign.design];
+}
+
+class _CompareSavedSealsButton extends StatelessWidget {
+  const _CompareSavedSealsButton({required this.designs});
+
+  final List<LocalSealDesign> designs;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return OutlinedButton.icon(
+      onPressed: designs.length < 2
+          ? null
+          : () => _showSavedSealComparisonDialog(context, designs),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: HankoColors.ink,
+        minimumSize: const Size.fromHeight(52),
+        side: const BorderSide(color: HankoColors.surfaceBorder),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+        ),
+      ),
+      icon: const Icon(Icons.compare_arrows, size: 20),
+      label: Text(
+        l10n.compareSavedSeals,
+        style: HankoTextStyles.label.copyWith(color: HankoColors.ink),
+      ),
+    );
+  }
+}
+
+Future<void> _showSavedSealComparisonDialog(
+  BuildContext context,
+  List<LocalSealDesign> designs,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => _SavedSealComparisonDialog(designs: designs),
+  );
+}
+
+class _SavedSealComparisonDialog extends StatelessWidget {
+  const _SavedSealComparisonDialog({required this.designs});
+
+  final List<LocalSealDesign> designs;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final screenSize = MediaQuery.of(context).size;
+    final cardWidth = ((screenSize.width - 92) / 2)
+        .clamp(156.0, 220.0)
+        .toDouble();
+
+    return Dialog(
+      backgroundColor: HankoColors.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(HankoRadii.md),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: screenSize.height * 0.82),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.compareSavedSealsTitle,
+                style: HankoTextStyles.cardTitle,
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              Text(l10n.compareSavedSealsMessage, style: HankoTextStyles.body),
+              const SizedBox(height: HankoSpacing.md),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (
+                          var index = 0;
+                          index < designs.length;
+                          index++
+                        ) ...[
+                          SizedBox(
+                            key: ValueKey(
+                              'MYS-002-comparison-card-${designs[index].id}',
+                            ),
+                            width: cardWidth,
+                            child: _SavedSealComparisonCard(
+                              design: designs[index],
+                              width: cardWidth,
+                            ),
+                          ),
+                          if (index < designs.length - 1)
+                            const SizedBox(width: HankoSpacing.sm),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.close),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SavedSealComparisonCard extends StatelessWidget {
+  const _SavedSealComparisonCard({required this.design, required this.width});
+
+  final LocalSealDesign design;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final previewSize = (width - 28).clamp(104.0, 132.0).toDouble();
+    final meaning = design.meaning?.trim();
+
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: _SavedSealPreview(design: design, dimension: previewSize),
+          ),
+          const SizedBox(height: HankoSpacing.sm),
+          Text(
+            design.selectedKanji,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: HankoTextStyles.cardTitle.copyWith(
+              fontFamily: HankoFonts.serif,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            meaning == null || meaning.isEmpty ? design.reading : meaning,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: HankoTextStyles.compactBody,
+          ),
+          const SizedBox(height: HankoSpacing.sm),
+          const Divider(color: HankoColors.surfaceBorder, height: 1),
+          const SizedBox(height: HankoSpacing.sm),
+          _ComparisonInfoRow(
+            label: l10n.kanjiReadingLabel,
+            value: design.reading,
+          ),
+          _ComparisonInfoRow(
+            label: l10n.sealStyleNameLabel,
+            value: _sealStyleNameLabel(l10n, design.style),
+          ),
+          _ComparisonInfoRow(
+            label: l10n.sealStrokeWeightLabel,
+            value: _sealStrokeWeightLabel(l10n, design.strokeWeight),
+          ),
+          _ComparisonInfoRow(
+            label: l10n.sealBalanceLabel,
+            value: _sealBalanceLabel(l10n, design.balance),
+          ),
+          _ComparisonInfoRow(
+            label: l10n.sealShapeLabel,
+            value: _sealShapeLabel(l10n, design.shape),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComparisonInfoRow extends StatelessWidget {
+  const _ComparisonInfoRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: HankoTextStyles.compactBody,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: HankoTextStyles.label.copyWith(fontSize: 14),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -116,10 +352,16 @@ class _MySealsEmptyState extends StatelessWidget {
 }
 
 class _SavedSealCard extends StatelessWidget {
-  const _SavedSealCard({required this.design, required this.onChoose});
+  const _SavedSealCard({
+    super.key,
+    required this.design,
+    required this.onChoose,
+    required this.onToggleFavorite,
+  });
 
   final LocalSealDesign design;
   final VoidCallback? onChoose;
+  final VoidCallback? onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +395,10 @@ class _SavedSealCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        _FavoriteBadge(isFavorite: design.isFavorite),
+                        _FavoriteButton(
+                          isFavorite: design.isFavorite,
+                          onPressed: onToggleFavorite,
+                        ),
                       ],
                     ),
                     const SizedBox(height: HankoSpacing.xs),
@@ -244,6 +489,7 @@ class SealDetailScreen extends StatelessWidget {
     required this.design,
     this.isSelectedForOrder = false,
     this.onChooseForOrder,
+    this.onEditRegenerate,
     this.onDelete,
     this.onBack,
   });
@@ -251,6 +497,7 @@ class SealDetailScreen extends StatelessWidget {
   final LocalSealDesign design;
   final bool isSelectedForOrder;
   final ValueChanged<LocalSealDesign>? onChooseForOrder;
+  final ValueChanged<LocalSealDesign>? onEditRegenerate;
   final Future<void> Function(LocalSealDesign design)? onDelete;
   final VoidCallback? onBack;
 
@@ -287,6 +534,7 @@ class SealDetailScreen extends StatelessWidget {
                 design: design,
                 isSelectedForOrder: isSelectedForOrder,
                 onChooseForOrder: onChooseForOrder,
+                onEditRegenerate: onEditRegenerate,
                 onDelete: onDelete,
               ),
             ],
@@ -302,12 +550,14 @@ class _SealDetailActions extends StatelessWidget {
     required this.design,
     required this.isSelectedForOrder,
     required this.onChooseForOrder,
+    required this.onEditRegenerate,
     required this.onDelete,
   });
 
   final LocalSealDesign design;
   final bool isSelectedForOrder;
   final ValueChanged<LocalSealDesign>? onChooseForOrder;
+  final ValueChanged<LocalSealDesign>? onEditRegenerate;
   final Future<void> Function(LocalSealDesign design)? onDelete;
 
   @override
@@ -327,11 +577,23 @@ class _SealDetailActions extends StatelessWidget {
               : () => onChooseForOrder?.call(design),
         ),
         const SizedBox(height: HankoSpacing.sm),
-        _UnavailableFeatureButton(
-          label: l10n.editSavedSeal,
-          icon: Icons.tune,
-          dialogTitle: l10n.editSavedSealTitle,
-          dialogMessage: l10n.editSavedSealMessage,
+        OutlinedButton.icon(
+          onPressed: onEditRegenerate == null
+              ? null
+              : () => onEditRegenerate?.call(design),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: HankoColors.ink,
+            minimumSize: const Size.fromHeight(52),
+            side: const BorderSide(color: HankoColors.surfaceBorder),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(HankoRadii.sm),
+            ),
+          ),
+          icon: const Icon(Icons.tune, size: 20),
+          label: Text(
+            l10n.editSavedSeal,
+            style: HankoTextStyles.label.copyWith(color: HankoColors.ink),
+          ),
         ),
         const SizedBox(height: HankoSpacing.sm),
         OutlinedButton.icon(
@@ -388,70 +650,6 @@ class _SealDetailActions extends StatelessWidget {
     }
     await deleteDesign(design);
   }
-}
-
-class _UnavailableFeatureButton extends StatelessWidget {
-  const _UnavailableFeatureButton({
-    required this.label,
-    required this.icon,
-    required this.dialogTitle,
-    required this.dialogMessage,
-  });
-
-  final String label;
-  final IconData icon;
-  final String dialogTitle;
-  final String dialogMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () {
-        _showUnavailableFeatureDialog(
-          context,
-          title: dialogTitle,
-          message: dialogMessage,
-        );
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: HankoColors.ink,
-        minimumSize: const Size.fromHeight(52),
-        side: const BorderSide(color: HankoColors.surfaceBorder),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(HankoRadii.sm),
-        ),
-      ),
-      icon: Icon(icon, size: 20),
-      label: Text(
-        label,
-        style: HankoTextStyles.label.copyWith(color: HankoColors.ink),
-      ),
-    );
-  }
-}
-
-Future<void> _showUnavailableFeatureDialog(
-  BuildContext context, {
-  required String title,
-  required String message,
-}) {
-  final l10n = context.l10n;
-  return showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        backgroundColor: HankoColors.surface,
-        title: Text(title, style: HankoTextStyles.cardTitle),
-        content: Text(message, style: HankoTextStyles.body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.close),
-          ),
-        ],
-      );
-    },
-  );
 }
 
 class _SealDetailHeader extends StatelessWidget {
@@ -764,24 +962,36 @@ class _SavedSealMedallion extends StatelessWidget {
   }
 }
 
-class _FavoriteBadge extends StatelessWidget {
-  const _FavoriteBadge({required this.isFavorite});
+class _FavoriteButton extends StatelessWidget {
+  const _FavoriteButton({required this.isFavorite, required this.onPressed});
 
   final bool isFavorite;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: HankoColors.medallion,
-        shape: BoxShape.circle,
-      ),
-      child: SizedBox.square(
-        dimension: 36,
-        child: Icon(
-          isFavorite ? Icons.star : Icons.favorite_border,
-          color: isFavorite ? HankoColors.gold : HankoColors.ink,
-          size: 20,
+    final l10n = context.l10n;
+
+    return SizedBox.square(
+      dimension: 44,
+      child: IconButton(
+        tooltip: isFavorite ? l10n.removeFavoriteSeal : l10n.favoriteSeal,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.expand(),
+        icon: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: HankoColors.medallion,
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox.square(
+            dimension: 36,
+            child: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? HankoColors.gold : HankoColors.ink,
+              size: 20,
+            ),
+          ),
         ),
       ),
     );

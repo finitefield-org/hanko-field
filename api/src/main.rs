@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fmt,
+    io::Cursor,
     net::SocketAddr,
     str::FromStr,
     sync::Arc,
@@ -23,6 +24,7 @@ use firebase_sdk_rust::firebase_firestore::{
 };
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
 use hmac::{Hmac, Mac};
+use image::{DynamicImage, ImageFormat, Rgba, RgbaImage, imageops::FilterType};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
@@ -42,7 +44,11 @@ const DEFAULT_JA_CURRENCY: &str = "JPY";
 const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
     "http://127.0.0.1:3052/payment/success?session_id={CHECKOUT_SESSION_ID}";
 const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://127.0.0.1:3052/payment/failure";
+const DEFAULT_STRIPE_APP_CHECKOUT_SUCCESS_URL: &str =
+    "hankofield://checkout/success?session_id={CHECKOUT_SESSION_ID}";
+const DEFAULT_STRIPE_APP_CHECKOUT_CANCEL_URL: &str = "hankofield://checkout/cancel";
 const STRIPE_CHECKOUT_SESSIONS_URL: &str = "https://api.stripe.com/v1/checkout/sessions";
+const STRIPE_CHECKOUT_API_VERSION: &str = "2025-07-30.basil";
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS: i64 = 5 * 60;
 const STORAGE_SCOPE: &str = "https://www.googleapis.com/auth/devstorage.read_write";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
@@ -50,7 +56,14 @@ const DEFAULT_GEMINI_THINKING_BUDGET: i32 = 1024;
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
 const DEFAULT_SEAL_DESIGN_VARIANT_COUNT: usize = 3;
+const MAX_SEAL_GENERATION_ATTEMPTS: usize = 3;
 const SEAL_DESIGN_IMAGE_SIZE: usize = 1024;
+const SEAL_DESIGN_FRAME_INSET: u32 = 96;
+const SEAL_DESIGN_FRAME_STROKE_WIDTH: u32 = 34;
+const SEAL_DESIGN_RED: [u8; 3] = [0x9D, 0x1F, 0x22];
+const SEAL_DESIGN_BACKGROUND: [u8; 3] = [0xFF, 0xFF, 0xFF];
+const SEAL_DESIGN_PAINT_STRENGTH_THRESHOLD: f32 = 0.08;
+const SEAL_DESIGN_BOUNDS_STRENGTH_THRESHOLD: f32 = 0.22;
 
 #[derive(Debug, Clone)]
 struct AppConfig {
@@ -61,6 +74,8 @@ struct AppConfig {
     stripe_webhook_secret: String,
     stripe_checkout_success_url: String,
     stripe_checkout_cancel_url: String,
+    stripe_app_checkout_success_url: String,
+    stripe_app_checkout_cancel_url: String,
     gemini_api_key: String,
     gemini_model: String,
     gemini_base_url: String,
@@ -82,6 +97,8 @@ struct AppState {
 struct StripeCheckoutConfig {
     success_url: String,
     cancel_url: String,
+    app_success_url: String,
+    app_cancel_url: String,
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +110,7 @@ struct GeminiClientConfig {
 
 #[derive(Clone)]
 struct FirestoreStore {
+    database: String,
     parent: String,
     token_provider: Arc<dyn TokenProvider>,
     jst: FixedOffset,
@@ -405,6 +423,18 @@ struct OrderCheckoutContext {
 struct StripeWebhookEvent {
     provider_event_id: String,
     event_type: String,
+    checkout_session_id: String,
+    checkout_session_payment_status: String,
+    checkout_session_status: String,
+    payment_intent_id: String,
+    order_id: String,
+}
+
+#[derive(Debug, Clone)]
+struct StripeCheckoutSessionSnapshot {
+    session_id: String,
+    payment_status: String,
+    session_status: String,
     payment_intent_id: String,
     order_id: String,
 }
@@ -551,6 +581,8 @@ struct GenerateSealDesignsRequest {
     stroke_weight: String,
     balance: String,
     variant_count: Option<usize>,
+    attempt_number: Option<usize>,
+    previous_recipes: Option<Vec<SealDesignRecipeDto>>,
     generation_rules: Option<SealGenerationRulesRequest>,
 }
 
@@ -574,6 +606,8 @@ struct GenerateSealDesignsInput {
     stroke_weight: SealStrokeWeight,
     balance: SealBalance,
     variant_count: usize,
+    attempt_number: usize,
+    previous_recipes: Vec<SealDesignRecipe>,
     generation_rules: SealGenerationRules,
 }
 
@@ -956,12 +990,14 @@ struct CreateOrderContactRequest {
 struct CreateStripeCheckoutSessionRequest {
     order_id: String,
     customer_email: Option<String>,
+    return_to_app: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
 struct CreateStripeCheckoutSessionInput {
     order_id: String,
     customer_email: String,
+    return_to_app: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -1011,11 +1047,10 @@ async fn run() -> Result<()> {
             .context("failed to initialize default GCP auth provider")?
     };
 
+    let database = firestore_database_path(&cfg.firestore_project_id);
     let store = Arc::new(FirestoreStore {
-        parent: format!(
-            "projects/{}/databases/(default)/documents",
-            cfg.firestore_project_id
-        ),
+        parent: firestore_documents_parent(&database),
+        database,
         token_provider,
         jst: FixedOffset::east_opt(9 * 60 * 60).expect("valid JST offset"),
     });
@@ -1033,6 +1068,8 @@ async fn run() -> Result<()> {
         stripe_checkout: StripeCheckoutConfig {
             success_url: cfg.stripe_checkout_success_url,
             cancel_url: cfg.stripe_checkout_cancel_url,
+            app_success_url: cfg.stripe_app_checkout_success_url,
+            app_cancel_url: cfg.stripe_app_checkout_cancel_url,
         },
         gemini: GeminiClientConfig {
             api_key: cfg.gemini_api_key,
@@ -1086,6 +1123,14 @@ async fn run() -> Result<()> {
         .context("api server exited unexpectedly")
 }
 
+fn firestore_database_path(project_id: &str) -> String {
+    format!("projects/{}/databases/(default)", project_id.trim())
+}
+
+fn firestore_documents_parent(database: &str) -> String {
+    format!("{}/documents", database.trim_end_matches('/'))
+}
+
 fn load_config() -> Result<AppConfig> {
     let port = first_non_empty(&[
         std::env::var("API_SERVER_PORT").ok(),
@@ -1123,6 +1168,14 @@ fn load_config() -> Result<AppConfig> {
         first_non_empty(&[std::env::var("API_PSP_STRIPE_CHECKOUT_CANCEL_URL").ok()])
             .unwrap_or_else(|| DEFAULT_STRIPE_CHECKOUT_CANCEL_URL.to_owned());
 
+    let stripe_app_checkout_success_url =
+        first_non_empty(&[std::env::var("API_PSP_STRIPE_APP_CHECKOUT_SUCCESS_URL").ok()])
+            .unwrap_or_else(|| DEFAULT_STRIPE_APP_CHECKOUT_SUCCESS_URL.to_owned());
+
+    let stripe_app_checkout_cancel_url =
+        first_non_empty(&[std::env::var("API_PSP_STRIPE_APP_CHECKOUT_CANCEL_URL").ok()])
+            .unwrap_or_else(|| DEFAULT_STRIPE_APP_CHECKOUT_CANCEL_URL.to_owned());
+
     let gemini_api_key = first_non_empty(&[
         std::env::var("API_GEMINI_API_KEY").ok(),
         std::env::var("GEMINI_API_KEY").ok(),
@@ -1148,6 +1201,8 @@ fn load_config() -> Result<AppConfig> {
         stripe_webhook_secret,
         stripe_checkout_success_url,
         stripe_checkout_cancel_url,
+        stripe_app_checkout_success_url,
+        stripe_app_checkout_cancel_url,
         gemini_api_key,
         gemini_model,
         gemini_base_url,
@@ -1452,11 +1507,7 @@ async fn handle_stone_listings(
         .trim()
         .to_lowercase();
     let requested_stone_shape = query.stone_shape.unwrap_or_default().trim().to_lowercase();
-    let requested_status = query
-        .status
-        .unwrap_or_else(|| "published".to_owned())
-        .trim()
-        .to_lowercase();
+    let requested_status = query.status.unwrap_or_default().trim().to_lowercase();
 
     let stone_listings = stone_listings
         .into_iter()
@@ -1720,6 +1771,7 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
         );
         return seal_design_failure_response(SealDesignFailurePhase::RecipeValidation);
     }
+    let recipe_variants = ensure_fresh_seal_design_recipes(&input, recipe_variants);
 
     let request_id = format!("seal_request_{}", Uuid::new_v4().simple());
     let variants =
@@ -1853,7 +1905,10 @@ async fn handle_get_order_status(
     }
 
     match state.store.get_order_status(order_id).await {
-        Ok(Some(result)) => json_response(StatusCode::OK, order_status_response_json(&result)),
+        Ok(Some(result)) => {
+            let result = reconcile_order_status_from_stripe_checkout(&state, result).await;
+            json_response(StatusCode::OK, order_status_response_json(&result))
+        }
         Ok(None) => error_response(StatusCode::NOT_FOUND, "order_not_found", "order not found"),
         Err(StoreError::Internal(err)) => {
             eprintln!("failed to load order status: {err:#}");
@@ -1872,6 +1927,77 @@ async fn handle_get_order_status(
             )
         }
     }
+}
+
+async fn reconcile_order_status_from_stripe_checkout(
+    state: &AppState,
+    current: OrderStatusResult,
+) -> OrderStatusResult {
+    if !order_status_needs_stripe_checkout_reconciliation(&current) {
+        return current;
+    }
+
+    let checkout_session_id = current.checkout_session_id.trim();
+    if checkout_session_id.is_empty() || state.stripe_api_key.trim().is_empty() {
+        return current;
+    }
+
+    let snapshot = match retrieve_stripe_checkout_session(state, checkout_session_id).await {
+        Ok(snapshot) => snapshot,
+        Err(err) => {
+            eprintln!(
+                "failed to reconcile order status from stripe checkout session order_id={} session_id={}: {err:#}",
+                current.order_id, checkout_session_id
+            );
+            return current;
+        }
+    };
+
+    if !snapshot.order_id.trim().is_empty() && snapshot.order_id.trim() != current.order_id {
+        eprintln!(
+            "stripe checkout session order_id mismatch status_order_id={} session_order_id={} session_id={}",
+            current.order_id, snapshot.order_id, snapshot.session_id
+        );
+        return current;
+    }
+
+    match state
+        .store
+        .reconcile_order_from_stripe_checkout_session(&current.order_id, &snapshot)
+        .await
+    {
+        Ok(Some(result)) => result,
+        Ok(None) => current,
+        Err(StoreError::Internal(err)) => {
+            eprintln!(
+                "failed to persist stripe checkout reconciliation order_id={} session_id={}: {err:#}",
+                current.order_id, snapshot.session_id
+            );
+            current
+        }
+        Err(err) => {
+            eprintln!(
+                "failed to persist stripe checkout reconciliation order_id={} session_id={}: {err}",
+                current.order_id, snapshot.session_id
+            );
+            current
+        }
+    }
+}
+
+fn order_status_needs_stripe_checkout_reconciliation(status: &OrderStatusResult) -> bool {
+    let order_status = status.status.trim().to_ascii_lowercase();
+    let payment_status = status.payment_status.trim().to_ascii_lowercase();
+    if order_status == "paid" || payment_status == "paid" {
+        return false;
+    }
+
+    !status.checkout_session_id.trim().is_empty()
+        && matches!(
+            order_status.as_str(),
+            "pending_payment" | "created" | "pending" | ""
+        )
+        && matches!(payment_status.as_str(), "unpaid" | "pending" | "")
 }
 
 async fn handle_lookup_order(State(state): State<AppState>, body: Bytes) -> Response {
@@ -1932,6 +2058,8 @@ async fn handle_create_stripe_checkout_session(
     }
     if state.stripe_checkout.success_url.trim().is_empty()
         || state.stripe_checkout.cancel_url.trim().is_empty()
+        || state.stripe_checkout.app_success_url.trim().is_empty()
+        || state.stripe_checkout.app_cancel_url.trim().is_empty()
     {
         return error_response(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -2001,7 +2129,14 @@ async fn handle_create_stripe_checkout_session(
         input.customer_email.clone()
     };
 
-    let session = match create_stripe_checkout_session(&state, &order, &customer_email).await {
+    let session = match create_stripe_checkout_session(
+        &state,
+        &order,
+        &customer_email,
+        input.return_to_app,
+    )
+    .await
+    {
         Ok(v) => v,
         Err(err) => {
             eprintln!("failed to create stripe checkout session: {err:#}");
@@ -2538,7 +2673,7 @@ impl FirestoreStore {
                 .ok_or_else(|| anyhow!("stone_listings document is missing name"))?;
             let is_active = read_bool_field(&document.fields, "is_active").unwrap_or(true);
             let status = read_string_field(&document.fields, "status");
-            if !stone_listing_is_orderable(is_active, &status) {
+            if !stone_listing_is_app_visible(is_active, &status) {
                 continue;
             }
             let price_by_currency = stone_listing_price_by_currency_from_fields(&document.fields);
@@ -2877,7 +3012,7 @@ impl FirestoreStore {
 
         let commit_result = client
             .commit(
-                &self.parent,
+                &self.database,
                 &CommitRequest {
                     writes: vec![
                         reserve_stone_listing_write(
@@ -3298,7 +3433,7 @@ impl FirestoreStore {
 
         client
             .commit(
-                &self.parent,
+                &self.database,
                 &CommitRequest {
                     writes,
                     transaction: None,
@@ -3372,6 +3507,80 @@ impl FirestoreStore {
             .map_err(|err| StoreError::Internal(anyhow!(err)))?;
 
         Ok(())
+    }
+
+    async fn reconcile_order_from_stripe_checkout_session(
+        &self,
+        order_id: &str,
+        snapshot: &StripeCheckoutSessionSnapshot,
+    ) -> Result<Option<OrderStatusResult>, StoreError> {
+        let Some(event) = stripe_event_from_checkout_session_snapshot(snapshot, order_id) else {
+            return Ok(None);
+        };
+
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
+        let mut order_doc = match client
+            .get_document(&order_doc_name, &GetDocumentOptions::default())
+            .await
+        {
+            Ok(doc) => doc,
+            Err(err) if is_not_found(&err) => return Ok(None),
+            Err(err) => return Err(StoreError::Internal(anyhow!(err))),
+        };
+
+        let payment = read_map_field(&order_doc.fields, "payment");
+        let stored_session_id = read_string_field(&payment, "checkout_session_id");
+        if stored_session_id.trim() != snapshot.session_id {
+            eprintln!(
+                "stripe checkout reconciliation skipped because session id did not match order_id={} stored_session_id={} session_id={}",
+                order_id, stored_session_id, snapshot.session_id
+            );
+            return Ok(None);
+        }
+
+        let now = Utc::now();
+        let mutation = apply_stripe_webhook_to_order_fields(&mut order_doc.fields, &event, now);
+
+        client
+            .patch_document(
+                &order_doc_name,
+                &order_doc,
+                &PatchDocumentOptions::default(),
+            )
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        if let Some(listing_status) = mutation.listing_status {
+            let listing = read_map_field(&order_doc.fields, "listing");
+            let listing_key = read_string_field(&listing, "key");
+            if !listing_key.is_empty() {
+                self.update_stone_listing_status(&listing_key, listing_status)
+                    .await?;
+            }
+        }
+
+        client
+            .create_document(
+                &format!("{}/orders/{}", self.parent, order_id),
+                "events",
+                &Document {
+                    name: None,
+                    fields: mutation.event_fields,
+                    ..Document::default()
+                },
+                &CreateDocumentOptions::default(),
+            )
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        Ok(Some(order_status_result_from_fields(
+            order_id,
+            &order_doc.fields,
+        )))
     }
 
     async fn try_idempotent_replay(
@@ -4228,6 +4437,28 @@ fn validate_generate_seal_designs_request(
         );
     }
 
+    let attempt_number = request.attempt_number.unwrap_or(1);
+    if attempt_number == 0 || attempt_number > MAX_SEAL_GENERATION_ATTEMPTS {
+        bail!(
+            "attempt_number must be between 1 and {}",
+            MAX_SEAL_GENERATION_ATTEMPTS
+        );
+    }
+
+    let previous_recipe_limit =
+        DEFAULT_SEAL_DESIGN_VARIANT_COUNT * (MAX_SEAL_GENERATION_ATTEMPTS - 1);
+    let previous_recipe_dtos = request.previous_recipes.unwrap_or_default();
+    if previous_recipe_dtos.len() > previous_recipe_limit {
+        bail!(
+            "previous_recipes must contain {} recipes or fewer",
+            previous_recipe_limit
+        );
+    }
+    let previous_recipes = previous_recipe_dtos
+        .into_iter()
+        .map(validate_seal_design_recipe)
+        .collect::<Result<Vec<_>>>()?;
+
     Ok(GenerateSealDesignsInput {
         input_name,
         kanji,
@@ -4236,6 +4467,8 @@ fn validate_generate_seal_designs_request(
         stroke_weight,
         balance,
         variant_count,
+        attempt_number,
+        previous_recipes,
         generation_rules: rules,
     })
 }
@@ -4819,6 +5052,131 @@ fn build_seal_designs_response_schema(input: &GenerateSealDesignsInput) -> JsonV
     })
 }
 
+fn seal_previous_recipes_prompt(input: &GenerateSealDesignsInput) -> String {
+    if input.previous_recipes.is_empty() {
+        if input.attempt_number <= 1 {
+            return String::new();
+        }
+        return format!(
+            "Regeneration attempt: {}. Favor a fresh visual direction even though no previous recipe metadata was provided.",
+            input.attempt_number
+        );
+    }
+
+    let previous_signatures = input
+        .previous_recipes
+        .iter()
+        .map(|recipe| {
+            format!(
+                "{}+{}+{}+{}+{}+{}",
+                recipe.font_profile.as_str(),
+                recipe.impression.as_str(),
+                recipe.weight.as_str(),
+                recipe.spacing.as_str(),
+                recipe.texture.as_str(),
+                recipe.frame.as_str()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    let previous_visual_signatures = input
+        .previous_recipes
+        .iter()
+        .map(|recipe| seal_recipe_visual_signature(*recipe))
+        .collect::<Vec<_>>()
+        .join("; ");
+    let previous_font_profiles = input
+        .previous_recipes
+        .iter()
+        .map(|recipe| recipe.font_profile.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!(
+        "Regeneration attempt: {}.\n\
+Avoid these previously shown full recipe combinations: {}.\n\
+Do not reuse these previous visual render signatures: {}.\n\
+Prefer different font_profile values from these previous candidates when possible: {}.\n\
+Every new variant must change at least two of font_profile, impression, weight, spacing, or texture compared with every previous recipe.",
+        input.attempt_number,
+        previous_signatures,
+        previous_visual_signatures,
+        previous_font_profiles
+    )
+}
+
+fn ensure_fresh_seal_design_recipes(
+    input: &GenerateSealDesignsInput,
+    recipe_variants: Vec<SealDesignRecipeVariant>,
+) -> Vec<SealDesignRecipeVariant> {
+    let frame = input.shape.recipe_frame();
+    let mut used_visual_signatures = input
+        .previous_recipes
+        .iter()
+        .map(|recipe| seal_recipe_visual_signature(*recipe))
+        .collect::<HashSet<_>>();
+
+    recipe_variants
+        .into_iter()
+        .map(|mut variant| {
+            let current_signature = seal_recipe_visual_signature(variant.recipe);
+            if used_visual_signatures.contains(&current_signature) {
+                if let Some((font_profile, spacing)) =
+                    next_unused_seal_recipe_visual(frame, &used_visual_signatures)
+                {
+                    variant.recipe.font_profile = font_profile;
+                    variant.recipe.spacing = spacing;
+                    variant.recipe.frame = frame;
+                }
+            }
+
+            used_visual_signatures.insert(seal_recipe_visual_signature(variant.recipe));
+            variant
+        })
+        .collect()
+}
+
+fn next_unused_seal_recipe_visual(
+    frame: SealRecipeFrame,
+    used_visual_signatures: &HashSet<String>,
+) -> Option<(SealRecipeFontProfile, SealRecipeSpacing)> {
+    for font_profile in [
+        SealRecipeFontProfile::FormalSerif,
+        SealRecipeFontProfile::SoftSans,
+        SealRecipeFontProfile::BoldBrush,
+        SealRecipeFontProfile::ClassicSeal,
+    ] {
+        for spacing in [
+            SealRecipeSpacing::Airy,
+            SealRecipeSpacing::Balanced,
+            SealRecipeSpacing::Dense,
+        ] {
+            let signature = seal_recipe_visual_signature(SealDesignRecipe {
+                font_profile,
+                impression: SealRecipeImpression::Traditional,
+                weight: SealRecipeWeight::Standard,
+                spacing,
+                texture: SealRecipeTexture::None,
+                frame,
+            });
+            if !used_visual_signatures.contains(&signature) {
+                return Some((font_profile, spacing));
+            }
+        }
+    }
+
+    None
+}
+
+fn seal_recipe_visual_signature(recipe: SealDesignRecipe) -> String {
+    format!(
+        "{}+{}+{}",
+        recipe.font_profile.as_str(),
+        recipe.spacing.as_str(),
+        recipe.frame.as_str()
+    )
+}
+
 fn build_seal_designs_prompt(input: &GenerateSealDesignsInput) -> String {
     format!(
         "Generate exactly {} unique hanko seal design recipe variants.\n\
@@ -4828,6 +5186,7 @@ Shape: {}\n\
 Style: {}\n\
 Stroke weight: {}\n\
 Balance: {}\n\
+{}\n\
 {}\n\
 {}\n\
 {}\n\
@@ -4856,6 +5215,7 @@ Rules:\n\
         input.style.prompt_instruction(),
         input.stroke_weight.prompt_instruction(),
         input.balance.prompt_instruction(),
+        seal_previous_recipes_prompt(input),
         input.shape.recipe_frame().as_str(),
         input.generation_rules.max_characters,
         input.variant_count,
@@ -4970,6 +5330,345 @@ fn validate_generated_seal_image(image: &GeneratedSealDesignImage) -> Result<()>
     }
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ArtworkBounds {
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32,
+}
+
+impl ArtworkBounds {
+    fn width(self) -> u32 {
+        self.right - self.left + 1
+    }
+
+    fn height(self) -> u32 {
+        self.bottom - self.top + 1
+    }
+}
+
+fn normalize_generated_seal_image(
+    image: GeneratedSealDesignImage,
+    shape: SealShape,
+) -> Result<GeneratedSealDesignImage> {
+    validate_generated_seal_image(&image)?;
+
+    let source = image::load_from_memory_with_format(&image.bytes, ImageFormat::Png)
+        .context("failed to decode generated seal png")?
+        .to_rgba8();
+    let bounds = find_artwork_bounds(&source)
+        .ok_or_else(|| anyhow!("generated seal image has no artwork"))?;
+    let content_bounds = pad_artwork_bounds(
+        find_kanji_artwork_bounds(&source, bounds).unwrap_or(bounds),
+        source.width(),
+        source.height(),
+    );
+
+    let target_size = SEAL_DESIGN_IMAGE_SIZE as u32;
+    let target_extent = target_size
+        .saturating_sub((SEAL_DESIGN_FRAME_INSET + SEAL_DESIGN_FRAME_STROKE_WIDTH + 82) * 2)
+        .max(1);
+    let scale = target_extent as f32 / content_bounds.width().max(content_bounds.height()) as f32;
+    let target_width = ((content_bounds.width() as f32 * scale).round() as u32).max(1);
+    let target_height = ((content_bounds.height() as f32 * scale).round() as u32).max(1);
+    let target_left = (target_size - target_width) / 2;
+    let target_top = (target_size - target_height) / 2;
+
+    let crop = image::imageops::crop_imm(
+        &source,
+        content_bounds.left,
+        content_bounds.top,
+        content_bounds.width(),
+        content_bounds.height(),
+    )
+    .to_image();
+    let resized = image::imageops::resize(&crop, target_width, target_height, FilterType::Lanczos3);
+    let mut canvas = RgbaImage::from_pixel(
+        target_size,
+        target_size,
+        Rgba([
+            SEAL_DESIGN_BACKGROUND[0],
+            SEAL_DESIGN_BACKGROUND[1],
+            SEAL_DESIGN_BACKGROUND[2],
+            255,
+        ]),
+    );
+
+    for (x, y, pixel) in resized.enumerate_pixels() {
+        let strength = seal_artwork_strength(*pixel);
+        if strength >= SEAL_DESIGN_PAINT_STRENGTH_THRESHOLD {
+            paint_seal_red_pixel(&mut canvas, target_left + x, target_top + y, strength);
+        }
+    }
+    draw_canonical_seal_frame(&mut canvas, shape);
+
+    let mut bytes = Vec::new();
+    DynamicImage::ImageRgba8(canvas)
+        .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+        .context("failed to encode normalized seal png")?;
+
+    Ok(GeneratedSealDesignImage {
+        content_type: "image/png".to_owned(),
+        bytes,
+    })
+}
+
+fn find_artwork_bounds(image: &RgbaImage) -> Option<ArtworkBounds> {
+    find_artwork_bounds_in_region(
+        image,
+        ArtworkBounds {
+            left: 0,
+            top: 0,
+            right: image.width().saturating_sub(1),
+            bottom: image.height().saturating_sub(1),
+        },
+        SEAL_DESIGN_BOUNDS_STRENGTH_THRESHOLD,
+    )
+}
+
+fn find_artwork_bounds_in_region(
+    image: &RgbaImage,
+    region: ArtworkBounds,
+    min_strength: f32,
+) -> Option<ArtworkBounds> {
+    let mut bounds: Option<ArtworkBounds> = None;
+    for y in region.top..=region.bottom {
+        for x in region.left..=region.right {
+            if seal_artwork_strength(*image.get_pixel(x, y)) < min_strength {
+                continue;
+            }
+            bounds = Some(match bounds {
+                Some(current) => ArtworkBounds {
+                    left: current.left.min(x),
+                    top: current.top.min(y),
+                    right: current.right.max(x),
+                    bottom: current.bottom.max(y),
+                },
+                None => ArtworkBounds {
+                    left: x,
+                    top: y,
+                    right: x,
+                    bottom: y,
+                },
+            });
+        }
+    }
+    bounds
+}
+
+fn pad_artwork_bounds(bounds: ArtworkBounds, image_width: u32, image_height: u32) -> ArtworkBounds {
+    let padding_x = ((bounds.width() as f32) * 0.04).round() as u32;
+    let padding_y = ((bounds.height() as f32) * 0.04).round() as u32;
+    ArtworkBounds {
+        left: bounds.left.saturating_sub(padding_x.max(2)),
+        top: bounds.top.saturating_sub(padding_y.max(2)),
+        right: (bounds.right + padding_x.max(2)).min(image_width.saturating_sub(1)),
+        bottom: (bounds.bottom + padding_y.max(2)).min(image_height.saturating_sub(1)),
+    }
+}
+
+#[derive(Debug)]
+struct FrameLineMask {
+    rows: Vec<bool>,
+    columns: Vec<bool>,
+    has_frame_lines: bool,
+}
+
+fn find_kanji_artwork_bounds(image: &RgbaImage, bounds: ArtworkBounds) -> Option<ArtworkBounds> {
+    let frame_mask = build_frame_line_mask(image, bounds);
+    if !frame_mask.has_frame_lines {
+        return Some(bounds);
+    }
+
+    let mut kanji_bounds: Option<ArtworkBounds> = None;
+    for y in bounds.top..=bounds.bottom {
+        let row_index = (y - bounds.top) as usize;
+        for x in bounds.left..=bounds.right {
+            let column_index = (x - bounds.left) as usize;
+            if frame_mask.rows[row_index]
+                || frame_mask.columns[column_index]
+                || is_outer_frame_band(bounds, x, y)
+                || seal_artwork_strength(*image.get_pixel(x, y))
+                    < SEAL_DESIGN_BOUNDS_STRENGTH_THRESHOLD
+            {
+                continue;
+            }
+
+            kanji_bounds = Some(match kanji_bounds {
+                Some(current) => ArtworkBounds {
+                    left: current.left.min(x),
+                    top: current.top.min(y),
+                    right: current.right.max(x),
+                    bottom: current.bottom.max(y),
+                },
+                None => ArtworkBounds {
+                    left: x,
+                    top: y,
+                    right: x,
+                    bottom: y,
+                },
+            });
+        }
+    }
+
+    kanji_bounds
+}
+
+fn build_frame_line_mask(image: &RgbaImage, bounds: ArtworkBounds) -> FrameLineMask {
+    let width = bounds.width();
+    let height = bounds.height();
+    let row_threshold = ((width as f32) * 0.52).round() as u32;
+    let column_threshold = ((height as f32) * 0.52).round() as u32;
+    let edge_band_x = ((width as f32) * 0.18).round() as u32;
+    let edge_band_y = ((height as f32) * 0.18).round() as u32;
+
+    let mut rows = Vec::with_capacity(height as usize);
+    let mut columns = Vec::with_capacity(width as usize);
+    let mut dense_edge_rows = 0;
+    let mut dense_edge_columns = 0;
+    let mut dense_rows = 0;
+    let mut dense_columns = 0;
+
+    for y in bounds.top..=bounds.bottom {
+        let artwork_count = (bounds.left..=bounds.right)
+            .filter(|x| {
+                seal_artwork_strength(*image.get_pixel(*x, y))
+                    >= SEAL_DESIGN_BOUNDS_STRENGTH_THRESHOLD
+            })
+            .count() as u32;
+        let is_dense = artwork_count >= row_threshold.max(1);
+        if is_dense {
+            dense_rows += 1;
+            if y < bounds.top + edge_band_y || y > bounds.bottom.saturating_sub(edge_band_y) {
+                dense_edge_rows += 1;
+            }
+        }
+        rows.push(is_dense);
+    }
+
+    for x in bounds.left..=bounds.right {
+        let artwork_count = (bounds.top..=bounds.bottom)
+            .filter(|y| {
+                seal_artwork_strength(*image.get_pixel(x, *y))
+                    >= SEAL_DESIGN_BOUNDS_STRENGTH_THRESHOLD
+            })
+            .count() as u32;
+        let is_dense = artwork_count >= column_threshold.max(1);
+        if is_dense {
+            dense_columns += 1;
+            if x < bounds.left + edge_band_x || x > bounds.right.saturating_sub(edge_band_x) {
+                dense_edge_columns += 1;
+            }
+        }
+        columns.push(is_dense);
+    }
+
+    FrameLineMask {
+        rows,
+        columns,
+        has_frame_lines: dense_edge_rows > 0
+            || dense_edge_columns > 0
+            || (dense_rows >= 2 && dense_columns >= 2),
+    }
+}
+
+fn is_outer_frame_band(bounds: ArtworkBounds, x: u32, y: u32) -> bool {
+    let horizontal_padding = ((bounds.width() as f32) * 0.08).round() as u32;
+    let vertical_padding = ((bounds.height() as f32) * 0.08).round() as u32;
+    x < bounds.left + horizontal_padding
+        || x > bounds.right.saturating_sub(horizontal_padding)
+        || y < bounds.top + vertical_padding
+        || y > bounds.bottom.saturating_sub(vertical_padding)
+}
+
+fn seal_artwork_strength(pixel: Rgba<u8>) -> f32 {
+    let [red, green, blue, alpha] = pixel.0;
+    if alpha < 16 {
+        return 0.0;
+    }
+
+    let luma = (0.299 * red as f32) + (0.587 * green as f32) + (0.114 * blue as f32);
+    if luma > 205.0 {
+        return 0.0;
+    }
+
+    let darkness = ((205.0 - luma) / 145.0).clamp(0.0, 1.0);
+    let strength = darkness * (alpha as f32 / 255.0);
+    if strength < SEAL_DESIGN_PAINT_STRENGTH_THRESHOLD {
+        0.0
+    } else {
+        strength
+    }
+}
+
+fn paint_seal_red_pixel(canvas: &mut RgbaImage, x: u32, y: u32, strength: f32) {
+    if x >= canvas.width() || y >= canvas.height() {
+        return;
+    }
+    let strength = strength.clamp(0.0, 1.0);
+    let pixel = canvas.get_pixel_mut(x, y);
+    let [base_red, base_green, base_blue, _] = pixel.0;
+    *pixel = Rgba([
+        blend_channel(SEAL_DESIGN_RED[0], base_red, strength),
+        blend_channel(SEAL_DESIGN_RED[1], base_green, strength),
+        blend_channel(SEAL_DESIGN_RED[2], base_blue, strength),
+        255,
+    ]);
+}
+
+fn blend_channel(foreground: u8, background: u8, strength: f32) -> u8 {
+    ((foreground as f32 * strength) + (background as f32 * (1.0 - strength))).round() as u8
+}
+
+fn draw_canonical_seal_frame(canvas: &mut RgbaImage, shape: SealShape) {
+    match shape {
+        SealShape::Square => draw_canonical_square_frame(canvas),
+        SealShape::Round => draw_canonical_round_frame(canvas),
+    }
+}
+
+fn draw_canonical_square_frame(canvas: &mut RgbaImage) {
+    let size = canvas.width();
+    let left = SEAL_DESIGN_FRAME_INSET;
+    let top = SEAL_DESIGN_FRAME_INSET;
+    let right = size - SEAL_DESIGN_FRAME_INSET;
+    let bottom = size - SEAL_DESIGN_FRAME_INSET;
+    let stroke = SEAL_DESIGN_FRAME_STROKE_WIDTH;
+
+    for y in top..bottom {
+        for x in left..right {
+            let in_stroke = x < left + stroke
+                || x >= right - stroke
+                || y < top + stroke
+                || y >= bottom - stroke;
+            if in_stroke {
+                paint_seal_red_pixel(canvas, x, y, 1.0);
+            }
+        }
+    }
+}
+
+fn draw_canonical_round_frame(canvas: &mut RgbaImage) {
+    let size = canvas.width() as f32;
+    let center = (size - 1.0) / 2.0;
+    let stroke = SEAL_DESIGN_FRAME_STROKE_WIDTH as f32;
+    let radius = ((canvas.width() - (SEAL_DESIGN_FRAME_INSET * 2)) as f32 / 2.0) - (stroke / 2.0);
+    let inner = radius - (stroke / 2.0);
+    let outer = radius + (stroke / 2.0);
+
+    for y in 0..canvas.height() {
+        for x in 0..canvas.width() {
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let distance = (dx * dx + dy * dy).sqrt();
+            if distance >= inner && distance <= outer {
+                paint_seal_red_pixel(canvas, x, y, 1.0);
+            }
+        }
+    }
 }
 
 async fn upload_seal_design_images_to_storage(
@@ -5478,6 +6177,7 @@ fn validate_create_stripe_checkout_session_request(
     Ok(CreateStripeCheckoutSessionInput {
         order_id,
         customer_email,
+        return_to_app: request.return_to_app.unwrap_or(false),
     })
 }
 
@@ -5508,18 +6208,25 @@ async fn create_stripe_checkout_session(
     state: &AppState,
     order: &OrderCheckoutContext,
     customer_email: &str,
+    return_to_app: bool,
 ) -> Result<CreateStripeCheckoutSessionResult> {
     let stripe_api_key = state.stripe_api_key.trim();
     if stripe_api_key.is_empty() {
         bail!("stripe client is not configured");
     }
 
-    let form = build_stripe_checkout_session_form(&state.stripe_checkout, order, customer_email);
+    let form = build_stripe_checkout_session_form(
+        &state.stripe_checkout,
+        order,
+        customer_email,
+        return_to_app,
+    );
 
     let response = state
         .http_client
         .post(STRIPE_CHECKOUT_SESSIONS_URL)
         .bearer_auth(stripe_api_key)
+        .header("Stripe-Version", STRIPE_CHECKOUT_API_VERSION)
         .header(
             "Idempotency-Key",
             format!("checkout_session_{}", order.order_id),
@@ -5576,29 +6283,133 @@ async fn create_stripe_checkout_session(
     })
 }
 
+async fn retrieve_stripe_checkout_session(
+    state: &AppState,
+    session_id: &str,
+) -> Result<StripeCheckoutSessionSnapshot> {
+    let session_id = session_id.trim();
+    validate_stripe_checkout_session_id(session_id)?;
+
+    let stripe_api_key = state.stripe_api_key.trim();
+    if stripe_api_key.is_empty() {
+        bail!("stripe client is not configured");
+    }
+
+    let response = state
+        .http_client
+        .get(format!("{STRIPE_CHECKOUT_SESSIONS_URL}/{session_id}"))
+        .bearer_auth(stripe_api_key)
+        .header("Stripe-Version", STRIPE_CHECKOUT_API_VERSION)
+        .query(&[("expand[]", "payment_intent")])
+        .send()
+        .await
+        .context("failed to retrieve stripe checkout session")?;
+
+    let status = response.status();
+    let response_body = response
+        .text()
+        .await
+        .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+    if !status.is_success() {
+        bail!(
+            "stripe checkout session retrieve failed status={} body={}",
+            status,
+            response_body
+        );
+    }
+
+    let payload: JsonValue = serde_json::from_str(&response_body)
+        .context("failed to parse stripe checkout session retrieve response")?;
+    parse_stripe_checkout_session_snapshot(&payload)
+}
+
+fn validate_stripe_checkout_session_id(session_id: &str) -> Result<()> {
+    if session_id.is_empty() {
+        bail!("stripe checkout session id is required");
+    }
+    if !session_id.starts_with("cs_")
+        || !session_id
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+    {
+        bail!("stripe checkout session id is invalid");
+    }
+    Ok(())
+}
+
+fn parse_stripe_checkout_session_snapshot(
+    payload: &JsonValue,
+) -> Result<StripeCheckoutSessionSnapshot> {
+    let session_id = payload
+        .get("id")
+        .and_then(JsonValue::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    validate_stripe_checkout_session_id(&session_id)?;
+
+    let payment_status = payload
+        .get("payment_status")
+        .and_then(JsonValue::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    let session_status = payload
+        .get("status")
+        .and_then(JsonValue::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    let payment_intent_id = payload
+        .get("payment_intent")
+        .and_then(stripe_payment_intent_id)
+        .unwrap_or_default();
+    let order_id = stripe_order_id_from_object(payload);
+
+    Ok(StripeCheckoutSessionSnapshot {
+        session_id,
+        payment_status,
+        session_status,
+        payment_intent_id,
+        order_id,
+    })
+}
+
 fn build_stripe_checkout_session_form(
     stripe_checkout: &StripeCheckoutConfig,
     order: &OrderCheckoutContext,
     customer_email: &str,
+    return_to_app: bool,
 ) -> Vec<(String, String)> {
     let product_name = build_checkout_product_name(order);
     let checkout_currency = stripe_checkout_currency(&order.currency);
-    let success_url = append_query_params(
-        &stripe_checkout.success_url,
-        &[
-            ("checkout", "success"),
-            ("order_id", order.order_id.as_str()),
-            ("lang", order.order_locale.as_str()),
-        ],
-    );
-    let cancel_url = append_query_params(
-        &stripe_checkout.cancel_url,
-        &[
-            ("checkout", "cancel"),
-            ("order_id", order.order_id.as_str()),
-            ("lang", order.order_locale.as_str()),
-        ],
-    );
+    let success_base_url = if return_to_app {
+        &stripe_checkout.app_success_url
+    } else {
+        &stripe_checkout.success_url
+    };
+    let cancel_base_url = if return_to_app {
+        &stripe_checkout.app_cancel_url
+    } else {
+        &stripe_checkout.cancel_url
+    };
+
+    let mut success_params = vec![
+        ("checkout", "success"),
+        ("order_id", order.order_id.as_str()),
+        ("lang", order.order_locale.as_str()),
+    ];
+    let mut cancel_params = vec![
+        ("checkout", "cancel"),
+        ("order_id", order.order_id.as_str()),
+        ("lang", order.order_locale.as_str()),
+    ];
+    if return_to_app {
+        success_params.push(("return_to", "app"));
+        cancel_params.push(("return_to", "app"));
+    }
+    let success_url = append_query_params(success_base_url, &success_params);
+    let cancel_url = append_query_params(cancel_base_url, &cancel_params);
 
     let mut form = vec![
         ("mode".to_owned(), "payment".to_owned()),
@@ -5625,10 +6436,15 @@ fn build_stripe_checkout_session_form(
         ("expand[0]".to_owned(), "payment_intent".to_owned()),
     ];
 
+    if return_to_app {
+        form.push(("origin_context".to_owned(), "mobile_app".to_owned()));
+    }
     if !customer_email.trim().is_empty() {
+        let customer_email = customer_email.trim().to_owned();
+        form.push(("customer_email".to_owned(), customer_email.clone()));
         form.push((
-            "customer_email".to_owned(),
-            customer_email.trim().to_owned(),
+            "payment_intent_data[receipt_email]".to_owned(),
+            customer_email,
         ));
     }
     if let Some(shipping) = build_payment_intent_shipping(order) {
@@ -5845,6 +6661,28 @@ fn stripe_payment_intent_id(value: &JsonValue) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned)
+}
+
+fn stripe_order_id_from_object(object: &JsonValue) -> String {
+    if let Some(id) = object.get("order_id").and_then(JsonValue::as_str) {
+        let trimmed = id.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_owned();
+        }
+    }
+
+    if let Some(metadata) = object.get("metadata").and_then(JsonValue::as_object) {
+        for key in ["order_id", "orderId", "orderID"] {
+            if let Some(value) = metadata.get(key).and_then(JsonValue::as_str) {
+                let trimmed = value.trim();
+                if !trimmed.is_empty() {
+                    return trimmed.to_owned();
+                }
+            }
+        }
+    }
+
+    String::new()
 }
 
 fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOrderInput> {
@@ -6312,6 +7150,9 @@ fn parse_stripe_event(event: JsonValue) -> Result<StripeWebhookEvent> {
         bail!("stripe event must include id and type");
     }
 
+    let mut checkout_session_id = String::new();
+    let mut checkout_session_payment_status = String::new();
+    let mut checkout_session_status = String::new();
     let mut payment_intent_id = String::new();
     let mut order_id = String::new();
 
@@ -6325,34 +7166,69 @@ fn parse_stripe_event(event: JsonValue) -> Result<StripeWebhookEvent> {
         {
             payment_intent_id = id.trim().to_owned();
         }
-        if let Some(id) = object.get("payment_intent").and_then(JsonValue::as_str) {
-            payment_intent_id = id.trim().to_owned();
-        }
-
-        if let Some(id) = object.get("order_id").and_then(JsonValue::as_str) {
-            order_id = id.trim().to_owned();
-        }
-
-        if order_id.is_empty()
-            && let Some(metadata) = object.get("metadata").and_then(JsonValue::as_object)
+        if let Some(id) = object.get("id").and_then(JsonValue::as_str)
+            && id.trim().starts_with("cs_")
         {
-            for key in ["order_id", "orderId", "orderID"] {
-                if let Some(value) = metadata.get(key).and_then(JsonValue::as_str) {
-                    let trimmed = value.trim();
-                    if !trimmed.is_empty() {
-                        order_id = trimmed.to_owned();
-                        break;
-                    }
-                }
-            }
+            checkout_session_id = id.trim().to_owned();
         }
+        if let Some(id) = object
+            .get("payment_intent")
+            .and_then(stripe_payment_intent_id)
+        {
+            payment_intent_id = id;
+        }
+        if let Some(status) = object.get("payment_status").and_then(JsonValue::as_str) {
+            checkout_session_payment_status = status.trim().to_ascii_lowercase();
+        }
+        if let Some(status) = object.get("status").and_then(JsonValue::as_str) {
+            checkout_session_status = status.trim().to_ascii_lowercase();
+        }
+
+        order_id = stripe_order_id_from_object(&JsonValue::Object(object.clone()));
     }
 
     Ok(StripeWebhookEvent {
         provider_event_id,
         event_type,
+        checkout_session_id,
+        checkout_session_payment_status,
+        checkout_session_status,
         payment_intent_id,
         order_id,
+    })
+}
+
+fn stripe_event_from_checkout_session_snapshot(
+    snapshot: &StripeCheckoutSessionSnapshot,
+    fallback_order_id: &str,
+) -> Option<StripeWebhookEvent> {
+    let event_type = if stripe_checkout_payment_is_paid(&snapshot.payment_status) {
+        "checkout.session.completed"
+    } else if snapshot
+        .session_status
+        .trim()
+        .eq_ignore_ascii_case("expired")
+    {
+        "checkout.session.expired"
+    } else {
+        return None;
+    };
+
+    Some(StripeWebhookEvent {
+        provider_event_id: format!(
+            "checkout_session_reconcile_{}_{}_{}",
+            snapshot.session_id, snapshot.payment_status, snapshot.session_status
+        ),
+        event_type: event_type.to_owned(),
+        checkout_session_id: snapshot.session_id.clone(),
+        checkout_session_payment_status: snapshot.payment_status.clone(),
+        checkout_session_status: snapshot.session_status.clone(),
+        payment_intent_id: snapshot.payment_intent_id.clone(),
+        order_id: if snapshot.order_id.trim().is_empty() {
+            fallback_order_id.trim().to_owned()
+        } else {
+            snapshot.order_id.clone()
+        },
     })
 }
 
@@ -6360,6 +7236,12 @@ fn normalize_webhook_event(event: StripeWebhookEvent) -> StripeWebhookEvent {
     StripeWebhookEvent {
         provider_event_id: event.provider_event_id.trim().to_owned(),
         event_type: event.event_type.trim().to_owned(),
+        checkout_session_id: event.checkout_session_id.trim().to_owned(),
+        checkout_session_payment_status: event
+            .checkout_session_payment_status
+            .trim()
+            .to_ascii_lowercase(),
+        checkout_session_status: event.checkout_session_status.trim().to_ascii_lowercase(),
         payment_intent_id: event.payment_intent_id.trim().to_owned(),
         order_id: event.order_id.trim().to_owned(),
     }
@@ -6371,13 +7253,19 @@ fn apply_stripe_webhook_to_order_fields(
     now: DateTime<Utc>,
 ) -> StripeOrderWebhookMutation {
     let order_status = read_string_field(order_fields, "status");
-    let (payment_status, next_status, audit_event_type) = stripe_transition(&normalized.event_type);
+    let (payment_status, next_status, audit_event_type) = stripe_transition(normalized);
 
     let mut payment = read_map_field(order_fields, "payment");
     payment.insert(
         "last_event_id".to_owned(),
         fs_string(normalized.provider_event_id.clone()),
     );
+    if !normalized.checkout_session_id.is_empty() {
+        payment.insert(
+            "checkout_session_id".to_owned(),
+            fs_string(normalized.checkout_session_id.clone()),
+        );
+    }
     if !normalized.payment_intent_id.is_empty() {
         payment.insert(
             "intent_id".to_owned(),
@@ -6413,6 +7301,24 @@ fn apply_stripe_webhook_to_order_fields(
             fs_string(normalized.payment_intent_id.clone()),
         );
     }
+    if !normalized.checkout_session_id.is_empty() {
+        payload.insert(
+            "checkout_session_id".to_owned(),
+            fs_string(normalized.checkout_session_id.clone()),
+        );
+    }
+    if !normalized.checkout_session_payment_status.is_empty() {
+        payload.insert(
+            "checkout_session_payment_status".to_owned(),
+            fs_string(normalized.checkout_session_payment_status.clone()),
+        );
+    }
+    if !normalized.checkout_session_status.is_empty() {
+        payload.insert(
+            "checkout_session_status".to_owned(),
+            fs_string(normalized.checkout_session_status.clone()),
+        );
+    }
 
     let mut event_fields = btree_from_pairs(vec![
         ("type", fs_string(audit_event_type)),
@@ -6432,15 +7338,25 @@ fn apply_stripe_webhook_to_order_fields(
     }
 }
 
-fn stripe_transition(event_type: &str) -> (&'static str, &'static str, &'static str) {
-    match event_type {
+fn stripe_transition(event: &StripeWebhookEvent) -> (&'static str, &'static str, &'static str) {
+    match event.event_type.as_str() {
         "payment_intent.succeeded" => ("paid", "paid", "payment_paid"),
+        "checkout.session.completed" | "checkout.session.async_payment_succeeded"
+            if stripe_checkout_payment_is_paid(&event.checkout_session_payment_status) =>
+        {
+            ("paid", "paid", "payment_paid")
+        }
         "payment_intent.payment_failed"
         | "payment_intent.canceled"
+        | "checkout.session.async_payment_failed"
         | "checkout.session.expired" => ("failed", "canceled", "payment_failed"),
         "charge.refunded" => ("refunded", "refunded", "payment_refunded"),
         _ => ("", "", "payment_event_recorded"),
     }
+}
+
+fn stripe_checkout_payment_is_paid(payment_status: &str) -> bool {
+    payment_status.trim().eq_ignore_ascii_case("paid")
 }
 
 fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str> {
@@ -7115,6 +8031,17 @@ mod tests {
     }
 
     #[test]
+    fn firestore_paths_keep_commit_database_separate_from_document_parent() {
+        let database = firestore_database_path("hanko-field");
+
+        assert_eq!(database, "projects/hanko-field/databases/(default)");
+        assert_eq!(
+            firestore_documents_parent(&database),
+            "projects/hanko-field/databases/(default)/documents"
+        );
+    }
+
+    #[test]
     fn resolve_currency_for_locale_uses_locale_map_and_default() {
         let mut currency_by_locale = HashMap::new();
         currency_by_locale.insert("ja".to_owned(), "JPY".to_owned());
@@ -7342,15 +8269,22 @@ mod tests {
             .unwrap_or_else(|| panic!("missing Stripe form key {key}"))
     }
 
+    fn stripe_checkout_config_fixture() -> StripeCheckoutConfig {
+        StripeCheckoutConfig {
+            success_url: DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL.to_owned(),
+            cancel_url: DEFAULT_STRIPE_CHECKOUT_CANCEL_URL.to_owned(),
+            app_success_url: DEFAULT_STRIPE_APP_CHECKOUT_SUCCESS_URL.to_owned(),
+            app_cancel_url: DEFAULT_STRIPE_APP_CHECKOUT_CANCEL_URL.to_owned(),
+        }
+    }
+
     #[test]
     fn m13_t05_checkout_session_form_carries_return_urls_and_order_metadata() {
         let order = order_checkout_context_fixture();
-        let checkout = StripeCheckoutConfig {
-            success_url: DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL.to_owned(),
-            cancel_url: DEFAULT_STRIPE_CHECKOUT_CANCEL_URL.to_owned(),
-        };
+        let checkout = stripe_checkout_config_fixture();
 
-        let form = build_stripe_checkout_session_form(&checkout, &order, " customer@example.com ");
+        let form =
+            build_stripe_checkout_session_form(&checkout, &order, " customer@example.com ", false);
 
         assert_eq!(stripe_form_value(&form, "mode"), "payment");
         assert_eq!(
@@ -7371,6 +8305,10 @@ mod tests {
             "customer@example.com"
         );
         assert_eq!(
+            stripe_form_value(&form, "payment_intent_data[receipt_email]"),
+            "customer@example.com"
+        );
+        assert_eq!(
             stripe_form_value(&form, "line_items[0][price_data][currency]"),
             "jpy"
         );
@@ -7386,6 +8324,25 @@ mod tests {
             stripe_form_value(&form, "payment_intent_data[shipping][address][country]"),
             "US"
         );
+    }
+
+    #[test]
+    fn checkout_session_form_uses_app_custom_scheme_for_app_returns() {
+        let order = order_checkout_context_fixture();
+        let checkout = stripe_checkout_config_fixture();
+
+        let form =
+            build_stripe_checkout_session_form(&checkout, &order, "customer@example.com", true);
+
+        assert_eq!(
+            stripe_form_value(&form, "success_url"),
+            "hankofield://checkout/success?session_id={CHECKOUT_SESSION_ID}&checkout=success&order_id=order_1&lang=en&return_to=app"
+        );
+        assert_eq!(
+            stripe_form_value(&form, "cancel_url"),
+            "hankofield://checkout/cancel?checkout=cancel&order_id=order_1&lang=en&return_to=app"
+        );
+        assert_eq!(stripe_form_value(&form, "origin_context"), "mobile_app");
     }
 
     #[test]
@@ -7991,12 +8948,14 @@ mod tests {
         let request = CreateStripeCheckoutSessionRequest {
             order_id: "order_1".to_owned(),
             customer_email: Some("buyer@example.com".to_owned()),
+            return_to_app: Some(true),
         };
 
         let input = validate_create_stripe_checkout_session_request(request)
             .expect("request must be valid");
         assert_eq!(input.order_id, "order_1");
         assert_eq!(input.customer_email, "buyer@example.com");
+        assert!(input.return_to_app);
     }
 
     #[test]
@@ -8004,6 +8963,7 @@ mod tests {
         let request = CreateStripeCheckoutSessionRequest {
             order_id: "order_1".to_owned(),
             customer_email: Some("invalid".to_owned()),
+            return_to_app: None,
         };
 
         assert!(validate_create_stripe_checkout_session_request(request).is_err());
@@ -8373,9 +9333,28 @@ mod tests {
     }
 
     fn stripe_webhook_event_fixture(event_type: &str) -> StripeWebhookEvent {
+        let is_checkout_completed = event_type == "checkout.session.completed";
+        let is_checkout_expired = event_type == "checkout.session.expired";
         StripeWebhookEvent {
             provider_event_id: format!("evt_{}", event_type.replace('.', "_")),
             event_type: event_type.to_owned(),
+            checkout_session_id: if is_checkout_completed || is_checkout_expired {
+                "cs_test_001".to_owned()
+            } else {
+                String::new()
+            },
+            checkout_session_payment_status: if is_checkout_completed {
+                "paid".to_owned()
+            } else {
+                String::new()
+            },
+            checkout_session_status: if is_checkout_completed {
+                "complete".to_owned()
+            } else if is_checkout_expired {
+                "expired".to_owned()
+            } else {
+                String::new()
+            },
             payment_intent_id: "pi_test_001".to_owned(),
             order_id: "order_001".to_owned(),
         }
@@ -8398,6 +9377,15 @@ mod tests {
         ) in [
             (
                 "payment_intent.succeeded",
+                "pending_payment",
+                "unpaid",
+                "paid",
+                "paid",
+                "payment_paid",
+                Some("sold"),
+            ),
+            (
+                "checkout.session.completed",
                 "pending_payment",
                 "unpaid",
                 "paid",
@@ -8495,6 +9483,8 @@ mod tests {
                 "object": {
                     "id": "cs_test_001",
                     "payment_intent": "pi_test_001",
+                    "payment_status": "paid",
+                    "status": "complete",
                     "metadata": {
                         "order_id": "order_001"
                     }
@@ -8506,12 +9496,78 @@ mod tests {
 
         assert_eq!(event.provider_event_id, "evt_checkout_completed");
         assert_eq!(event.event_type, "checkout.session.completed");
+        assert_eq!(event.checkout_session_id, "cs_test_001");
+        assert_eq!(event.checkout_session_payment_status, "paid");
+        assert_eq!(event.checkout_session_status, "complete");
         assert_eq!(event.payment_intent_id, "pi_test_001");
         assert_eq!(event.order_id, "order_001");
-        assert_eq!(
-            stripe_transition(&event.event_type),
-            ("", "", "payment_event_recorded")
+        assert_eq!(stripe_transition(&event), ("paid", "paid", "payment_paid"));
+    }
+
+    #[test]
+    fn checkout_session_reconciliation_only_targets_unpaid_pending_orders() {
+        let mut status = order_status_result_fixture(
+            "order_001",
+            "HF-20260602-0001",
+            "pending_payment",
+            "unpaid",
         );
+        status.checkout_session_id = "cs_test_001".to_owned();
+        assert!(order_status_needs_stripe_checkout_reconciliation(&status));
+
+        status.payment_status = "paid".to_owned();
+        assert!(!order_status_needs_stripe_checkout_reconciliation(&status));
+
+        status.payment_status = "unpaid".to_owned();
+        status.status = "paid".to_owned();
+        assert!(!order_status_needs_stripe_checkout_reconciliation(&status));
+
+        status.status = "pending_payment".to_owned();
+        status.checkout_session_id.clear();
+        assert!(!order_status_needs_stripe_checkout_reconciliation(&status));
+    }
+
+    #[test]
+    fn checkout_session_snapshot_maps_paid_and_expired_states_to_order_events() {
+        let paid = StripeCheckoutSessionSnapshot {
+            session_id: "cs_test_001".to_owned(),
+            payment_status: "paid".to_owned(),
+            session_status: "complete".to_owned(),
+            payment_intent_id: "pi_test_001".to_owned(),
+            order_id: "order_001".to_owned(),
+        };
+        let paid_event = stripe_event_from_checkout_session_snapshot(&paid, "fallback_order")
+            .expect("paid checkout session should produce a payment event");
+        assert_eq!(paid_event.event_type, "checkout.session.completed");
+        assert_eq!(
+            stripe_transition(&paid_event),
+            ("paid", "paid", "payment_paid")
+        );
+
+        let expired = StripeCheckoutSessionSnapshot {
+            session_id: "cs_test_002".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            session_status: "expired".to_owned(),
+            payment_intent_id: String::new(),
+            order_id: String::new(),
+        };
+        let expired_event = stripe_event_from_checkout_session_snapshot(&expired, "order_002")
+            .expect("expired checkout session should produce a payment event");
+        assert_eq!(expired_event.order_id, "order_002");
+        assert_eq!(expired_event.event_type, "checkout.session.expired");
+        assert_eq!(
+            stripe_transition(&expired_event),
+            ("failed", "canceled", "payment_failed")
+        );
+
+        let open = StripeCheckoutSessionSnapshot {
+            session_id: "cs_test_003".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            session_status: "open".to_owned(),
+            payment_intent_id: String::new(),
+            order_id: "order_003".to_owned(),
+        };
+        assert!(stripe_event_from_checkout_session_snapshot(&open, "order_003").is_none());
     }
 
     #[test]
@@ -8557,8 +9613,9 @@ mod tests {
 
     #[test]
     fn stripe_transition_treats_expired_checkout_session_as_canceled() {
+        let event = stripe_webhook_event_fixture("checkout.session.expired");
         assert_eq!(
-            stripe_transition("checkout.session.expired"),
+            stripe_transition(&event),
             ("failed", "canceled", "payment_failed")
         );
     }
@@ -8572,6 +9629,8 @@ mod tests {
             stroke_weight: "standard".to_owned(),
             balance: "balanced".to_owned(),
             variant_count: Some(3),
+            attempt_number: Some(1),
+            previous_recipes: None,
             generation_rules: Some(SealGenerationRulesRequest {
                 max_characters: Some(2),
                 avoid_complex_characters: Some(true),
@@ -8614,8 +9673,71 @@ mod tests {
         assert_eq!(input.stroke_weight, SealStrokeWeight::Standard);
         assert_eq!(input.balance, SealBalance::Balanced);
         assert_eq!(input.variant_count, DEFAULT_SEAL_DESIGN_VARIANT_COUNT);
+        assert_eq!(input.attempt_number, 1);
+        assert!(input.previous_recipes.is_empty());
         assert_eq!(input.generation_rules.max_characters, 2);
         assert!(input.generation_rules.engraving_friendly);
+    }
+
+    #[test]
+    fn validate_generate_seal_designs_request_accepts_previous_recipes() {
+        let mut request = valid_seal_designs_request();
+        request.attempt_number = Some(2);
+        request.previous_recipes = Some(vec![valid_seal_design_recipe_dto()]);
+
+        let input =
+            validate_generate_seal_designs_request(request).expect("request should be valid");
+
+        assert_eq!(input.attempt_number, 2);
+        assert_eq!(input.previous_recipes.len(), 1);
+        assert_eq!(
+            input.previous_recipes[0].font_profile,
+            SealRecipeFontProfile::FormalSerif
+        );
+
+        let prompt = build_seal_designs_prompt(&input);
+        assert!(prompt.contains("Regeneration attempt: 2"));
+        assert!(prompt.contains("Avoid these previously shown full recipe combinations"));
+        assert!(
+            prompt.contains("formal_serif+elegant+standard+balanced+subtle_ink+square_standard")
+        );
+    }
+
+    #[test]
+    fn validate_generate_seal_designs_request_rejects_invalid_attempt_number() {
+        let mut request = valid_seal_designs_request();
+        request.attempt_number = Some(MAX_SEAL_GENERATION_ATTEMPTS + 1);
+
+        let err =
+            validate_generate_seal_designs_request(request).expect_err("invalid attempt must fail");
+
+        assert!(err.to_string().contains("attempt_number must be between"));
+    }
+
+    #[test]
+    fn ensure_fresh_seal_design_recipes_replaces_previous_visual_duplicates() {
+        let mut request = valid_seal_designs_request();
+        request.attempt_number = Some(2);
+        request.previous_recipes = Some(vec![valid_seal_design_recipe_dto()]);
+        let input =
+            validate_generate_seal_designs_request(request).expect("request should be valid");
+        let previous_signature = seal_recipe_visual_signature(input.previous_recipes[0]);
+
+        let adjusted = ensure_fresh_seal_design_recipes(
+            &input,
+            vec![
+                valid_seal_design_recipe_variant("Duplicate previous visual"),
+                valid_seal_design_recipe_variant("Duplicate response visual"),
+            ],
+        );
+
+        assert_eq!(adjusted.len(), 2);
+        let signatures = adjusted
+            .iter()
+            .map(|variant| seal_recipe_visual_signature(variant.recipe))
+            .collect::<HashSet<_>>();
+        assert_eq!(signatures.len(), 2);
+        assert!(!signatures.contains(&previous_signature));
     }
 
     #[test]
@@ -9149,9 +10271,8 @@ mod tests {
         for image in images {
             assert_eq!(image.content_type, "image/png");
             validate_generated_seal_image(&image).expect("rendered image must be a valid png");
-            let decoded =
-                image::load_from_memory_with_format(&image.bytes, image::ImageFormat::Png)
-                    .expect("rendered png must decode");
+            let decoded = image::load_from_memory_with_format(&image.bytes, ImageFormat::Png)
+                .expect("rendered png must decode");
             assert_eq!(decoded.width(), SEAL_DESIGN_IMAGE_SIZE as u32);
             assert_eq!(decoded.height(), SEAL_DESIGN_IMAGE_SIZE as u32);
         }
@@ -9477,6 +10598,105 @@ mod tests {
                 "AI quality prompt must include {required}"
             );
         }
+    }
+
+    #[test]
+    fn normalize_generated_seal_image_recolors_and_fixes_square_frame() {
+        let mut source = RgbaImage::from_pixel(120, 120, Rgba([246, 214, 214, 255]));
+        for y in 12..108 {
+            for x in 12..108 {
+                let in_outer_frame = !(18..102).contains(&x) || !(18..102).contains(&y);
+                let in_inner_frame = (((30..34).contains(&x) || (86..90).contains(&x))
+                    && (30..90).contains(&y))
+                    || (((30..34).contains(&y) || (86..90).contains(&y)) && (30..90).contains(&x));
+                let in_kanji_mark = (54..66).contains(&x) && (44..78).contains(&y);
+                if in_outer_frame || in_inner_frame || in_kanji_mark {
+                    source.put_pixel(x, y, Rgba([0, 0, 0, 255]));
+                }
+            }
+        }
+        for y in 88..92 {
+            for x in 48..74 {
+                source.put_pixel(x, y, Rgba([210, 160, 160, 255]));
+            }
+        }
+
+        let mut bytes = Vec::new();
+        DynamicImage::ImageRgba8(source)
+            .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+            .expect("test png should encode");
+
+        let normalized = normalize_generated_seal_image(
+            GeneratedSealDesignImage {
+                content_type: "image/png".to_owned(),
+                bytes,
+            },
+            SealShape::Square,
+        )
+        .expect("seal should normalize");
+        validate_generated_seal_image(&normalized).expect("normalized image should validate");
+
+        let decoded = image::load_from_memory_with_format(&normalized.bytes, ImageFormat::Png)
+            .expect("normalized png should decode")
+            .to_rgba8();
+        assert_eq!(decoded.width(), SEAL_DESIGN_IMAGE_SIZE as u32);
+        assert_eq!(decoded.height(), SEAL_DESIGN_IMAGE_SIZE as u32);
+        assert_eq!(
+            decoded
+                .get_pixel(SEAL_DESIGN_FRAME_INSET, SEAL_DESIGN_IMAGE_SIZE as u32 / 2)
+                .0,
+            [
+                SEAL_DESIGN_RED[0],
+                SEAL_DESIGN_RED[1],
+                SEAL_DESIGN_RED[2],
+                255
+            ]
+        );
+        assert_eq!(
+            decoded
+                .get_pixel(
+                    SEAL_DESIGN_FRAME_INSET + SEAL_DESIGN_FRAME_STROKE_WIDTH + 70,
+                    SEAL_DESIGN_IMAGE_SIZE as u32 / 2
+                )
+                .0,
+            [
+                SEAL_DESIGN_BACKGROUND[0],
+                SEAL_DESIGN_BACKGROUND[1],
+                SEAL_DESIGN_BACKGROUND[2],
+                255
+            ],
+            "normalizer must remove AI-generated inner frames"
+        );
+        assert_eq!(
+            decoded.get_pixel(24, 24).0,
+            [
+                SEAL_DESIGN_BACKGROUND[0],
+                SEAL_DESIGN_BACKGROUND[1],
+                SEAL_DESIGN_BACKGROUND[2],
+                255
+            ]
+        );
+        let inner_edge = SEAL_DESIGN_FRAME_INSET + SEAL_DESIGN_FRAME_STROKE_WIDTH + 1;
+        let kanji_bounds = find_artwork_bounds_in_region(
+            &decoded,
+            ArtworkBounds {
+                left: inner_edge,
+                top: inner_edge,
+                right: SEAL_DESIGN_IMAGE_SIZE as u32 - inner_edge - 1,
+                bottom: SEAL_DESIGN_IMAGE_SIZE as u32 - inner_edge - 1,
+            },
+            SEAL_DESIGN_BOUNDS_STRENGTH_THRESHOLD,
+        )
+        .expect("normalized kanji should have visible artwork");
+        let center_y = (kanji_bounds.top + kanji_bounds.bottom) as f32 / 2.0;
+        assert!(
+            (center_y - (SEAL_DESIGN_IMAGE_SIZE as f32 / 2.0)).abs() <= 24.0,
+            "normalizer must not let faint lower artifacts push kanji upward"
+        );
+        assert!(
+            decoded.pixels().all(|pixel| pixel.0 != [0, 0, 0, 255]),
+            "normalizer must remove black ink"
+        );
     }
 
     #[test]
