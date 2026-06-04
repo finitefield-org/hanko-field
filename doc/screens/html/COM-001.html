@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-001 Splash - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --ink: #222326;
+        --wine: #8d1618;
+        --gold: #b8894b;
+        --paper: #f8f4ef;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.9) 0 22%, transparent 58%),
+          radial-gradient(circle at 50% 72%, rgba(255, 255, 255, 0.65) 0 16%, transparent 48%),
+          linear-gradient(135deg, #efe6dc 0%, #fbf8f3 42%, #f4ece2 100%);
+      }
+
+      .phone {
+        width: min(100vw, 431.5px);
+        min-height: min(100vh, 911px);
+        aspect-ratio: 863 / 1822;
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.82) 0 24%, rgba(255, 255, 255, 0) 58%),
+          radial-gradient(circle at 76% 91%, rgba(185, 137, 76, 0.1), transparent 24%),
+          radial-gradient(circle at 18% 74%, rgba(255, 255, 255, 0.42), transparent 32%),
+          linear-gradient(135deg, #f5eee7 0%, #fffcf8 42%, #f3eadf 100%);
+      }
+
+      .phone::before,
+      .phone::after {
+        content: "";
+        position: absolute;
+        inset: auto -22% -13% auto;
+        width: 74%;
+        height: 34%;
+        border-radius: 50% 0 0 0;
+        border-top: 1px solid rgba(185, 137, 76, 0.09);
+        transform: rotate(-42deg);
+        filter: blur(0.2px);
+      }
+
+      .phone::after {
+        inset: auto -28% -8% auto;
+        width: 88%;
+        height: 42%;
+        border-top-color: rgba(185, 137, 76, 0.06);
+        transform: rotate(-47deg);
+      }
+
+      .site-logo {
+        width: 146px;
+        height: 146px;
+        object-fit: contain;
+        filter: drop-shadow(0 16px 24px rgba(57, 22, 14, 0.18));
+      }
+
+      .brand-title {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2rem, 8.9vw, 2.45rem);
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+        text-shadow: 0 11px 18px rgba(94, 60, 42, 0.15);
+      }
+
+      .divider-line {
+        width: 38px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--gold) 18% 82%, transparent);
+      }
+
+      .diamond {
+        width: 10px;
+        height: 10px;
+        transform: rotate(45deg);
+        border: 2px solid var(--gold);
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .loader {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        border: 4px solid rgba(183, 136, 75, 0.28);
+        border-top-color: #b58448;
+        border-left-color: #b58448;
+      }
+
+      @media (max-width: 390px) {
+        .site-logo {
+          width: 132px;
+          height: 132px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30">
+      <section class="relative z-10 flex min-h-full flex-col items-center">
+        <div class="h-[222px]"></div>
+
+        <img class="site-logo" src="../../../web/static/site-logo.png" alt="Stone Signature" />
+
+        <h1 class="brand-title mt-[38px] whitespace-nowrap text-center">
+          <span class="text-[#252b2f]">Stone</span>
+          <span class="ml-[13px] text-[#891618]">Signature</span>
+        </h1>
+
+        <div class="mt-[24px] flex items-center justify-center gap-[17px]" aria-hidden="true">
+          <span class="divider-line"></span>
+          <span class="diamond"></span>
+          <span class="divider-line"></span>
+        </div>
+
+        <div class="mt-[150px] flex flex-col items-center">
+          <div class="loader"></div>
+          <p class="mt-[22px] text-center text-[14px] tracking-[-0.01em] text-[#31353a]">
+            Preparing your design experience.
+          </p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

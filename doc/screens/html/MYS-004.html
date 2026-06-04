@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MYS-004 Edit Seal - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #11161a;
+        --copy: #626a71;
+        --wine: #951719;
+        --deep-wine: #821214;
+        --gold: #a86d26;
+        --line: #eaded2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 44%, #f4ece3 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button {
+        font: inherit;
+      }
+
+      .stage {
+        width: min(100vw, 470.5px);
+        height: 836px;
+        overflow: hidden;
+      }
+
+      .phone {
+        position: relative;
+        width: 470.5px;
+        height: 836px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 3%, rgba(255, 255, 255, 0.96) 0 25%, transparent 58%),
+          radial-gradient(circle at 49% 45%, rgba(255, 255, 255, 0.64) 0 25%, transparent 58%),
+          radial-gradient(circle at 51% 86%, rgba(255, 255, 255, 0.56) 0 24%, transparent 57%),
+          linear-gradient(139deg, #f4ece3 0%, #fffdf9 45%, #f7eee5 100%);
+        transform-origin: top left;
+      }
+
+      .top-bar {
+        position: relative;
+        height: 122px;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 64px;
+        left: 29px;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--wine);
+        padding: 0;
+      }
+
+      .back-button svg {
+        width: 23px;
+        height: 23px;
+        stroke-width: 2.15;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 58px;
+        right: 92px;
+        left: 92px;
+        margin: 0;
+        color: var(--deep-wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 31px;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 16px rgba(112, 65, 41, 0.11);
+        white-space: nowrap;
+      }
+
+      .screen-title span + span {
+        margin-left: 8px;
+      }
+
+      .title-ornament {
+        position: absolute;
+        top: 100px;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 33px;
+        height: 1px;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      .preview-card {
+        position: relative;
+        display: grid;
+        height: 194px;
+        grid-template-columns: 158px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        margin: 0 28px;
+        padding: 23px 24px 20px 33px;
+        border: 0.8px solid rgba(231, 219, 207, 0.96);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.67);
+        box-shadow:
+          0 12px 25px rgba(86, 58, 36, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.84);
+        backdrop-filter: blur(2px);
+      }
+
+      .seal-art {
+        width: 138px;
+        height: 138px;
+        justify-self: center;
+        object-fit: cover;
+        filter: drop-shadow(0 9px 12px rgba(66, 43, 27, 0.18));
+      }
+
+      .preview-copy {
+        min-width: 0;
+      }
+
+      .preview-label,
+      .field-label {
+        display: block;
+        color: var(--copy);
+        font-size: 13.5px;
+        line-height: 1.05;
+      }
+
+      .kanji-value {
+        display: block;
+        margin-top: 12px;
+        color: #11161a;
+        font-family: "Hanko JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 31px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .inline-ornament {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        margin-top: 24px;
+        color: var(--gold);
+      }
+
+      .inline-ornament .ornament-line {
+        width: 63px;
+      }
+
+      .meaning {
+        margin-top: 17px;
+      }
+
+      .meaning-value {
+        display: block;
+        margin-top: 9px;
+        color: var(--copy);
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      .favorite-button {
+        position: absolute;
+        top: 21px;
+        right: 21px;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--gold);
+        padding: 0;
+      }
+
+      .favorite-button svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 1.7;
+      }
+
+      .edit-form {
+        margin: 28px 28px 0;
+      }
+
+      .control-row {
+        display: grid;
+        min-height: 65px;
+        grid-template-columns: 54px 112px minmax(0, 1fr);
+        align-items: center;
+        column-gap: 5px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .control-row:first-child {
+        border-top: 0;
+      }
+
+      .control-row:last-child {
+        border-bottom: 0;
+      }
+
+      .control-row.is-style {
+        grid-template-columns: 54px 72px minmax(0, 1fr);
+      }
+
+      .round-icon {
+        display: grid;
+        width: 52px;
+        height: 52px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(246, 240, 234, 0.92);
+        color: var(--wine);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      }
+
+      .round-icon svg {
+        width: 29px;
+        height: 29px;
+        stroke-width: 1.45;
+      }
+
+      .control-title {
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .segmented {
+        display: grid;
+        min-width: 0;
+        height: 37px;
+        overflow: hidden;
+        border: 1px solid rgba(225, 211, 200, 0.95);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.35);
+      }
+
+      .segmented.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .segmented.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .segmented.four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .segment {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border: 0;
+        border-right: 1px solid rgba(225, 211, 200, 0.8);
+        background: transparent;
+        color: var(--copy);
+        font-size: 13px;
+        line-height: 1;
+        padding: 0 10px;
+      }
+
+      .segment:last-child {
+        border-right: 0;
+      }
+
+      .segment.is-active {
+        border: 1px solid var(--wine);
+        border-radius: 9px;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 15px;
+        font-weight: 600;
+        margin: -1px;
+        background: rgba(255, 255, 255, 0.28);
+      }
+
+      .segment-icon {
+        width: 18px;
+        height: 18px;
+        stroke-width: 1.5;
+      }
+
+      .action-stack {
+        display: grid;
+        gap: 12px;
+        margin: 13px 27px 0;
+      }
+
+      .primary-action,
+      .secondary-action {
+        display: flex;
+        height: 48px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 19px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .primary-action {
+        gap: 139px;
+        background:
+          radial-gradient(circle at 20% 25%, rgba(198, 31, 34, 0.48), transparent 48%),
+          linear-gradient(135deg, #9d1217 0%, #871014 100%);
+        color: #fffdf9;
+        box-shadow:
+          0 8px 15px rgba(111, 50, 30, 0.17),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .primary-action svg {
+        width: 22px;
+        height: 22px;
+        stroke-width: 1.7;
+      }
+
+      .secondary-action {
+        border: 1px solid var(--wine);
+        color: var(--wine);
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .bottom-nav {
+        position: absolute;
+        z-index: 3;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 95px;
+        border-top: 1px solid rgba(230, 220, 211, 0.98);
+        background: rgba(255, 253, 250, 0.94);
+        box-shadow: 0 -8px 18px rgba(87, 60, 40, 0.04);
+        backdrop-filter: blur(8px);
+      }
+
+      .active-tab-marker {
+        position: absolute;
+        top: -2px;
+        left: 50%;
+        width: 58px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--wine);
+        font-size: 0;
+        transform: translateX(-50%);
+      }
+
+      .tab-list {
+        display: grid;
+        height: 100%;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 17px 29px 14px;
+      }
+
+      .tab-item {
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 6px;
+        color: #11161a;
+        text-decoration: none;
+      }
+
+      .tab-item svg {
+        width: 31px;
+        height: 31px;
+        stroke-width: 1.55;
+      }
+
+      .tab-label {
+        font-size: 13px;
+        line-height: 1;
+      }
+
+      .tab-item.is-active {
+        color: var(--wine);
+      }
+
+      .tab-item.is-active .shield {
+        width: 30px;
+        height: 31px;
+        color: var(--wine);
+      }
+
+      .tab-item.is-active .tab-label {
+        color: var(--wine);
+        font-weight: 600;
+      }
+
+      @media (max-width: 470.5px) {
+        .stage {
+          width: 100vw;
+          height: 100vh;
+          min-height: 780px;
+        }
+
+        .phone {
+          width: 100vw;
+          height: 100%;
+          transform: none;
+        }
+
+        .screen-title {
+          right: 76px;
+          left: 76px;
+          font-size: 29px;
+        }
+
+        .back-button {
+          left: 27px;
+        }
+
+        .preview-card {
+          grid-template-columns: 137px minmax(0, 1fr);
+          margin-right: 28px;
+          margin-left: 28px;
+          padding-right: 19px;
+          padding-left: 20px;
+        }
+
+        .seal-art {
+          width: 126px;
+          height: 126px;
+        }
+
+        .kanji-value {
+          font-size: 29px;
+        }
+
+        .inline-ornament {
+          gap: 10px;
+        }
+
+        .inline-ornament .ornament-line {
+          width: 44px;
+        }
+
+        .edit-form {
+          margin-right: 27px;
+          margin-left: 27px;
+        }
+
+        .control-row {
+          min-height: 65px;
+          grid-template-columns: 52px 104px minmax(0, 1fr);
+          column-gap: 5px;
+        }
+
+        .control-row.is-style {
+          grid-template-columns: 52px 60px minmax(0, 1fr);
+        }
+
+        .control-title {
+          font-size: 19px;
+        }
+
+        .segment {
+          gap: 6px;
+          font-size: 11.8px;
+          padding: 0 7px;
+        }
+
+        .segment.is-active {
+          font-size: 14px;
+        }
+
+        .segment-icon {
+          width: 16px;
+          height: 16px;
+        }
+
+        .primary-action {
+          gap: 82px;
+        }
+
+        .tab-list {
+          padding-right: 23px;
+          padding-left: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-start justify-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+        <path d="M11 5 4 12l7 7M5 12h15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M4 12h15.8M13.7 5.7 20 12l-6.3 6.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-star" viewBox="0 0 24 24">
+        <path d="m12 3 2.45 5.7 6.15.55-4.65 4.05 1.4 6.05L12 16.18 6.65 19.35l1.4-6.05L3.4 9.25l6.15-.55Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-square" viewBox="0 0 24 24">
+        <rect x="4.3" y="4.3" width="15.4" height="15.4" rx="2.1" fill="none" stroke="currentColor" />
+      </symbol>
+      <symbol id="icon-circle" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" />
+      </symbol>
+      <symbol id="icon-diamond-small" viewBox="0 0 24 24">
+        <path d="m12 3.8 8.2 8.2-8.2 8.2L3.8 12Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-sparkle" viewBox="0 0 24 24">
+        <path d="M10 3.8 11.8 9l5.2 1.8-5.2 1.8-1.8 5.2-1.8-5.2L3 10.8 8.2 9ZM18.4 14.4l.7 2.1 2.1.7-2.1.8-.7 2.1-.8-2.1-2.1-.8 2.1-.7Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-brush" viewBox="0 0 24 24">
+        <path d="M13.6 15.4 20.1 4.8c.5-.8.3-1.7-.5-2.1-.7-.4-1.6-.2-2.1.5L10.8 13.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M12.9 14.7c1.1 1.1 1.1 3 0 4.1-1.4 1.4-4.2 1.2-7.6 1.2 0-3.4-.2-6.2 1.2-7.6 1.1-1.1 3-1.1 4.1 0Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="m6.1 19.3 5-5" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-scales" viewBox="0 0 24 24">
+        <path d="M12 3.2v17.6M4.3 7.1h15.4M7.1 7.1 3.4 14h7.4ZM16.9 7.1 13.2 14h7.4ZM3.4 14c.4 1.8 1.9 3 3.7 3s3.4-1.2 3.7-3M13.2 14c.4 1.8 1.9 3 3.7 3s3.4-1.2 3.7-3M8.2 20.8h7.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-tab-design" viewBox="0 0 32 32">
+        <path d="M19.4 5.3c.8-.8 2.1-.8 2.9 0 .7.7.8 1.8.2 2.6L14.3 21c-.5.8-1.2 1.3-2.1 1.6l-4.7 1.6 1.7-4.6c.3-.9.9-1.7 1.7-2.2Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7.1 21.7c-2.6.8-4.1 1.9-4.1 3.1 0 2 5.2 3.6 11.5 3.6S26 26.8 26 24.8c0-1.4-2.4-2.6-5.9-3.2M17.5 8.1l3.5 3.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-star" viewBox="0 0 32 32">
+        <path d="M16 3.3 25 6.8v7.6c0 5.6-3.5 10.5-9 12.6-5.5-2.1-9-7-9-12.6V6.8Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
+        <path d="m16 10.2 1.45 3.4 3.65.32-2.75 2.42.82 3.56L16 18.04l-3.17 1.86.82-3.56-2.75-2.42 3.65-.32Z" fill="currentColor" />
+      </symbol>
+      <symbol id="icon-diamond" viewBox="0 0 32 32">
+        <path d="M5.6 10.7 10.2 5h11.6l4.6 5.7L16 27Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M5.6 10.7h20.8M10.2 5l2.5 5.7L16 27l3.3-16.3L21.8 5M12.7 10.7h6.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+    </svg>
+
+    <div class="stage">
+      <main class="phone" aria-label="Edit Seal screen preview">
+        <header class="top-bar">
+          <a class="back-button" href="#" aria-label="Back">
+            <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+          </a>
+          <h1 class="screen-title"><span>Edit</span><span>Seal</span></h1>
+          <div class="title-ornament" aria-hidden="true">
+            <span class="ornament-line">&nbsp;</span>
+            <span class="ornament-diamond">&nbsp;</span>
+            <span class="ornament-line">&nbsp;</span>
+          </div>
+        </header>
+
+        <section class="preview-card" aria-label="Seal preview">
+          <img class="seal-art" src="assets/mys-001-seal-sky.png" alt="" />
+          <div class="preview-copy">
+            <span class="preview-label">Kanji</span>
+            <span class="kanji-value">美空</span>
+            <div class="inline-ornament" aria-hidden="true">
+              <span class="ornament-line">&nbsp;</span>
+              <span class="ornament-diamond">&nbsp;</span>
+              <span class="ornament-line">&nbsp;</span>
+            </div>
+            <div class="meaning">
+              <span class="preview-label">Meaning</span>
+              <span class="meaning-value">Beautiful sky</span>
+            </div>
+          </div>
+          <button class="favorite-button" type="button" aria-label="Save Beautiful sky to favorites" aria-pressed="false">
+            <svg aria-hidden="true"><use href="#icon-star" /></svg>
+          </button>
+        </section>
+
+        <form class="edit-form" aria-label="Edit seal options">
+          <section class="control-row" aria-labelledby="shape-label">
+            <span class="round-icon" aria-hidden="true"><svg><use href="#icon-diamond-small" /></svg></span>
+            <h2 class="control-title" id="shape-label">Shape</h2>
+            <div class="segmented two" role="group" aria-labelledby="shape-label">
+              <button class="segment" type="button">
+                <svg class="segment-icon" aria-hidden="true"><use href="#icon-square" /></svg>
+                <span>Square</span>
+              </button>
+              <button class="segment is-active" type="button" aria-pressed="true">
+                <svg class="segment-icon" aria-hidden="true"><use href="#icon-circle" /></svg>
+                <span>Round</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="control-row is-style" aria-labelledby="style-label">
+            <span class="round-icon" aria-hidden="true"><svg><use href="#icon-sparkle" /></svg></span>
+            <h2 class="control-title" id="style-label">Style</h2>
+            <div class="segmented four" role="group" aria-labelledby="style-label">
+              <button class="segment" type="button">Traditional</button>
+              <button class="segment is-active" type="button" aria-pressed="true">Elegant</button>
+              <button class="segment" type="button">Soft</button>
+              <button class="segment" type="button">Bold</button>
+            </div>
+          </section>
+
+          <section class="control-row" aria-labelledby="stroke-label">
+            <span class="round-icon" aria-hidden="true"><svg><use href="#icon-brush" /></svg></span>
+            <h2 class="control-title" id="stroke-label">Stroke</h2>
+            <div class="segmented two" role="group" aria-labelledby="stroke-label">
+              <button class="segment is-active" type="button" aria-pressed="true">Standard</button>
+              <button class="segment" type="button">Bold</button>
+            </div>
+          </section>
+
+          <section class="control-row" aria-labelledby="balance-label">
+            <span class="round-icon" aria-hidden="true"><svg><use href="#icon-scales" /></svg></span>
+            <h2 class="control-title" id="balance-label">Balance</h2>
+            <div class="segmented three" role="group" aria-labelledby="balance-label">
+              <button class="segment" type="button">Airy</button>
+              <button class="segment is-active" type="button" aria-pressed="true">Balanced</button>
+              <button class="segment" type="button">Dense</button>
+            </div>
+          </section>
+        </form>
+
+        <section class="action-stack" aria-label="Save actions">
+          <a class="primary-action" href="#" aria-label="Regenerate Design">
+            <span>Regenerate Design</span>
+            <svg aria-hidden="true"><use href="#icon-arrow-right" /></svg>
+          </a>
+          <a class="secondary-action" href="#" aria-label="Save Changes">Save Changes</a>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Primary">
+          <span class="active-tab-marker" aria-hidden="true">&nbsp;</span>
+          <div class="tab-list">
+            <a class="tab-item" href="#" aria-label="Design">
+              <svg aria-hidden="true"><use href="#icon-tab-design" /></svg>
+              <span class="tab-label">Design</span>
+            </a>
+            <a class="tab-item is-active" href="#" aria-label="My Seals">
+              <svg class="shield" aria-hidden="true"><use href="#icon-shield-star" /></svg>
+              <span class="tab-label">My Seals</span>
+            </a>
+            <a class="tab-item" href="#" aria-label="Stones">
+              <svg aria-hidden="true"><use href="#icon-diamond" /></svg>
+              <span class="tab-label">Stones</span>
+            </a>
+          </div>
+        </nav>
+      </main>
+    </div>
+  </body>
+</html>

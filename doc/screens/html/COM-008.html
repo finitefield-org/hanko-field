@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-008 Contact - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #171b1f;
+        --copy: #72777c;
+        --wine: #98191a;
+        --gold: #bd8847;
+        --line: #eaded3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 11%, rgba(255, 255, 255, 0.92) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, 431.5px);
+        min-height: min(100vh, 911px);
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 49% 11%, rgba(255, 255, 255, 0.94) 0 25%, transparent 58%),
+          radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.64) 0 26%, transparent 61%),
+          radial-gradient(circle at 50% 89%, rgba(255, 255, 255, 0.7) 0 24%, transparent 62%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .topbar {
+        position: relative;
+        height: 83px;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 35px;
+        left: 27px;
+        display: grid;
+        width: 22px;
+        height: 20px;
+        place-items: center;
+        color: #11161a;
+      }
+
+      .screen-title {
+        margin: 0;
+        padding: 31px 0 0 72px;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 29px;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 8px 15px rgba(112, 65, 41, 0.08);
+      }
+
+      .hero {
+        position: relative;
+        height: 204px;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(248, 243, 240, 0.98) 0 43%, rgba(248, 243, 240, 0.62) 60%, rgba(248, 243, 240, 0) 100%),
+          linear-gradient(180deg, rgba(250, 246, 242, 0.95), rgba(252, 249, 246, 0.45));
+      }
+
+      .hero-photo {
+        position: absolute;
+        inset: 0 0 0 auto;
+        width: 180px;
+        height: 204px;
+        object-fit: cover;
+        object-position: center;
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 2;
+        width: 275px;
+        padding: 50px 0 0 28px;
+      }
+
+      .hero-title {
+        margin: 0;
+        color: #1d2327;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 34px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        text-shadow: 0 10px 16px rgba(74, 50, 38, 0.08);
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 26px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 57px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .hero-text {
+        margin: 19px 0 0 1px;
+        color: var(--copy);
+        font-size: 13.4px;
+        line-height: 1.66;
+      }
+
+      .contact-options {
+        display: grid;
+        gap: 11px;
+        padding: 0 28px;
+        transform: translateY(-1px);
+      }
+
+      .option-card {
+        display: grid;
+        min-height: 102px;
+        grid-template-columns: 73px minmax(0, 1fr) 23px;
+        gap: 19px;
+        align-items: center;
+        padding: 16px 18px 16px 14px;
+        border: 0.8px solid rgba(232, 219, 208, 0.96);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.56);
+        box-shadow:
+          0 8px 22px rgba(88, 58, 34, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .option-icon-wrap {
+        display: grid;
+        width: 57px;
+        height: 57px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 45% 43%, rgba(255, 255, 255, 0.74), rgba(246, 239, 231, 0.95));
+      }
+
+      .option-icon {
+        width: 34px;
+        height: 34px;
+        color: var(--wine);
+        stroke-width: 1.55;
+      }
+
+      .option-title {
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1.1;
+      }
+
+      .option-text {
+        margin-top: 10px;
+        color: var(--copy);
+        font-size: 12.5px;
+        line-height: 1.55;
+      }
+
+      .chevron {
+        width: 16px;
+        height: 16px;
+        color: var(--gold);
+        stroke-width: 2.2;
+      }
+
+      .message-card {
+        margin: 24px 28px 0;
+        padding: 25px 20px 21px;
+        border: 0.8px solid rgba(232, 219, 208, 0.96);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.56);
+        box-shadow:
+          0 8px 22px rgba(88, 58, 34, 0.05),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .form-title {
+        margin: 0;
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1.05;
+      }
+
+      .message-card .ornament {
+        margin-top: 3px;
+        gap: 11px;
+      }
+
+      .message-card .ornament-line {
+        width: 53px;
+      }
+
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 11px;
+        margin-top: 12px;
+      }
+
+      .field,
+      .message-field {
+        border: 0.8px solid rgba(225, 213, 203, 0.98);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.44);
+      }
+
+      .field {
+        height: 55px;
+        padding: 9px 12px;
+      }
+
+      .field-label {
+        display: block;
+        color: #73787e;
+        font-size: 8.8px;
+        line-height: 1;
+      }
+
+      .placeholder {
+        margin-top: 14px;
+        color: #9b9da1;
+        font-size: 11.5px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .message-field {
+        height: 92px;
+        margin-top: 14px;
+        padding: 13px 12px;
+      }
+
+      .message-field .placeholder {
+        margin-top: 18px;
+      }
+
+      .send-button {
+        display: flex;
+        height: 42px;
+        align-items: center;
+        justify-content: center;
+        gap: 21px;
+        width: 100%;
+        margin-top: 15px;
+        border: 0;
+        border-radius: 6px;
+        background:
+          radial-gradient(circle at 88% 40%, rgba(129, 10, 12, 0.45), transparent 42%),
+          linear-gradient(90deg, #9d1618, #941718 56%, #8f1718);
+        color: #fff6ef;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 15px;
+        line-height: 1;
+        box-shadow: 0 8px 16px rgba(125, 22, 20, 0.17);
+      }
+
+      .reply-note {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 18px;
+        color: var(--copy);
+        font-size: 12.8px;
+      }
+
+      .clock {
+        width: 21px;
+        height: 21px;
+        color: var(--gold);
+        stroke-width: 1.7;
+      }
+
+      @media (max-width: 390px) {
+        .topbar {
+          height: 76px;
+        }
+
+        .back-button {
+          top: 32px;
+          left: 24px;
+        }
+
+        .screen-title {
+          padding-top: 29px;
+          padding-left: 66px;
+          font-size: 27px;
+        }
+
+        .hero {
+          height: 188px;
+        }
+
+        .hero-photo {
+          width: 168px;
+          height: 188px;
+        }
+
+        .hero-copy {
+          width: 250px;
+          padding-top: 45px;
+          padding-left: 25px;
+        }
+
+        .hero-title {
+          font-size: 30px;
+        }
+
+        .ornament {
+          margin-top: 21px;
+        }
+
+        .ornament-line {
+          width: 51px;
+        }
+
+        .hero-text {
+          margin-top: 15px;
+          font-size: 12.1px;
+          line-height: 1.56;
+        }
+
+        .contact-options {
+          gap: 10px;
+          padding-inline: 24px;
+        }
+
+        .option-card {
+          min-height: 91px;
+          grid-template-columns: 65px minmax(0, 1fr) 20px;
+          gap: 15px;
+          padding: 13px 16px 13px 12px;
+        }
+
+        .option-icon-wrap {
+          width: 52px;
+          height: 52px;
+        }
+
+        .option-icon {
+          width: 31px;
+          height: 31px;
+        }
+
+        .option-title {
+          font-size: 16.4px;
+        }
+
+        .option-text {
+          margin-top: 7px;
+          font-size: 11.4px;
+          line-height: 1.45;
+        }
+
+        .message-card {
+          margin: 19px 24px 0;
+          padding: 20px 18px 18px;
+        }
+
+        .form-title {
+          font-size: 18.4px;
+        }
+
+        .message-card .ornament {
+          margin-top: 4px;
+        }
+
+        .fields {
+          gap: 10px;
+          margin-top: 11px;
+        }
+
+        .field {
+          height: 51px;
+          padding: 8px 11px;
+        }
+
+        .placeholder {
+          margin-top: 12px;
+          font-size: 10.7px;
+        }
+
+        .message-field {
+          height: 82px;
+          margin-top: 12px;
+          padding: 12px 11px;
+        }
+
+        .send-button {
+          height: 39px;
+          margin-top: 13px;
+          font-size: 14px;
+        }
+
+        .reply-note {
+          margin-top: 15px;
+          gap: 12px;
+          font-size: 11.5px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Contact screen preview">
+      <header class="topbar">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 28 24" aria-hidden="true">
+            <path
+              d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </a>
+        <h1 class="screen-title">Contact</h1>
+      </header>
+
+      <section class="hero" aria-labelledby="contact-heading">
+        <img class="hero-photo" src="assets/com-008-hero-seal.png" alt="" />
+        <div class="hero-copy">
+          <h2 id="contact-heading" class="hero-title">We&rsquo;re here to help.</h2>
+          <div class="ornament" aria-hidden="true">
+            <span class="ornament-line"></span>
+            <span class="ornament-diamond"></span>
+            <span class="ornament-line"></span>
+          </div>
+          <p class="hero-text">Reach out to our team for support<br />or any questions you may have.</p>
+        </div>
+      </section>
+
+      <section class="contact-options" aria-label="Contact options">
+        <a class="option-card" href="#">
+          <span class="option-icon-wrap" aria-hidden="true">
+            <svg class="option-icon" viewBox="0 0 40 40">
+              <rect x="6" y="10.5" width="28" height="20" rx="1.8" fill="none" stroke="currentColor" />
+              <path d="m7.2 12.6 12.8 10 12.8-10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span>
+            <span class="option-title">Email Support</span>
+            <span class="option-text block">Get help with general questions<br />and account support.</span>
+          </span>
+          <svg class="chevron" viewBox="0 0 20 24" aria-hidden="true">
+            <path d="m5 3 9 9-9 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <a class="option-card" href="#">
+          <span class="option-icon-wrap" aria-hidden="true">
+            <svg class="option-icon" viewBox="0 0 40 40">
+              <path d="M16.2 29.2c-5.8-.9-10-4.7-10-9.1 0-5.2 5.6-9.4 12.5-9.4s12.5 4.2 12.5 9.4c0 2.8-1.7 5.4-4.4 7.1l.7 5.1-5.1-3.1c-1.2.3-2.4.4-3.7.4-.8 0-1.7-.1-2.5-.4Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M24.3 11.2c5.4 1 9.4 4.6 9.4 9 0 3.1-2.1 5.9-5.3 7.6" fill="none" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span>
+            <span class="option-title">Send an Inquiry</span>
+            <span class="option-text block">Questions about your order,<br />shipping, or returns.</span>
+          </span>
+          <svg class="chevron" viewBox="0 0 20 24" aria-hidden="true">
+            <path d="m5 3 9 9-9 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      </section>
+
+      <section class="message-card" aria-labelledby="message-heading">
+        <h2 id="message-heading" class="form-title">Send us a message</h2>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <form>
+          <div class="fields">
+            <label class="field">
+              <span class="field-label">Name</span>
+              <span class="placeholder">Your full name</span>
+            </label>
+            <label class="field">
+              <span class="field-label">Email</span>
+              <span class="placeholder">you@example.com</span>
+            </label>
+          </div>
+          <label class="message-field block">
+            <span class="field-label">Message</span>
+            <span class="placeholder">How can we help you?</span>
+          </label>
+          <button class="send-button" type="button">
+            <span>Send Message</span>
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 20" aria-hidden="true">
+              <path d="M2 10h18M13 3l7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" />
+            </svg>
+          </button>
+        </form>
+      </section>
+
+      <footer class="reply-note">
+        <svg class="clock" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="12.5" fill="none" stroke="currentColor" />
+          <path d="M16 8.5V17l5.1 3.3M23.8 6.4l1.7-1.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>We usually reply within 2 business days.</span>
+      </footer>
+    </main>
+  </body>
+</html>

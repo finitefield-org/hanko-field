@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-003 Design Home</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --phone-w: 431.5px;
+        --phone-h: 911px;
+        --ink: #22272b;
+        --muted: #686e75;
+        --wine: #9a1318;
+        --gold: #b6813a;
+        --line: #eadfd2;
+        --paper: #fffbf6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: #eee7dd;
+        color: var(--ink);
+        font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, var(--phone-w));
+        min-height: max(100vh, min(var(--phone-h), 211.12vw));
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            circle at 19% 38%,
+            rgba(255, 255, 255, 0.88) 0 18%,
+            transparent 44%
+          ),
+          radial-gradient(
+            circle at 78% 12%,
+            rgba(255, 255, 255, 0.74) 0 21%,
+            transparent 48%
+          ),
+          radial-gradient(
+            circle at 51% 73%,
+            rgba(255, 255, 255, 0.7) 0 17%,
+            transparent 48%
+          ),
+          linear-gradient(136deg, #f2e9df 0%, #fffdf9 42%, #f7efe7 100%);
+      }
+
+      .phone::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(
+            115deg,
+            transparent 0 35%,
+            rgba(187, 149, 96, 0.05) 35.4%,
+            transparent 36.6%
+          ),
+          linear-gradient(
+            120deg,
+            transparent 0 62%,
+            rgba(193, 158, 111, 0.08) 62.3%,
+            transparent 63.3%
+          ),
+          radial-gradient(
+            ellipse at 18% 50%,
+            rgba(227, 211, 193, 0.18),
+            transparent 39%
+          );
+      }
+
+      .app-header {
+        position: relative;
+        z-index: 5;
+        display: flex;
+        height: 110px;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 44px 24px 0;
+      }
+
+      .brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-logo {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        object-fit: contain;
+        filter: drop-shadow(0 7px 11px rgba(76, 47, 28, 0.13));
+      }
+
+      .brand-title {
+        color: var(--wine);
+        font-family: "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 42px;
+        font-weight: 600;
+        line-height: 0.95;
+        text-shadow: 0 9px 18px rgba(96, 54, 32, 0.07);
+      }
+
+      .settings-button {
+        display: grid;
+        width: 35px;
+        height: 35px;
+        place-items: center;
+        color: var(--gold);
+        transform: translate(1px, 1px);
+      }
+
+      .settings-button svg {
+        width: 30px;
+        height: 30px;
+        stroke-width: 1.9;
+      }
+
+      .hero-card {
+        position: relative;
+        z-index: 2;
+        height: 386px;
+        margin: 0 16px;
+        overflow: hidden;
+        border: 0.7px solid rgba(232, 219, 206, 0.94);
+        border-radius: 17px;
+        background:
+          radial-gradient(
+            circle at 24% 22%,
+            rgba(255, 255, 255, 0.96) 0 23%,
+            transparent 55%
+          ),
+          linear-gradient(
+            134deg,
+            rgba(255, 255, 255, 0.88) 0%,
+            rgba(252, 247, 240, 0.88) 100%
+          );
+        box-shadow:
+          0 17px 35px rgba(99, 65, 42, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.84);
+      }
+
+      .hero-photo {
+        position: absolute;
+        top: 27px;
+        right: -24px;
+        width: 220px;
+        height: 270px;
+        object-fit: cover;
+        object-position: center;
+        -webkit-mask-image: linear-gradient(
+          to right,
+          transparent 0,
+          #000 20%,
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          to right,
+          transparent 0,
+          #000 20%,
+          #000 100%
+        );
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 2;
+        padding: 67px 0 0 26px;
+      }
+
+      .hero-copy h1 {
+        max-width: 238px;
+        font-family: "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 41px;
+        font-weight: 600;
+        line-height: 1.02;
+        text-shadow: 0 8px 16px rgba(69, 50, 38, 0.08);
+      }
+
+      .ornament {
+        display: flex;
+        width: 144px;
+        align-items: center;
+        gap: 13px;
+        margin-top: 20px;
+        color: var(--gold);
+      }
+
+      .ornament span {
+        height: 1px;
+        flex: 1 1 auto;
+        background: currentColor;
+      }
+
+      .ornament svg {
+        width: 11px;
+        height: 11px;
+        flex: 0 0 auto;
+      }
+
+      .tagline {
+        margin-top: 23px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.82;
+      }
+
+      .primary-action {
+        position: relative;
+        display: inline-flex;
+        width: 171px;
+        height: 52px;
+        align-items: center;
+        margin-top: 27px;
+        border: 0;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #a61519 0%, #971419 100%);
+        color: white;
+        box-shadow: 0 14px 25px rgba(126, 17, 21, 0.16);
+        font-family: "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .primary-action span {
+        margin-left: 21px;
+        transform: scaleX(0.86);
+        transform-origin: left center;
+        white-space: nowrap;
+      }
+
+      .primary-action svg {
+        position: absolute;
+        right: 20px;
+        width: 19px;
+        height: 19px;
+      }
+
+      .quick-grid {
+        position: relative;
+        z-index: 3;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 14px;
+        padding: 22px 16px 0;
+      }
+
+      .quick-card {
+        position: relative;
+        height: 263px;
+        overflow: hidden;
+        border: 0.7px solid rgba(232, 219, 206, 0.95);
+        border-radius: 16px;
+        background:
+          radial-gradient(
+            circle at 72% 16%,
+            rgba(255, 255, 255, 0.9) 0 21%,
+            transparent 54%
+          ),
+          linear-gradient(
+            143deg,
+            rgba(255, 255, 255, 0.86) 0%,
+            rgba(252, 247, 240, 0.86) 100%
+          );
+        box-shadow:
+          0 14px 31px rgba(92, 59, 38, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      }
+
+      .card-photo {
+        position: absolute;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .saved-photo {
+        top: 22px;
+        right: -4px;
+        width: 125px;
+        height: 109px;
+        object-fit: cover;
+        opacity: 0.95;
+        -webkit-mask-image: radial-gradient(
+          ellipse at 72% 45%,
+          #000 0 58%,
+          transparent 77%
+        );
+        mask-image: radial-gradient(
+          ellipse at 72% 45%,
+          #000 0 58%,
+          transparent 77%
+        );
+      }
+
+      .stones-photo {
+        top: 23px;
+        right: 8px;
+        width: 122px;
+        height: 115px;
+        object-fit: cover;
+        -webkit-mask-image: radial-gradient(
+          ellipse at 58% 47%,
+          #000 0 66%,
+          transparent 82%
+        );
+        mask-image: radial-gradient(
+          ellipse at 58% 47%,
+          #000 0 66%,
+          transparent 82%
+        );
+      }
+
+      .white-gem {
+        top: 151px;
+        right: -1px;
+        width: 52px;
+        height: 55px;
+        object-fit: cover;
+        -webkit-mask-image: radial-gradient(
+          ellipse at 55% 20%,
+          #000 0 52%,
+          transparent 80%
+        );
+        mask-image: radial-gradient(
+          ellipse at 55% 20%,
+          #000 0 52%,
+          transparent 80%
+        );
+      }
+
+      .quick-icon {
+        position: absolute;
+        top: 28px;
+        left: 14px;
+        display: grid;
+        width: 62px;
+        height: 62px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(238, 229, 218, 0.88);
+        color: var(--gold);
+      }
+
+      .quick-icon svg {
+        width: 33px;
+        height: 33px;
+        stroke-width: 1.6;
+      }
+
+      .card-copy {
+        position: absolute;
+        left: 20px;
+        right: 18px;
+        top: 138px;
+        z-index: 2;
+      }
+
+      .card-copy h2 {
+        font-family: "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 25px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .card-copy p {
+        margin-top: 17px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.72;
+      }
+
+      .card-chevron {
+        position: absolute;
+        right: 19px;
+        bottom: 27px;
+        width: 17px;
+        height: 17px;
+        color: var(--gold);
+        stroke-width: 2.1;
+      }
+
+      .tabbar {
+        position: absolute;
+        z-index: 6;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 99px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 252, 248, 0.78);
+        backdrop-filter: blur(2px);
+      }
+
+      .tab-active-line {
+        position: absolute;
+        top: -2px;
+        left: 56px;
+        width: 48px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--wine);
+      }
+
+      .tabs {
+        display: grid;
+        height: 83px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: start;
+        padding-top: 13px;
+      }
+
+      .tab {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+      }
+
+      .tab.active {
+        color: var(--wine);
+      }
+
+      .tab svg {
+        width: 34px;
+        height: 34px;
+        stroke-width: 1.6;
+      }
+
+      .tab .diamond-icon {
+        width: 37px;
+        height: 37px;
+        transform: translateY(-2px);
+      }
+
+      .home-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        width: 134px;
+        height: 5px;
+        border-radius: 999px;
+        background: #050505;
+        transform: translateX(-50%);
+      }
+
+      @media (max-width: 400px) {
+        .app-header {
+          height: 103px;
+          padding-top: 46px;
+          padding-right: 22px;
+          padding-left: 22px;
+        }
+
+        .brand-title {
+          font-size: 39px;
+        }
+
+        .brand-logo {
+          width: 34px;
+          height: 34px;
+        }
+
+        .hero-card {
+          height: 371px;
+          margin-right: 14px;
+          margin-left: 14px;
+        }
+
+        .hero-photo {
+          top: 25px;
+          width: 206px;
+          height: 265px;
+        }
+
+        .hero-copy {
+          padding-top: 64px;
+          padding-left: 37px;
+        }
+
+        .hero-copy h1 {
+          max-width: 178px;
+          font-size: 39px;
+        }
+
+        .ornament {
+          width: 136px;
+          margin-top: 29px;
+        }
+
+        .primary-action {
+          width: 165px;
+          height: 50px;
+          margin-top: 22px;
+          font-size: 20px;
+        }
+
+        .quick-grid {
+          gap: 12px;
+          padding: 17px 14px 0;
+        }
+
+        .quick-card {
+          height: 251px;
+        }
+
+        .quick-icon {
+          top: 25px;
+          left: 12px;
+          width: 57px;
+          height: 57px;
+        }
+
+        .saved-photo {
+          width: 115px;
+          height: 101px;
+        }
+
+        .stones-photo {
+          right: 4px;
+          width: 114px;
+          height: 107px;
+        }
+
+        .card-copy {
+          top: 136px;
+          left: 17px;
+          right: 14px;
+        }
+
+        .card-copy h2 {
+          font-size: 23px;
+        }
+
+        .card-copy p {
+          margin-top: 15px;
+          font-size: 12px;
+        }
+
+        .card-chevron {
+          right: 17px;
+          bottom: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="phone shadow-2xl shadow-stone-300/30"
+      aria-label="Design home screen preview"
+    >
+      <header class="app-header">
+        <div class="brand-lockup">
+          <img class="brand-logo" src="../../../web/static/site-logo.png" alt="Stone Signature" />
+          <div class="brand-title">Design</div>
+        </div>
+        <a class="settings-button" href="#" aria-label="Settings">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path
+              d="M13.6 2.5h4.8l.9 3.9c1 .3 1.9.7 2.7 1.1l3.4-2 3.4 3.4-2 3.4c.5.8.9 1.7 1.1 2.7l3.8.9v4.8l-3.8.9c-.3 1-.7 1.9-1.1 2.7l2 3.4-3.4 3.4-3.4-2c-.8.5-1.7.9-2.7 1.1l-.9 3.9h-4.8l-.9-3.9c-1-.3-1.9-.7-2.7-1.1l-3.4 2-3.4-3.4 2-3.4c-.5-.8-.9-1.7-1.1-2.7l-3.8-.9v-4.8l3.8-.9c.3-1 .7-1.9 1.1-2.7l-2-3.4 3.4-3.4 3.4 2c.8-.5 1.7-.9 2.7-1.1l.9-3.9Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+            <circle cx="16" cy="16" r="4.2" stroke="currentColor" />
+          </svg>
+        </a>
+      </header>
+
+      <section class="hero-card" aria-labelledby="design-title">
+        <img
+          class="hero-photo"
+          src="assets/com-003-hero-seal.png"
+          alt=""
+          aria-hidden="true"
+        />
+        <div class="hero-copy">
+          <h1 id="design-title">Create your<br />custom seal</h1>
+          <div class="ornament" aria-hidden="true">
+            <span></span>
+            <svg viewBox="0 0 12 12" fill="none">
+              <path
+                d="M6 1.2 10.8 6 6 10.8 1.2 6 6 1.2Z"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            <span></span>
+          </div>
+          <p class="tagline">
+            Turn your name into a<br />personalized gemstone seal.
+          </p>
+          <button class="primary-action" type="button">
+            <span>Start Designing</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M5 12h14M13 5l7 7-7 7"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="quick-grid" aria-label="Design shortcuts">
+        <a class="quick-card" href="#" aria-label="Saved Seals">
+          <img
+            class="card-photo saved-photo"
+            src="assets/com-003-saved-seal.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <div class="quick-icon" aria-hidden="true">
+            <svg viewBox="0 0 42 42" fill="none">
+              <path
+                d="M10 8.5h20.2a3 3 0 0 1 3 3v22.2l-5.8-4.2-5.8 4.2V21.8h11.6"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M10 8.5v27h13.2M10 17.8h5.3"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <div class="card-copy">
+            <h2>Saved Seals</h2>
+            <p>View and manage your<br />saved seal designs.</p>
+          </div>
+          <svg
+            class="card-chevron"
+            viewBox="0 0 16 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="m3 3 9 9-9 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
+
+        <a class="quick-card" href="#" aria-label="Browse Stones">
+          <img
+            class="card-photo stones-photo"
+            src="assets/com-003-stones.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <img
+            class="card-photo white-gem"
+            src="assets/com-003-white-gem.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <div class="quick-icon" aria-hidden="true">
+            <svg viewBox="0 0 42 42" fill="none">
+              <path
+                d="M6 16.5h30L21 36 6 16.5Z"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+              <path
+                d="m6 16.5 6.5-9h17l6.5 9M12.5 7.5 21 36M29.5 7.5 21 36M12.5 7.5 21 16.5l8.5-9M6 16.5h30"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <div class="card-copy">
+            <h2>Browse Stones</h2>
+            <p>Explore our collection of<br />natural gemstones.</p>
+          </div>
+          <svg
+            class="card-chevron"
+            viewBox="0 0 16 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="m3 3 9 9-9 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
+      </section>
+
+      <nav class="tabbar" aria-label="Main navigation">
+        <div class="tab-active-line" aria-hidden="true"></div>
+        <div class="tabs">
+          <a class="tab active" href="#" aria-label="Design">
+            <svg viewBox="0 0 42 42" fill="none" aria-hidden="true">
+              <path
+                d="M26.8 5.3 34.5 13 18.8 28.7l-9.2 3 3-9.2L26.8 5.3Z"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="m23.5 8.6 7.7 7.7M11.9 23.1l5.8 5.8M5.8 32.8c2.2 4.2 13.1 4.2 16.2 0"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M3.8 36.2c4.1 3.6 17.7 3.6 22 0"
+                stroke="currentColor"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Design</span>
+          </a>
+          <a class="tab" href="#" aria-label="My Seals">
+            <svg viewBox="0 0 42 42" fill="none" aria-hidden="true">
+              <path
+                d="M21 4.5c5 3.4 9.5 4.8 14 5.5v9.2c0 9.5-5.6 15-14 18.3C12.6 34.2 7 29.7 7 19.2V10c4.7-.7 9.4-2.1 14-5.5Z"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M21 14.5c1.4 4.2 4.2 7 8.5 8.5-4.3 1.5-7.1 4.2-8.5 8.5-1.5-4.3-4.3-7-8.5-8.5 4.2-1.5 7-4.3 8.5-8.5Z"
+                fill="currentColor"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>My Seals</span>
+          </a>
+          <a class="tab" href="#" aria-label="Stones">
+            <svg
+              class="diamond-icon"
+              viewBox="0 0 44 44"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5.5 17h33L22 38 5.5 17Z"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+              <path
+                d="m5.5 17 7-10h19l7 10M12.5 7 22 38M31.5 7 22 38M12.5 7 22 17l9.5-10M5.5 17h33"
+                stroke="currentColor"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>Stones</span>
+          </a>
+        </div>
+        <div class="home-indicator" aria-hidden="true"></div>
+      </nav>
+    </main>
+  </body>
+</html>

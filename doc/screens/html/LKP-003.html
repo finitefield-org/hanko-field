@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LKP-003 Order Status - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --screen-h: 836px;
+        --ink: #162229;
+        --copy: #3c464d;
+        --muted: #59636b;
+        --wine: #821719;
+        --gold: #b7782c;
+        --line: #e6d5c3;
+        --paper: #fbf8f3;
+        --card: rgba(255, 255, 255, 0.62);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      h3,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(calc(100cqw / 470.5px));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.9) 0 23%, transparent 58%),
+          radial-gradient(circle at 46% 50%, rgba(255, 255, 255, 0.74) 0 23%, transparent 62%),
+          radial-gradient(circle at 50% 85%, rgba(255, 255, 255, 0.7) 0 22%, transparent 60%),
+          linear-gradient(135deg, #f2e9df 0%, #fffdf9 44%, #f6eee5 100%);
+        box-shadow: inset 0 0 64px rgba(122, 95, 65, 0.08);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .artboard::before {
+        opacity: 0.36;
+        background:
+          linear-gradient(126deg, transparent 0 63%, rgba(181, 138, 91, 0.045) 63.1%, transparent 64.1%),
+          linear-gradient(143deg, transparent 0 15%, rgba(181, 138, 91, 0.048) 15.1%, transparent 16.3%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.54), transparent 31%),
+          radial-gradient(ellipse at 50% 78%, rgba(255, 255, 255, 0.46), transparent 31%);
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .jp {
+        font-family: "Hanko JP", "Hanko Serif", "Times New Roman", serif;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 68px;
+        left: 26px;
+        z-index: 2;
+        display: grid;
+        width: 26px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 26px;
+        height: 24px;
+        stroke-width: 1.65;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 64px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 32px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(83, 45, 35, 0.08);
+        transform: scaleX(0.94);
+      }
+
+      .ornament {
+        position: absolute;
+        top: 104px;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 44px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8.5px;
+        height: 8.5px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .lede {
+        position: absolute;
+        top: 123px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: #3d4650;
+        font-size: 14px;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .card {
+        position: absolute;
+        z-index: 2;
+        left: 49px;
+        width: 373px;
+        border: 1px solid rgba(229, 214, 201, 0.82);
+        border-radius: 12px;
+        background: var(--card);
+        box-shadow:
+          0 11px 24px rgba(84, 56, 35, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(2px);
+      }
+
+      .order-card {
+        top: 145px;
+        height: 265px;
+      }
+
+      .order-label {
+        position: absolute;
+        top: 9px;
+        left: 0;
+        width: 100%;
+        color: #a76416;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .order-number {
+        position: absolute;
+        top: 30px;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 25.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .copy-icon {
+        position: absolute;
+        top: 34px;
+        left: 259px;
+        width: 16px;
+        height: 16px;
+        color: var(--gold);
+        stroke-width: 1.6;
+      }
+
+      .product-box {
+        position: absolute;
+        top: 61px;
+        left: 15px;
+        width: 343px;
+        height: 190px;
+        border: 1px solid rgba(229, 214, 201, 0.78);
+        border-radius: 7px;
+      }
+
+      .product-row {
+        position: absolute;
+        left: 18px;
+        display: grid;
+        width: 306px;
+        grid-template-columns: 86px minmax(0, 1fr);
+        column-gap: 19px;
+        align-items: center;
+      }
+
+      .product-row.seal {
+        top: 13px;
+        height: 78px;
+      }
+
+      .product-row.stone {
+        top: 103px;
+        height: 74px;
+      }
+
+      .product-row.stone::before {
+        content: "";
+        position: absolute;
+        top: -10px;
+        left: -5px;
+        right: -3px;
+        height: 1px;
+        background: rgba(229, 213, 197, 0.95);
+      }
+
+      .product-image {
+        width: 86px;
+        height: 78px;
+        border-radius: 7px;
+        object-fit: cover;
+      }
+
+      .product-row.stone .product-image {
+        height: 74px;
+      }
+
+      .eyebrow {
+        display: block;
+        color: #a76416;
+        font-size: 11.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .seal-name {
+        display: block;
+        margin-top: 11px;
+        color: #172328;
+        font-size: 22.5px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .seal-meaning {
+        display: block;
+        margin-top: 9px;
+        color: var(--wine);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .stone-name {
+        display: block;
+        margin-top: 13px;
+        color: #172328;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stock-pill {
+        display: inline-flex;
+        height: 18px;
+        align-items: center;
+        gap: 7px;
+        margin-top: 11px;
+        border-radius: 5px;
+        background: rgba(232, 234, 222, 0.88);
+        padding: 0 9px 0 7px;
+        color: #374148;
+        font-size: 11px;
+        line-height: 1;
+      }
+
+      .stock-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #4f8e50;
+      }
+
+      .progress-card {
+        top: 420px;
+        height: 194px;
+      }
+
+      .card-heading {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        margin: 0;
+        color: #a76416;
+        font-size: 11.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .timeline {
+        position: absolute;
+        top: 34px;
+        left: 37px;
+        width: 50px;
+        height: 121px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        top: 31px;
+        left: 24px;
+        width: 1px;
+        height: 72px;
+        background: var(--gold);
+      }
+
+      .timeline-node {
+        position: absolute;
+        left: 3px;
+        display: grid;
+        width: 33px;
+        height: 33px;
+        place-items: center;
+        border-radius: 999px;
+        color: #fffaf5;
+        box-shadow: 0 6px 13px rgba(104, 58, 20, 0.16);
+      }
+
+      .timeline-node svg {
+        width: 18px;
+        height: 18px;
+        stroke-width: 1.9;
+      }
+
+      .node-paid {
+        top: 0;
+        background: linear-gradient(135deg, #951519, #780f12);
+      }
+
+      .node-production {
+        top: 54px;
+        background: linear-gradient(135deg, #c68d3c, #a96b22);
+      }
+
+      .node-shipping {
+        top: 108px;
+        background: linear-gradient(135deg, #c58c3a, #a46b22);
+      }
+
+      .progress-row {
+        position: absolute;
+        left: 123px;
+        right: 20px;
+        min-height: 44px;
+      }
+
+      .progress-row.first {
+        top: 37px;
+      }
+
+      .progress-row.second {
+        top: 94px;
+      }
+
+      .progress-row.third {
+        top: 151px;
+      }
+
+      .progress-row + .progress-row::before {
+        content: "";
+        position: absolute;
+        top: -16px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: rgba(229, 213, 197, 0.9);
+      }
+
+      .progress-title {
+        margin: 0;
+        color: #172328;
+        font-size: 16.5px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .progress-value {
+        margin: 9px 0 0;
+        color: var(--wine);
+        font-size: 15.5px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .progress-date {
+        position: absolute;
+        top: 0;
+        right: 0;
+        margin: 0;
+        color: #4f5b63;
+        font-size: 12.5px;
+        line-height: 1.55;
+        text-align: right;
+      }
+
+      .details-card {
+        top: 623px;
+        height: 103px;
+      }
+
+      .detail-row {
+        position: absolute;
+        left: 19px;
+        right: 19px;
+        display: grid;
+        grid-template-columns: 29px 103px minmax(0, 1fr);
+        align-items: center;
+        height: 34px;
+      }
+
+      .detail-row:nth-child(1) {
+        top: 2px;
+      }
+
+      .detail-row:nth-child(2) {
+        top: 36px;
+      }
+
+      .detail-row:nth-child(3) {
+        top: 70px;
+      }
+
+      .detail-row + .detail-row::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: rgba(229, 213, 197, 0.95);
+      }
+
+      .detail-icon {
+        width: 18px;
+        height: 18px;
+        color: var(--gold);
+        stroke-width: 1.7;
+      }
+
+      .detail-label {
+        color: #172328;
+        font-size: 15.5px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .detail-value {
+        color: #46515a;
+        font-size: 13.5px;
+        font-weight: 400;
+        line-height: 1;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .detail-value.price {
+        color: var(--wine);
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .primary-action,
+      .secondary-action {
+        position: absolute;
+        left: 49px;
+        z-index: 2;
+        display: block;
+        width: 373px;
+        height: 39px;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+
+      .primary-action {
+        top: 735px;
+        background:
+          radial-gradient(circle at 27% 28%, rgba(255, 255, 255, 0.09), transparent 24%),
+          linear-gradient(120deg, #a21518 0%, #8f1014 47%, #7d0d10 100%);
+        box-shadow:
+          0 9px 18px rgba(96, 31, 24, 0.17),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        color: #fffaf6;
+      }
+
+      .action-sparkle {
+        position: absolute;
+        top: 9px;
+        left: 122px;
+        width: 19px;
+        height: 19px;
+        color: #fffaf3;
+      }
+
+      .primary-text {
+        position: absolute;
+        top: 11px;
+        left: 0;
+        width: 100%;
+        color: #fffaf6;
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .action-arrow {
+        position: absolute;
+        top: 10px;
+        right: 18px;
+        width: 22px;
+        height: 22px;
+        color: #fffaf3;
+        stroke-width: 1.6;
+      }
+
+      .secondary-action {
+        top: 782px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        border: 1px solid rgba(183, 120, 44, 0.78);
+        background: rgba(255, 255, 255, 0.4);
+        color: #172328;
+      }
+
+      .support-icon {
+        width: 24px;
+        height: 24px;
+        color: var(--gold);
+        stroke-width: 1.6;
+      }
+
+      .secondary-text {
+        color: #172328;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Order status screen">
+      <div class="artboard">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15.5 4.5 8 12l7.5 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M8.5 12h12" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+        </a>
+
+        <h1 class="screen-title serif">Order Status</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="lede">Here&rsquo;s the latest update on your order.</p>
+
+        <section class="card order-card" aria-label="Order summary">
+          <span class="order-label">Order Number</span>
+          <p class="order-number serif">SS-2025-0427</p>
+          <svg class="copy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M8 7.5V5h9v12h-2.5" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M5 9.5h9v12H5v-12Z" stroke="currentColor" stroke-linejoin="round" />
+          </svg>
+
+          <div class="product-box">
+            <div class="product-row seal">
+              <img class="product-image" src="assets/chk-006-seal-frame.png" alt="" />
+              <div>
+                <span class="eyebrow">Selected Seal</span>
+                <span class="seal-name jp">美空</span>
+                <span class="seal-meaning serif">Beautiful Sky</span>
+              </div>
+            </div>
+            <div class="product-row stone">
+              <img class="product-image" src="assets/chk-006-stone-frame.png" alt="" />
+              <div>
+                <span class="eyebrow">Gemstone</span>
+                <span class="stone-name serif">Soft Pink Rose Quartz</span>
+                <span class="stock-pill"><span class="stock-dot"></span>In stock</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card progress-card" aria-label="Order progress">
+          <h2 class="card-heading">Order Progress</h2>
+          <div class="timeline" aria-hidden="true">
+            <span class="timeline-node node-paid">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4.5 7.2h15v10h-15v-10Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M7 11.5h9.8" stroke="currentColor" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="timeline-node node-production">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="m13.3 5.2 5.5 5.5-8.8 8.8H4.5v-5.4l8.8-8.9Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m11 7.4 5.5 5.5" stroke="currentColor" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="timeline-node node-shipping">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4.8 8 12 4.3 19.2 8 12 11.8 4.8 8Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M4.8 8v8l7.2 3.8 7.2-3.8V8M12 11.8v8" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </div>
+
+          <div class="progress-row first">
+            <p class="progress-title serif">Payment Status</p>
+            <p class="progress-value serif">Paid</p>
+            <p class="progress-date">Mar 28, 2025<br />10:15 AM</p>
+          </div>
+          <div class="progress-row second">
+            <p class="progress-title serif">Production Status</p>
+            <p class="progress-value serif">In Production</p>
+            <p class="progress-date">Mar 28, 2025<br />2:30 PM</p>
+          </div>
+          <div class="progress-row third">
+            <p class="progress-title serif">Shipping Status</p>
+            <p class="progress-value serif">Preparing Shipment</p>
+            <p class="progress-date">Mar 29, 2025<br />9:10 AM</p>
+          </div>
+        </section>
+
+        <section class="card details-card" aria-label="Order details">
+          <div class="detail-row">
+            <svg class="detail-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12.4 12.4 4H20v7.6L11.6 20 4 12.4Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M15.8 8.3h.1M10.3 13.2c1.3 1.2 3.1 1 3.6-.2.8-1.7-2.3-1.8-1.5-3.4.5-1 2-1.2 3.1-.2M11.8 14.8l3.4-6.8" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+            <span class="detail-label serif">Total Paid</span>
+            <span class="detail-value price serif">&yen; 21,000</span>
+          </div>
+          <div class="detail-row">
+            <svg class="detail-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4.5 6.8h15v10.4h-15V6.8Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="m5 7.5 7 5.9 7-5.9" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="detail-label serif">Email</span>
+            <span class="detail-value">stone.signature@example.com</span>
+          </div>
+          <div class="detail-row">
+            <svg class="detail-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 6.5h14v13H5v-13Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M8 4.5v4M16 4.5v4M5 10.2h14M8 13.4h2.1M12 13.4h2.1M16 13.4h.1M8 16.3h2.1M12 16.3h2.1" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+            <span class="detail-label serif">Order Date</span>
+            <span class="detail-value">Mar 28, 2025</span>
+          </div>
+        </section>
+
+        <a class="primary-action" href="#">
+          <svg class="action-sparkle" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <path d="M13.7 1.8c1.4 7 5 10.5 12 12-7 1.5-10.6 5-12 12-1.5-7-5.1-10.5-12.1-12 7-1.5 10.6-5 12.1-12Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M23.3 1.7v7.1M19.8 5.2h7.1" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          <span class="primary-text serif">View Tracking</span>
+          <svg class="action-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <a class="secondary-action" href="#">
+          <svg class="support-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4.8 13v-2.1a7.2 7.2 0 0 1 14.4 0V13" stroke="currentColor" stroke-linecap="round" />
+            <path d="M4.8 13.1h2.7v5.1H4.8v-5.1ZM16.5 13.1h2.7v5.1h-2.7v-5.1Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M16.5 18.2c-.6 1.6-2 2.4-4.2 2.4" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          <span class="secondary-text serif">Contact Support</span>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>

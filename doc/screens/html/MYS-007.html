@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MYS-007 Delete Seal - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #11161a;
+        --copy: #626a71;
+        --wine: #951719;
+        --deep-wine: #821214;
+        --gold: #a86d26;
+        --line: #eaded2;
+        --paper: #fffdfa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 44%, #f4ece3 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button {
+        font: inherit;
+      }
+
+      .stage {
+        width: min(100vw, 470.5px);
+        height: 836px;
+        overflow: hidden;
+      }
+
+      .phone {
+        position: relative;
+        width: 470.5px;
+        height: 836px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 3%, rgba(255, 255, 255, 0.96) 0 25%, transparent 58%),
+          radial-gradient(circle at 49% 46%, rgba(255, 255, 255, 0.58) 0 26%, transparent 58%),
+          radial-gradient(circle at 51% 87%, rgba(255, 255, 255, 0.56) 0 24%, transparent 57%),
+          linear-gradient(139deg, #f4ece3 0%, #fffdf9 45%, #f7eee5 100%);
+        transform-origin: top left;
+      }
+
+      .screen-header {
+        position: relative;
+        height: 161px;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 62px;
+        left: 29px;
+        margin: 0;
+        color: var(--deep-wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 43px;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 10px 16px rgba(112, 65, 41, 0.11);
+        white-space: nowrap;
+      }
+
+      .add-button {
+        position: absolute;
+        top: 68px;
+        right: 33px;
+        display: grid;
+        width: 27px;
+        height: 27px;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--gold);
+        padding: 0;
+      }
+
+      .add-button svg {
+        width: 27px;
+        height: 27px;
+        stroke-width: 1.75;
+      }
+
+      .search-field {
+        position: absolute;
+        top: 107px;
+        right: 26px;
+        left: 26px;
+        display: flex;
+        height: 45px;
+        align-items: center;
+        gap: 15px;
+        border: 0.8px solid rgba(231, 219, 207, 0.96);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.68);
+        color: var(--copy);
+        padding: 0 15px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .search-field svg {
+        width: 23px;
+        height: 23px;
+        color: #303940;
+        stroke-width: 1.8;
+      }
+
+      .search-placeholder {
+        font-size: 16px;
+        line-height: 1;
+      }
+
+      .list-shell {
+        position: absolute;
+        top: 161px;
+        right: 26px;
+        left: 26px;
+        height: 633px;
+        overflow: hidden;
+        border: 0.8px solid rgba(231, 219, 207, 0.96);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.66);
+        box-shadow:
+          0 9px 24px rgba(86, 58, 36, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(2px);
+      }
+
+      .seal-row {
+        position: relative;
+        height: 88.5px;
+        border-bottom: 1px solid rgba(233, 222, 211, 0.92);
+      }
+
+      .seal-row:last-child {
+        border-bottom: 0;
+      }
+
+      .row-seal {
+        position: absolute;
+        top: 17px;
+        left: 20px;
+        width: 54px;
+        height: 54px;
+        object-fit: cover;
+      }
+
+      .row-name {
+        position: absolute;
+        top: 22px;
+        left: 90px;
+        margin: 0;
+        color: #11161a;
+        font-family: "Hanko JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .row-subtitle {
+        position: absolute;
+        top: 52px;
+        left: 90px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 14px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .row-chevron {
+        position: absolute;
+        top: 34px;
+        right: 20px;
+        width: 17px;
+        height: 21px;
+        color: var(--gold);
+      }
+
+      .bottom-nav {
+        position: absolute;
+        z-index: 2;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 95px;
+        border-top: 1px solid rgba(230, 220, 211, 0.98);
+        background: rgba(255, 253, 250, 0.94);
+        box-shadow: 0 -8px 18px rgba(87, 60, 40, 0.04);
+        backdrop-filter: blur(8px);
+      }
+
+      .tab-list {
+        display: grid;
+        height: 100%;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 17px 29px 14px;
+      }
+
+      .tab-item {
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 6px;
+        color: #11161a;
+        text-decoration: none;
+      }
+
+      .tab-item svg {
+        width: 31px;
+        height: 31px;
+        stroke-width: 1.55;
+      }
+
+      .tab-label {
+        font-size: 13px;
+        line-height: 1;
+      }
+
+      .tab-item.is-active {
+        color: var(--wine);
+      }
+
+      .tab-item.is-active .shield {
+        width: 30px;
+        height: 31px;
+        color: var(--wine);
+      }
+
+      .tab-item.is-active .tab-label {
+        color: var(--wine);
+        font-weight: 600;
+      }
+
+      .scrim {
+        position: absolute;
+        z-index: 5;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+      }
+
+      .delete-dialog {
+        position: absolute;
+        z-index: 6;
+        top: 225px;
+        left: 50%;
+        width: 335px;
+        height: 445px;
+        border: 0.8px solid rgba(231, 219, 207, 0.96);
+        border-radius: 18px;
+        background:
+          radial-gradient(circle at 50% 3%, rgba(255, 255, 255, 0.98) 0 31%, transparent 59%),
+          linear-gradient(143deg, #fffaf5 0%, #fffefd 48%, #f8f1ea 100%);
+        box-shadow: 0 13px 24px rgba(17, 18, 18, 0.2);
+        text-align: center;
+        transform: translateX(-50%);
+      }
+
+      .trash-ring {
+        position: absolute;
+        top: -1px;
+        left: 50%;
+        display: grid;
+        width: 54px;
+        height: 54px;
+        place-items: center;
+        border-radius: 999px;
+        background: #f0eae4;
+        color: var(--wine);
+        transform: translateX(-50%);
+      }
+
+      .trash-ring svg {
+        width: 27px;
+        height: 27px;
+        stroke-width: 1.75;
+      }
+
+      .dialog-title {
+        position: absolute;
+        top: 62px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: var(--deep-wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 30px;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 8px 13px rgba(112, 65, 41, 0.1);
+        white-space: nowrap;
+      }
+
+      .title-ornament {
+        position: absolute;
+        top: 99px;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 33px;
+        height: 1px;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      .seal-preview {
+        position: absolute;
+        top: 119px;
+        right: 32px;
+        left: 32px;
+        height: 212px;
+        border: 0.8px solid rgba(231, 219, 207, 0.96);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.47);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+      }
+
+      .dialog-seal {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        display: block;
+        width: 108px;
+        height: 108px;
+        margin: 0;
+        object-fit: contain;
+        transform: translateX(-50%);
+      }
+
+      .preview-name {
+        position: absolute;
+        top: 135px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: #11161a;
+        font-family: "Hanko JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .preview-copy {
+        position: absolute;
+        top: 169px;
+        right: 0;
+        left: 0;
+        margin: 0 auto;
+        width: 210px;
+        color: var(--copy);
+        font-size: 14px;
+        line-height: 1.42;
+      }
+
+      .dialog-action {
+        position: absolute;
+        right: 30px;
+        left: 30px;
+        display: flex;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px;
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 19px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .delete-action {
+        top: 340px;
+        border: 0;
+        background:
+          radial-gradient(circle at 20% 25%, rgba(198, 31, 34, 0.48), transparent 48%),
+          linear-gradient(135deg, #9d1217 0%, #871014 100%);
+        color: #fffdf9;
+        box-shadow:
+          0 8px 15px rgba(111, 50, 30, 0.17),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .cancel-action {
+        top: 387px;
+        border: 1px solid var(--wine);
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--wine);
+      }
+
+      @media (max-width: 470.5px) {
+        .stage {
+          width: 100vw;
+          height: 100vh;
+          min-height: 780px;
+        }
+
+        .phone {
+          width: 100vw;
+          height: 100%;
+          transform: none;
+        }
+
+        .screen-title {
+          left: 29px;
+          font-size: 40px;
+        }
+
+        .add-button {
+          right: 32px;
+        }
+
+        .search-field,
+        .list-shell {
+          right: 25px;
+          left: 25px;
+        }
+
+        .delete-dialog {
+          width: min(335px, calc(100vw - 56px));
+        }
+
+        .seal-preview {
+          right: 31px;
+          left: 31px;
+        }
+
+        .dialog-action {
+          right: 30px;
+          left: 30px;
+        }
+
+        .tab-list {
+          padding-right: 23px;
+          padding-left: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-start justify-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-plus" viewBox="0 0 24 24">
+        <path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-search" viewBox="0 0 24 24">
+        <path d="m20 20-4.7-4.7M10.6 18a7.4 7.4 0 1 1 0-14.8 7.4 7.4 0 0 1 0 14.8Z" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-trash" viewBox="0 0 24 24">
+        <path d="M5 6h14M9 6V4.6c0-.9.7-1.6 1.6-1.6h2.8c.9 0 1.6.7 1.6 1.6V6m-8.7 0 .8 14h9.8l.8-14M10 10v7M14 10v7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-chevron-right" viewBox="0 0 24 24">
+        <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-tab-design" viewBox="0 0 32 32">
+        <path d="M19.4 5.3c.8-.8 2.1-.8 2.9 0 .7.7.8 1.8.2 2.6L14.3 21c-.5.8-1.2 1.3-2.1 1.6l-4.7 1.6 1.7-4.6c.3-.9.9-1.7 1.7-2.2Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7.1 21.7c-2.6.8-4.1 1.9-4.1 3.1 0 2 5.2 3.6 11.5 3.6S26 26.8 26 24.8c0-1.4-2.4-2.6-5.9-3.2M17.5 8.1l3.5 3.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-star" viewBox="0 0 32 32">
+        <path d="M16 3.3 25 6.8v7.6c0 5.6-3.5 10.5-9 12.6-5.5-2.1-9-7-9-12.6V6.8Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
+        <path d="m16 10.2 1.45 3.4 3.65.32-2.75 2.42.82 3.56L16 18.04l-3.17 1.86.82-3.56-2.75-2.42 3.65-.32Z" fill="currentColor" />
+      </symbol>
+      <symbol id="icon-diamond" viewBox="0 0 32 32">
+        <path d="M5.6 10.7 10.2 5h11.6l4.6 5.7L16 27Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M5.6 10.7h20.8M10.2 5l2.5 5.7L16 27l3.3-16.3L21.8 5M12.7 10.7h6.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+    </svg>
+
+    <div class="stage">
+      <main class="phone" aria-label="Delete saved seal dialog preview">
+        <header class="screen-header">
+          <h1 class="screen-title">My Seals</h1>
+          <button class="add-button" type="button" aria-label="Add seal">
+            <svg aria-hidden="true"><use href="#icon-plus" /></svg>
+          </button>
+          <div class="search-field" aria-label="Search seals">
+            <svg aria-hidden="true"><use href="#icon-search" /></svg>
+            <span class="search-placeholder">Search seals</span>
+          </div>
+        </header>
+
+        <section class="list-shell" aria-label="Saved seals">
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-sky.png" alt="" />
+            <h2 class="row-name">美空</h2>
+            <p class="row-subtitle">Beautiful sky</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-love.png" alt="" />
+            <h2 class="row-name">永愛</h2>
+            <p class="row-subtitle">Eternal love</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-hope.png" alt="" />
+            <h2 class="row-name">希望</h2>
+            <p class="row-subtitle">Hope</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-love.png" alt="" />
+            <h2 class="row-name">勇美</h2>
+            <p class="row-subtitle">Courage and beauty</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-sky.png" alt="" />
+            <h2 class="row-name">力美</h2>
+            <p class="row-subtitle">Strength and beauty</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-sky.png" alt="" />
+            <h2 class="row-name">永楽</h2>
+            <p class="row-subtitle">Eternal joy</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+          <article class="seal-row">
+            <img class="row-seal" src="assets/mys-001-seal-sky.png" alt="" />
+            <h2 class="row-name">美空</h2>
+            <p class="row-subtitle">Beautiful sky</p>
+            <svg class="row-chevron" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </article>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Primary">
+          <div class="tab-list">
+            <a class="tab-item" href="#" aria-label="Design">
+              <svg aria-hidden="true"><use href="#icon-tab-design" /></svg>
+              <span class="tab-label">Design</span>
+            </a>
+            <a class="tab-item is-active" href="#" aria-label="My Seals">
+              <svg class="shield" aria-hidden="true"><use href="#icon-shield-star" /></svg>
+              <span class="tab-label">My Seals</span>
+            </a>
+            <a class="tab-item" href="#" aria-label="Stones">
+              <svg aria-hidden="true"><use href="#icon-diamond" /></svg>
+              <span class="tab-label">Stones</span>
+            </a>
+          </div>
+        </nav>
+
+        <div class="scrim" aria-hidden="true"></div>
+
+        <div class="delete-dialog" role="dialog" aria-labelledby="delete-title">
+          <div class="trash-ring" aria-hidden="true">
+            <svg><use href="#icon-trash" /></svg>
+          </div>
+          <h2 class="dialog-title" id="delete-title">Delete Seal?</h2>
+          <div class="title-ornament" aria-hidden="true">
+            <span class="ornament-line">&nbsp;</span>
+            <span class="ornament-diamond">&nbsp;</span>
+            <span class="ornament-line">&nbsp;</span>
+          </div>
+          <div class="seal-preview">
+            <img class="dialog-seal" src="assets/mys-007-delete-seal.png" alt="" />
+            <p class="preview-name">美空</p>
+            <p class="preview-copy">This saved seal will be removed from this device.</p>
+          </div>
+          <a class="dialog-action delete-action" href="#">Delete</a>
+          <a class="dialog-action cancel-action" href="#">Cancel</a>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

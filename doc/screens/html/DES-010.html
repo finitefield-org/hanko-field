@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-010 Seal Saved - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 431.5px;
+        --screen-h: 911px;
+        --screen-scale: 1;
+        --ink: #172126;
+        --copy: #59636b;
+        --wine: #8d1518;
+        --gold: #b98038;
+        --line: #eadccf;
+        --paper: #fffdf9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: start center;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 11%, rgba(255, 255, 255, 0.94) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 43%, #f4ece3 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      h1,
+      h2,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(var(--screen-scale));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.95) 0 25%, transparent 58%),
+          radial-gradient(circle at 50% 53%, rgba(255, 255, 255, 0.7) 0 27%, transparent 62%),
+          radial-gradient(circle at 50% 86%, rgba(255, 255, 255, 0.58) 0 24%, transparent 58%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        box-shadow: inset 0 0 72px rgba(107, 76, 47, 0.07);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        content: "";
+      }
+
+      .artboard::before {
+        opacity: 0.33;
+        background:
+          linear-gradient(142deg, transparent 0 20%, rgba(180, 139, 92, 0.06) 20.1%, transparent 20.7%),
+          linear-gradient(131deg, transparent 0 76%, rgba(180, 139, 92, 0.05) 76.1%, transparent 76.8%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 50% 26%, rgba(255, 255, 255, 0.44), transparent 31%),
+          radial-gradient(ellipse at 50% 75%, rgba(255, 255, 255, 0.4), transparent 34%);
+      }
+
+      .serif {
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman",
+          serif;
+      }
+
+      .brand {
+        position: absolute;
+        top: 65px;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 11px;
+        color: var(--wine);
+      }
+
+      .brand-mark {
+        width: 39px;
+        height: 39px;
+        color: var(--gold);
+      }
+
+      .brand-name {
+        margin: 0;
+        font-size: 29px;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 9px 16px rgba(110, 61, 38, 0.08);
+        transform: scaleX(0.88);
+        transform-origin: left center;
+        white-space: nowrap;
+      }
+
+      .success-medal {
+        position: absolute;
+        top: 145px;
+        left: 50%;
+        z-index: 2;
+        display: grid;
+        width: 145px;
+        height: 145px;
+        place-items: center;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.85) 0 22%, transparent 45%),
+          radial-gradient(circle at 50% 50%, rgba(255, 253, 249, 0.76), rgba(238, 220, 198, 0.28) 71%),
+          repeating-conic-gradient(from 5deg, rgba(193, 154, 105, 0.08) 0 14deg, transparent 14deg 28deg);
+        box-shadow:
+          0 12px 22px rgba(109, 75, 40, 0.08),
+          inset 0 0 0 4px rgba(229, 202, 170, 0.46),
+          inset 0 0 0 10px rgba(255, 250, 244, 0.72),
+          inset 0 0 0 14px rgba(183, 128, 60, 0.2);
+        transform: translateX(-50%);
+      }
+
+      .success-medal::before {
+        position: absolute;
+        inset: 18px;
+        border: 1.5px solid rgba(116, 72, 25, 0.86);
+        border-radius: inherit;
+        content: "";
+      }
+
+      .success-medal svg {
+        width: 69px;
+        height: 69px;
+        color: var(--gold);
+        stroke-width: 8.5;
+        filter: drop-shadow(0 3px 4px rgba(88, 57, 31, 0.1));
+      }
+
+      .spark {
+        position: absolute;
+        z-index: 2;
+        width: 15px;
+        height: 15px;
+        color: var(--gold);
+      }
+
+      .spark.large {
+        top: 217px;
+        left: 107px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .spark.top {
+        top: 158px;
+        left: 295px;
+        width: 11px;
+        height: 11px;
+      }
+
+      .spark.right {
+        top: 237px;
+        left: 308px;
+        width: 17px;
+        height: 17px;
+      }
+
+      .spark.low {
+        top: 270px;
+        left: 129px;
+        width: 11px;
+        height: 11px;
+      }
+
+      .saved-title {
+        position: absolute;
+        top: 310px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--ink);
+        font-size: 47px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 18px rgba(69, 43, 27, 0.08);
+        transform: scaleX(0.87);
+      }
+
+      .saved-title .accent {
+        color: var(--wine);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 13px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .title-ornament {
+        top: 375px;
+      }
+
+      .ornament-line {
+        width: 45px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .saved-copy {
+        position: absolute;
+        top: 398px;
+        left: 50%;
+        z-index: 2;
+        width: 315px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.55;
+        text-align: center;
+        transform: translateX(-50%);
+      }
+
+      .seal-card {
+        position: absolute;
+        top: 468px;
+        left: 42px;
+        z-index: 2;
+        display: grid;
+        width: 347.5px;
+        height: 134px;
+        grid-template-columns: 128px 1px 1fr;
+        align-items: center;
+        overflow: hidden;
+        border: 0.8px solid rgba(232, 219, 207, 0.94);
+        border-radius: 12px;
+        background:
+          radial-gradient(circle at 17% 47%, rgba(255, 255, 255, 0.7) 0 18%, transparent 38%),
+          linear-gradient(135deg, rgba(255, 255, 255, 0.67), rgba(255, 249, 243, 0.75));
+        box-shadow:
+          0 12px 24px rgba(89, 58, 34, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(2px);
+      }
+
+      .seal-image {
+        width: 102px;
+        height: 102px;
+        margin-left: 20px;
+        border-radius: 999px;
+        object-fit: cover;
+        filter: drop-shadow(0 7px 11px rgba(90, 50, 25, 0.13));
+      }
+
+      .divider {
+        position: relative;
+        width: 1px;
+        height: 92px;
+        background: rgba(184, 128, 57, 0.72);
+      }
+
+      .divider::before {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        border: 2px solid var(--gold);
+        background: var(--paper);
+        content: "";
+        transform: translate(-50%, -50%) rotate(45deg);
+      }
+
+      .seal-details {
+        min-width: 0;
+        padding-left: 24px;
+      }
+
+      .seal-name {
+        margin: 0;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP",
+          serif;
+        font-size: 30px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .seal-style {
+        margin: 20px 0 0;
+        color: var(--copy);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stone-line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 23px 0 0;
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .stone-line svg {
+        width: 18px;
+        height: 18px;
+        color: var(--gold);
+      }
+
+      .action-button {
+        position: absolute;
+        left: 45px;
+        z-index: 2;
+        display: grid;
+        width: 341.5px;
+        height: 56px;
+        grid-template-columns: 1fr 34px;
+        align-items: center;
+        border-radius: 8px;
+        font-size: 27px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .action-button svg {
+        width: 30px;
+        height: 30px;
+        justify-self: end;
+        stroke-width: 1.65;
+      }
+
+      .primary {
+        top: 640px;
+        padding: 0 18px 0 51px;
+        border: 1px solid rgba(119, 8, 10, 0.72);
+        background:
+          radial-gradient(circle at 48% 20%, rgba(190, 40, 38, 0.26), transparent 43%),
+          linear-gradient(135deg, #a1171b, #870f12);
+        box-shadow:
+          0 11px 19px rgba(113, 25, 19, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.13);
+        color: #fff9f2;
+      }
+
+      .secondary {
+        top: 713px;
+        padding: 0 18px 0 52px;
+        border: 1.2px solid rgba(180, 121, 50, 0.95);
+        background: rgba(255, 255, 255, 0.24);
+        color: var(--ink);
+      }
+
+      .secondary svg {
+        color: #171d20;
+      }
+
+      .text-link {
+        position: absolute;
+        top: 801px;
+        left: 50%;
+        z-index: 2;
+        width: max-content;
+        border-bottom: 1px solid rgba(141, 21, 24, 0.88);
+        color: var(--wine);
+        font-size: 21px;
+        font-weight: 500;
+        line-height: 1.28;
+        text-decoration: none;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Seal saved screen">
+      <div class="artboard">
+        <header class="brand" aria-label="Stone Signature">
+          <svg class="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M24 4 43 24 24 44 5 24 24 4Z" stroke="currentColor" stroke-width="2.2" />
+            <path d="M24 4v40M5 24h38M12.7 12.7l22.6 22.6M35.3 12.7 12.7 35.3" stroke="currentColor" stroke-width="1.35" />
+          </svg>
+          <h1 class="brand-name serif">Stone Signature</h1>
+        </header>
+
+        <span class="spark large" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 1.7c.8 6.1 3.6 8.9 9.7 10.3-6.1 1.3-8.9 4.2-9.7 10.3C11.2 16.2 8.4 13.3 2.3 12 8.4 10.6 11.2 7.8 12 1.7Z" fill="currentColor" /></svg>
+        </span>
+        <span class="spark top" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 1.7c.8 6.1 3.6 8.9 9.7 10.3-6.1 1.3-8.9 4.2-9.7 10.3C11.2 16.2 8.4 13.3 2.3 12 8.4 10.6 11.2 7.8 12 1.7Z" fill="currentColor" /></svg>
+        </span>
+        <span class="spark right" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 1.7c.8 6.1 3.6 8.9 9.7 10.3-6.1 1.3-8.9 4.2-9.7 10.3C11.2 16.2 8.4 13.3 2.3 12 8.4 10.6 11.2 7.8 12 1.7Z" fill="currentColor" /></svg>
+        </span>
+        <span class="spark low" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 1.7c.8 6.1 3.6 8.9 9.7 10.3-6.1 1.3-8.9 4.2-9.7 10.3C11.2 16.2 8.4 13.3 2.3 12 8.4 10.6 11.2 7.8 12 1.7Z" fill="currentColor" /></svg>
+        </span>
+
+        <div class="success-medal" aria-hidden="true">
+          <svg viewBox="0 0 80 80" fill="none">
+            <path d="m18 42 16 16 29-32" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+
+        <h2 class="saved-title serif">Seal <span class="accent">Saved</span></h2>
+        <div class="ornament title-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="saved-copy">
+          Your custom seal has been saved<br />
+          to My Seals.
+        </p>
+
+        <section class="seal-card" aria-label="Saved seal summary">
+          <img
+            class="seal-image"
+            src="assets/des-010-saved-seal.png"
+            width="230"
+            height="230"
+            alt=""
+            aria-hidden="true"
+          />
+          <span class="divider" aria-hidden="true"></span>
+          <div class="seal-details">
+            <h3 class="seal-name">美空</h3>
+            <p class="seal-style">Elegant / Standard / Balanced</p>
+            <p class="stone-line">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2.2c.8 6 3.6 8.8 9.6 9.8-6 1-8.8 3.8-9.6 9.8-.8-6-3.6-8.8-9.6-9.8 6-1 8.8-3.8 9.6-9.8Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M19.3 3.7c.4 2.4 1.5 3.5 3.9 3.9-2.4.4-3.5 1.5-3.9 3.9-.4-2.4-1.5-3.5-3.9-3.9 2.4-.4 3.5-1.5 3.9-3.9Z" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+              Red Jasper
+            </p>
+          </div>
+        </section>
+
+        <a class="action-button primary serif" href="#">
+          <span>Choose a Stone</span>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 12h14" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 6 6 6-6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <a class="action-button secondary serif" href="#">
+          <span>Go to My Seals</span>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 12h14" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 6 6 6-6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <a class="text-link serif" href="#">Create Another Seal</a>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const screen = document.querySelector(".screen");
+        const setScale = () => {
+          document.documentElement.style.setProperty("--screen-scale", Math.min(screen.clientWidth / 431.5, 1));
+        };
+
+        setScale();
+        window.addEventListener("resize", setScale, { passive: true });
+      })();
+    </script>
+  </body>
+</html>

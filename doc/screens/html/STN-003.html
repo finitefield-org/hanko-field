@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STN-003 Stones Loading - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #14191c;
+        --wine: #9b191d;
+        --gold: #b27e3f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dc;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Hanko Serif", "Yu Mincho", "Hiragino Mincho ProN",
+          serif;
+        letter-spacing: 0;
+      }
+
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            ellipse at 50% 8%,
+            rgba(255, 255, 255, 0.95),
+            transparent 36%
+          ),
+          radial-gradient(
+            ellipse at 49% 48%,
+            rgba(255, 255, 255, 0.68),
+            transparent 43%
+          ),
+          radial-gradient(
+            ellipse at 49% 88%,
+            rgba(255, 255, 255, 0.5),
+            transparent 40%
+          ),
+          linear-gradient(127deg, #f4ece4 0%, #fffdf9 42%, #f7efe7 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.28;
+        background:
+          linear-gradient(
+            148deg,
+            transparent 0 31%,
+            rgba(200, 166, 119, 0.08) 31.15%,
+            transparent 31.72%
+          ),
+          linear-gradient(
+            140deg,
+            transparent 0 64%,
+            rgba(196, 158, 112, 0.12) 64.2%,
+            transparent 64.72%
+          ),
+          linear-gradient(
+            144deg,
+            transparent 0 70%,
+            rgba(188, 149, 103, 0.16) 70.1%,
+            transparent 70.62%
+          ),
+          linear-gradient(
+            136deg,
+            transparent 0 76%,
+            rgba(202, 167, 119, 0.13) 76.12%,
+            transparent 76.7%
+          );
+        filter: blur(0.72px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 66px rgba(125, 96, 68, 0.075);
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 2;
+        top: 9.15%;
+        left: 50%;
+        margin: 0;
+        color: var(--wine);
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 7.9cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 9px 15px rgba(83, 45, 35, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .loading-state {
+        position: absolute;
+        z-index: 2;
+        top: 38.45%;
+        left: 50%;
+        display: flex;
+        width: 82%;
+        transform: translateX(-50%);
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .seal-loader {
+        position: relative;
+        display: grid;
+        width: 29.25cqw;
+        height: 29.25cqw;
+        place-items: center;
+      }
+
+      .progress-ring {
+        position: absolute;
+        inset: 0;
+        color: var(--gold);
+        overflow: visible;
+        transform: rotate(-90deg);
+      }
+
+      .ring-track {
+        fill: none;
+        stroke: rgba(214, 196, 176, 0.63);
+        stroke-width: 0.82;
+      }
+
+      .ring-progress {
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-width: 1.95;
+        stroke-dasharray: 214 92;
+        stroke-dashoffset: 50;
+      }
+
+      .ring-dot {
+        fill: currentColor;
+        transform: rotate(74deg);
+        transform-origin: 50% 50%;
+      }
+
+      .seal-mark {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        width: 15.2cqw;
+        height: 15.2cqw;
+        place-items: center;
+        border: 0.62cqw solid rgba(178, 126, 63, 0.88);
+        border-radius: 999px;
+        color: rgba(178, 126, 63, 0.93);
+        background: rgba(255, 253, 248, 0.2);
+      }
+
+      .seal-kanji {
+        color: currentColor;
+        font-family:
+          "Hanko Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 8.1cqw;
+        font-weight: 700;
+        line-height: 0.94;
+        transform: scaleX(0.88) translateY(-0.12cqw);
+      }
+
+      .loading-title {
+        margin: 7.25cqw 0 0;
+        color: #151b1f;
+        font-size: 4.08cqw;
+        font-weight: 500;
+        line-height: 1.2;
+        text-shadow: 0 5px 12px rgba(55, 47, 42, 0.09);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2.72cqw;
+        margin-top: 4.45cqw;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 10.05cqw;
+        height: 0.1cqw;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 1.86cqw;
+        height: 1.86cqw;
+        border: 0.35cqw solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .loading-title {
+          font-size: 4cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/30 md:shadow-stone-300/40"
+      aria-label="宝石材を読み込み中"
+    >
+      <h1 class="screen-title">Stones</h1>
+
+      <section
+        class="loading-state"
+        aria-labelledby="loading-title"
+        aria-live="polite"
+      >
+        <div class="seal-loader" aria-hidden="true">
+          <svg class="progress-ring" viewBox="0 0 100 100">
+            <circle class="ring-track" cx="50" cy="50" r="47" />
+            <circle class="ring-progress" cx="50" cy="50" r="47" />
+            <circle class="ring-dot" cx="50" cy="3" r="1.7" />
+          </svg>
+
+          <div class="seal-mark">
+            <span class="seal-kanji">蘭</span>
+          </div>
+        </div>
+
+        <h2 id="loading-title" class="loading-title">宝石材を読み込み中です</h2>
+
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

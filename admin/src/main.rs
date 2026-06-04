@@ -85,6 +85,18 @@ struct Order {
     contact_email: String,
     seal_line1: String,
     seal_line2: String,
+    engraving_text: String,
+    ai_generation_id: String,
+    ai_variant_id: String,
+    seal_preview_image_storage_path: String,
+    seal_style_name: String,
+    seal_style_stroke_weight: String,
+    seal_style_balance: String,
+    seal_style_prompt_summary: String,
+    customer_confirmation_kanji_and_design: Option<bool>,
+    customer_confirmation_custom_made_policy: Option<bool>,
+    customer_confirmation_confirmed_at: Option<DateTime<Utc>>,
+    customer_confirmation_confirmed_seal_text: String,
     listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
@@ -590,6 +602,12 @@ struct OrderListItemView {
     id: String,
     order_no: String,
     created_at: String,
+    channel_label: String,
+    is_app_order: bool,
+    engraving_text: String,
+    has_engraving_text: bool,
+    ai_variant_id: String,
+    has_ai_variant_id: bool,
     status_label: String,
     payment_status_label: String,
     fulfillment_status_label: String,
@@ -631,6 +649,32 @@ struct OrderDetailView {
     seal_line1: String,
     seal_line2: String,
     has_seal_line2: bool,
+    seal_preview_image_storage_path: String,
+    seal_preview_image_url: String,
+    has_seal_preview_image: bool,
+    has_seal_preview_image_url: bool,
+    ai_generation_id: String,
+    has_ai_generation_id: bool,
+    ai_variant_id: String,
+    has_ai_variant_id: bool,
+    seal_style_name: String,
+    seal_style_stroke_weight: String,
+    seal_style_balance: String,
+    seal_style_prompt_summary: String,
+    has_seal_style_name: bool,
+    has_seal_style_stroke_weight: bool,
+    has_seal_style_balance: bool,
+    has_seal_style_prompt_summary: bool,
+    has_ai_seal_metadata: bool,
+    customer_confirmation_kanji_and_design_label: String,
+    customer_confirmation_custom_made_policy_label: String,
+    customer_confirmation_confirmed_at: String,
+    customer_confirmation_confirmed_seal_text: String,
+    has_customer_confirmation_kanji_and_design: bool,
+    has_customer_confirmation_custom_made_policy: bool,
+    has_customer_confirmation_confirmed_at: bool,
+    has_customer_confirmation_confirmed_seal_text: bool,
+    has_customer_confirmation: bool,
     listing_label_ja: String,
     total: String,
     next_statuses: Vec<StatusOptionView>,
@@ -3978,6 +4022,12 @@ impl ServerState {
                 id: order.id.clone(),
                 order_no: order.order_no.clone(),
                 created_at: format_datetime(order.created_at),
+                channel_label: order_channel_label(&order.channel),
+                is_app_order: order.channel.eq_ignore_ascii_case("app"),
+                engraving_text: order.engraving_text.clone(),
+                has_engraving_text: !order.engraving_text.is_empty(),
+                ai_variant_id: order.ai_variant_id.clone(),
+                has_ai_variant_id: !order.ai_variant_id.is_empty(),
                 status_label: order_status_label(&order.status).to_owned(),
                 payment_status_label: payment_status_label(&order.payment_status).to_owned(),
                 fulfillment_status_label: fulfillment_status_label(&order.fulfillment_status)
@@ -4025,6 +4075,39 @@ impl ServerState {
 
         let next_statuses = next_status_options(&order.status);
         let shipping_transitions = shipping_transition_options(&order.status);
+        let seal_preview_image_url = build_storage_media_url(
+            &self.storage_assets_bucket,
+            &order.seal_preview_image_storage_path,
+        );
+        let has_ai_generation_id = !order.ai_generation_id.is_empty();
+        let has_ai_variant_id = !order.ai_variant_id.is_empty();
+        let has_seal_style_name = !order.seal_style_name.is_empty();
+        let has_seal_style_stroke_weight = !order.seal_style_stroke_weight.is_empty();
+        let has_seal_style_balance = !order.seal_style_balance.is_empty();
+        let has_seal_style_prompt_summary = !order.seal_style_prompt_summary.is_empty();
+        let has_ai_seal_metadata = has_ai_generation_id
+            || has_ai_variant_id
+            || has_seal_style_name
+            || has_seal_style_stroke_weight
+            || has_seal_style_balance
+            || has_seal_style_prompt_summary;
+        let has_customer_confirmation_kanji_and_design =
+            order.customer_confirmation_kanji_and_design.is_some();
+        let has_customer_confirmation_custom_made_policy =
+            order.customer_confirmation_custom_made_policy.is_some();
+        let has_customer_confirmation_confirmed_at =
+            order.customer_confirmation_confirmed_at.is_some();
+        let customer_confirmation_confirmed_at = order
+            .customer_confirmation_confirmed_at
+            .as_ref()
+            .map(|value| format_datetime(value.to_owned()))
+            .unwrap_or_default();
+        let has_customer_confirmation_confirmed_seal_text =
+            !order.customer_confirmation_confirmed_seal_text.is_empty();
+        let has_customer_confirmation = has_customer_confirmation_kanji_and_design
+            || has_customer_confirmation_custom_made_policy
+            || has_customer_confirmation_confirmed_at
+            || has_customer_confirmation_confirmed_seal_text;
 
         Some(OrderDetailView {
             id: order.id.clone(),
@@ -4046,6 +4129,44 @@ impl ServerState {
             seal_line1: order.seal_line1.clone(),
             seal_line2: order.seal_line2.clone(),
             has_seal_line2: !order.seal_line2.is_empty(),
+            seal_preview_image_storage_path: order.seal_preview_image_storage_path.clone(),
+            seal_preview_image_url: seal_preview_image_url.clone(),
+            has_seal_preview_image: !order.seal_preview_image_storage_path.is_empty(),
+            has_seal_preview_image_url: !seal_preview_image_url.is_empty(),
+            ai_generation_id: order.ai_generation_id.clone(),
+            has_ai_generation_id,
+            ai_variant_id: order.ai_variant_id.clone(),
+            has_ai_variant_id,
+            seal_style_name: order.seal_style_name.clone(),
+            seal_style_stroke_weight: order.seal_style_stroke_weight.clone(),
+            seal_style_balance: order.seal_style_balance.clone(),
+            seal_style_prompt_summary: order.seal_style_prompt_summary.clone(),
+            has_seal_style_name,
+            has_seal_style_stroke_weight,
+            has_seal_style_balance,
+            has_seal_style_prompt_summary,
+            has_ai_seal_metadata,
+            customer_confirmation_kanji_and_design_label: confirmation_bool_label(
+                order
+                    .customer_confirmation_kanji_and_design
+                    .unwrap_or_default(),
+            )
+            .to_owned(),
+            customer_confirmation_custom_made_policy_label: confirmation_bool_label(
+                order
+                    .customer_confirmation_custom_made_policy
+                    .unwrap_or_default(),
+            )
+            .to_owned(),
+            customer_confirmation_confirmed_at,
+            customer_confirmation_confirmed_seal_text: order
+                .customer_confirmation_confirmed_seal_text
+                .clone(),
+            has_customer_confirmation_kanji_and_design,
+            has_customer_confirmation_custom_made_policy,
+            has_customer_confirmation_confirmed_at,
+            has_customer_confirmation_confirmed_seal_text,
+            has_customer_confirmation,
             listing_label_ja: order.listing_label_ja.clone(),
             total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
@@ -5719,6 +5840,110 @@ impl ServerState {
     }
 }
 
+fn decode_order_fields(
+    default_locale: &str,
+    order_id: &str,
+    data: &BTreeMap<String, JsonValue>,
+) -> Order {
+    let payment = read_map_field(data, "payment");
+    let listing = read_map_field(data, "listing");
+    let material = read_map_field(data, "material");
+    let fulfillment = read_map_field(data, "fulfillment");
+    let shipping = read_map_field(data, "shipping");
+    let contact = read_map_field(data, "contact");
+    let seal = read_map_field(data, "seal");
+    let seal_style = read_map_field(&seal, "style");
+    let customer_confirmation = read_map_field(data, "customer_confirmation");
+    let pricing = read_map_field(data, "pricing");
+    let raw_locale = read_string_field(data, "locale");
+    let locale = if raw_locale.is_empty() {
+        let contact_locale = read_string_field(&contact, "preferred_locale");
+        if contact_locale.is_empty() {
+            default_locale.trim().to_owned()
+        } else {
+            contact_locale
+        }
+    } else {
+        raw_locale
+    };
+    let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
+    let total = resolve_order_total(data, &pricing);
+    let (listing_key, listing_label_ja) =
+        FirestoreAdminSource::resolve_order_listing_fields(data, &listing, &material);
+    let seal_line1 = read_string_field(&seal, "line1");
+    let seal_line2 = read_string_field(&seal, "line2");
+    let engraving_text =
+        resolve_order_engraving_text(&customer_confirmation, &seal_line1, &seal_line2);
+
+    let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
+    let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
+    let status_updated_at = read_timestamp_field(data, "status_updated_at").unwrap_or(updated_at);
+
+    let mut order = Order {
+        id: order_id.to_owned(),
+        order_no: read_string_field(data, "order_no"),
+        channel: read_string_field(data, "channel"),
+        locale,
+        currency: pricing_currency,
+        listing_key,
+        status: read_string_field(data, "status"),
+        status_updated_at,
+        payment_status: read_string_field(&payment, "status"),
+        fulfillment_status: read_string_field(&fulfillment, "status"),
+        tracking_no: read_string_field(&fulfillment, "tracking_no"),
+        carrier: read_string_field(&fulfillment, "carrier"),
+        country_code: read_string_field(&shipping, "country_code").to_uppercase(),
+        contact_email: read_string_field(&contact, "email"),
+        seal_line1,
+        seal_line2,
+        engraving_text,
+        ai_generation_id: read_string_field(&seal, "ai_generation_id"),
+        ai_variant_id: read_string_field(&seal, "ai_variant_id"),
+        seal_preview_image_storage_path: read_seal_preview_image_storage_path(&seal),
+        seal_style_name: read_string_field(&seal_style, "name"),
+        seal_style_stroke_weight: read_string_field(&seal_style, "stroke_weight"),
+        seal_style_balance: read_string_field(&seal_style, "balance"),
+        seal_style_prompt_summary: read_string_field(&seal_style, "prompt_summary"),
+        customer_confirmation_kanji_and_design: read_bool_field(
+            &customer_confirmation,
+            "kanji_and_design",
+        ),
+        customer_confirmation_custom_made_policy: read_bool_field(
+            &customer_confirmation,
+            "custom_made_policy",
+        ),
+        customer_confirmation_confirmed_at: read_timestamp_field(
+            &customer_confirmation,
+            "confirmed_at",
+        ),
+        customer_confirmation_confirmed_seal_text: read_string_field(
+            &customer_confirmation,
+            "confirmed_seal_text",
+        ),
+        listing_label_ja,
+        total,
+        created_at,
+        updated_at,
+        events: Vec::new(),
+    };
+
+    if order.order_no.is_empty() {
+        order.order_no = order_id.to_owned();
+    }
+    if order.locale.is_empty() {
+        order.locale = default_locale.trim().to_owned();
+    }
+    if order.currency.trim().is_empty() {
+        order.currency = "USD".to_owned();
+    }
+    if order.status.is_empty() {
+        order.status = "pending_payment".to_owned();
+    }
+
+    fill_derived_statuses(&mut order);
+    order
+}
+
 impl FirestoreAdminSource {
     async fn firestore_client(&self) -> Result<FirebaseFirestoreClient> {
         let access_token = self
@@ -5896,69 +6121,7 @@ impl FirestoreAdminSource {
     }
 
     fn decode_order(&self, order_id: &str, data: &BTreeMap<String, JsonValue>) -> Order {
-        let payment = read_map_field(data, "payment");
-        let listing = read_map_field(data, "listing");
-        let material = read_map_field(data, "material");
-        let fulfillment = read_map_field(data, "fulfillment");
-        let shipping = read_map_field(data, "shipping");
-        let contact = read_map_field(data, "contact");
-        let seal = read_map_field(data, "seal");
-        let pricing = read_map_field(data, "pricing");
-        let raw_locale = read_string_field(data, "locale");
-        let locale = if raw_locale.is_empty() {
-            read_string_field(&contact, "preferred_locale")
-        } else {
-            raw_locale
-        };
-        let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
-        let total = resolve_order_total(data, &pricing);
-        let (listing_key, listing_label_ja) =
-            Self::resolve_order_listing_fields(data, &listing, &material);
-
-        let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
-        let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
-        let status_updated_at =
-            read_timestamp_field(data, "status_updated_at").unwrap_or(updated_at);
-
-        let mut order = Order {
-            id: order_id.to_owned(),
-            order_no: read_string_field(data, "order_no"),
-            channel: read_string_field(data, "channel"),
-            locale,
-            currency: pricing_currency,
-            listing_key,
-            status: read_string_field(data, "status"),
-            status_updated_at,
-            payment_status: read_string_field(&payment, "status"),
-            fulfillment_status: read_string_field(&fulfillment, "status"),
-            tracking_no: read_string_field(&fulfillment, "tracking_no"),
-            carrier: read_string_field(&fulfillment, "carrier"),
-            country_code: read_string_field(&shipping, "country_code").to_uppercase(),
-            contact_email: read_string_field(&contact, "email"),
-            seal_line1: read_string_field(&seal, "line1"),
-            seal_line2: read_string_field(&seal, "line2"),
-            listing_label_ja,
-            total,
-            created_at,
-            updated_at,
-            events: Vec::new(),
-        };
-
-        if order.order_no.is_empty() {
-            order.order_no = order_id.to_owned();
-        }
-        if order.locale.is_empty() {
-            order.locale = self.default_locale.clone();
-        }
-        if order.currency.trim().is_empty() {
-            order.currency = "USD".to_owned();
-        }
-        if order.status.is_empty() {
-            order.status = "pending_payment".to_owned();
-        }
-
-        fill_derived_statuses(&mut order);
-        order
+        decode_order_fields(&self.default_locale, order_id, data)
     }
 
     fn resolve_order_listing_fields(
@@ -8856,6 +9019,37 @@ fn order_status_label(status: &str) -> &str {
     }
 }
 
+fn order_channel_label(channel: &str) -> String {
+    match channel.trim().to_ascii_lowercase().as_str() {
+        "app" => "App".to_owned(),
+        "web" => "Web".to_owned(),
+        "" => "不明".to_owned(),
+        _ => channel.trim().to_owned(),
+    }
+}
+
+fn resolve_order_engraving_text(
+    customer_confirmation: &BTreeMap<String, JsonValue>,
+    seal_line1: &str,
+    seal_line2: &str,
+) -> String {
+    let confirmed_seal_text = read_string_field(customer_confirmation, "confirmed_seal_text");
+    if !confirmed_seal_text.is_empty() {
+        return confirmed_seal_text;
+    }
+
+    format!("{}{}", seal_line1.trim(), seal_line2.trim())
+}
+
+fn read_seal_preview_image_storage_path(seal: &BTreeMap<String, JsonValue>) -> String {
+    let preview_image = read_map_field(seal, "preview_image");
+    normalize_storage_path(&read_string_field(&preview_image, "storage_path"))
+}
+
+fn confirmation_bool_label(value: bool) -> &'static str {
+    if value { "確認済み" } else { "未確認" }
+}
+
 fn payment_status_label(status: &str) -> &str {
     match status {
         "unpaid" => "未払い",
@@ -9729,6 +9923,18 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "ito@example.com".to_owned(),
                 seal_line1: "伊".to_owned(),
                 seal_line2: "藤".to_owned(),
+                engraving_text: "伊藤".to_owned(),
+                ai_generation_id: String::new(),
+                ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
@@ -9783,6 +9989,19 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "jane.smith@example.com".to_owned(),
                 seal_line1: "JA".to_owned(),
                 seal_line2: "NE".to_owned(),
+                engraving_text: "JANE".to_owned(),
+                ai_generation_id: "seal_request_006".to_owned(),
+                ai_variant_id: "seal_variant_006".to_owned(),
+                seal_preview_image_storage_path:
+                    "seal_designs/seal_request_006/seal_variant_006.png".to_owned(),
+                seal_style_name: "elegant".to_owned(),
+                seal_style_stroke_weight: "standard".to_owned(),
+                seal_style_balance: "balanced".to_owned(),
+                seal_style_prompt_summary: "Latin initials with refined spacing".to_owned(),
+                customer_confirmation_kanji_and_design: Some(true),
+                customer_confirmation_custom_made_policy: Some(true),
+                customer_confirmation_confirmed_at: Some(now - chrono::Duration::hours(13)),
+                customer_confirmation_confirmed_seal_text: "JANE".to_owned(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
@@ -9828,6 +10047,18 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "tanaka@example.com".to_owned(),
                 seal_line1: "田".to_owned(),
                 seal_line2: "中".to_owned(),
+                engraving_text: "田中".to_owned(),
+                ai_generation_id: String::new(),
+                ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
@@ -9900,6 +10131,19 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "kato@example.com".to_owned(),
                 seal_line1: "加".to_owned(),
                 seal_line2: "藤".to_owned(),
+                engraving_text: "加藤".to_owned(),
+                ai_generation_id: "seal_request_004".to_owned(),
+                ai_variant_id: "seal_variant_004".to_owned(),
+                seal_preview_image_storage_path:
+                    "seal_designs/seal_request_004/seal_variant_004.png".to_owned(),
+                seal_style_name: "traditional".to_owned(),
+                seal_style_stroke_weight: "bold".to_owned(),
+                seal_style_balance: "dense".to_owned(),
+                seal_style_prompt_summary: "Classic kanji seal with dense balance".to_owned(),
+                customer_confirmation_kanji_and_design: Some(true),
+                customer_confirmation_custom_made_policy: Some(true),
+                customer_confirmation_confirmed_at: Some(now - chrono::Duration::hours(98)),
+                customer_confirmation_confirmed_seal_text: "加藤".to_owned(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
@@ -9945,6 +10189,18 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "chris@example.com".to_owned(),
                 seal_line1: "CH".to_owned(),
                 seal_line2: "RI".to_owned(),
+                engraving_text: "CHRI".to_owned(),
+                ai_generation_id: String::new(),
+                ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
@@ -9979,6 +10235,19 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "suzuki@example.com".to_owned(),
                 seal_line1: "鈴".to_owned(),
                 seal_line2: "木".to_owned(),
+                engraving_text: "鈴木".to_owned(),
+                ai_generation_id: "seal_request_002".to_owned(),
+                ai_variant_id: "seal_variant_002".to_owned(),
+                seal_preview_image_storage_path:
+                    "seal_designs/seal_request_002/seal_variant_002.png".to_owned(),
+                seal_style_name: "soft".to_owned(),
+                seal_style_stroke_weight: "standard".to_owned(),
+                seal_style_balance: "airy".to_owned(),
+                seal_style_prompt_summary: "Soft kanji seal with open spacing".to_owned(),
+                customer_confirmation_kanji_and_design: Some(true),
+                customer_confirmation_custom_made_policy: Some(true),
+                customer_confirmation_confirmed_at: Some(now - chrono::Duration::hours(152)),
+                customer_confirmation_confirmed_seal_text: "鈴木".to_owned(),
                 listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
@@ -10024,6 +10293,18 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "yamada@example.com".to_owned(),
                 seal_line1: "山".to_owned(),
                 seal_line2: "田".to_owned(),
+                engraving_text: "山田".to_owned(),
+                ai_generation_id: String::new(),
+                ai_variant_id: String::new(),
+                seal_preview_image_storage_path: String::new(),
+                seal_style_name: String::new(),
+                seal_style_stroke_weight: String::new(),
+                seal_style_balance: String::new(),
+                seal_style_prompt_summary: String::new(),
+                customer_confirmation_kanji_and_design: None,
+                customer_confirmation_custom_made_policy: None,
+                customer_confirmation_confirmed_at: None,
+                customer_confirmation_confirmed_seal_text: String::new(),
                 listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
@@ -10825,6 +11106,326 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn filter_orders_exposes_app_metadata_for_list() {
+        let state = mock_server_state();
+        let orders = state
+            .filter_orders(&OrderFilter {
+                status: "paid".to_owned(),
+                country: String::new(),
+                email: String::new(),
+            })
+            .await;
+
+        let app_order = orders
+            .iter()
+            .find(|order| order.id == "ord_1006")
+            .expect("paid app order should be listed");
+
+        assert!(app_order.is_app_order);
+        assert_eq!(app_order.channel_label, "App");
+        assert_eq!(app_order.engraving_text, "JANE");
+        assert!(app_order.has_engraving_text);
+        assert_eq!(app_order.ai_variant_id, "seal_variant_006");
+        assert!(app_order.has_ai_variant_id);
+        assert_eq!(app_order.payment_status_label, "支払い済み");
+        assert_eq!(app_order.fulfillment_status_label, "未着手");
+    }
+
+    #[tokio::test]
+    async fn render_orders_list_includes_engraving_and_ai_variant() {
+        let state = mock_server_state();
+        let orders = state
+            .filter_orders(&OrderFilter {
+                status: "paid".to_owned(),
+                country: String::new(),
+                email: String::new(),
+            })
+            .await;
+
+        let html = render_orders_list(&orders).expect("orders list should render");
+
+        assert!(html.contains("彫刻 / AI"));
+        assert!(html.contains("JANE"));
+        assert!(html.contains("AI Variant: seal_variant_006"));
+        assert!(html.contains(">App</span>"));
+    }
+
+    #[tokio::test]
+    async fn get_order_detail_exposes_ai_seal_preview_image() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        assert!(detail.has_seal_preview_image);
+        assert!(detail.has_seal_preview_image_url);
+        assert_eq!(
+            detail.seal_preview_image_storage_path,
+            "seal_designs/seal_request_006/seal_variant_006.png"
+        );
+        assert_eq!(
+            detail.seal_preview_image_url,
+            "https://storage.googleapis.com/hanko-field-dev/seal_designs/seal_request_006/seal_variant_006.png"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_order_detail_exposes_ai_seal_metadata() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        assert!(detail.has_ai_seal_metadata);
+        assert!(detail.has_ai_generation_id);
+        assert!(detail.has_ai_variant_id);
+        assert_eq!(detail.ai_generation_id, "seal_request_006");
+        assert_eq!(detail.ai_variant_id, "seal_variant_006");
+        assert_eq!(detail.seal_style_name, "elegant");
+        assert_eq!(detail.seal_style_stroke_weight, "standard");
+        assert_eq!(detail.seal_style_balance, "balanced");
+        assert_eq!(
+            detail.seal_style_prompt_summary,
+            "Latin initials with refined spacing"
+        );
+        assert!(detail.has_seal_style_name);
+        assert!(detail.has_seal_style_stroke_weight);
+        assert!(detail.has_seal_style_balance);
+        assert!(detail.has_seal_style_prompt_summary);
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_includes_generated_seal_preview_image() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        let html = render_order_detail(&detail).expect("order detail should render");
+
+        assert!(html.contains("生成印影プレビュー"));
+        assert!(html.contains(
+            "AIは構造化レシピ提案のみを担い、最終PNGは実在フォントを使ったプログラム描画です。"
+        ));
+        assert!(html.contains("seal_designs/seal_request_006/seal_variant_006.png"));
+        assert!(html.contains("https://storage.googleapis.com/hanko-field-dev/seal_designs/seal_request_006/seal_variant_006.png"));
+        assert!(html.contains("HF-20260209-1006 の生成印影プレビュー"));
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_includes_generated_seal_recipe_metadata() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        let html = render_order_detail(&detail).expect("order detail should render");
+
+        assert!(html.contains("生成印影レシピ/スタイル"));
+        assert!(html.contains(
+            "制作確認ではStorageパス、AI Variant ID、選択スタイル、顧客確認を正本として扱います。"
+        ));
+        assert!(html.contains("AIレシピ生成ID"));
+        assert!(html.contains("seal_request_006"));
+        assert!(html.contains("AI Variant ID"));
+        assert!(html.contains("seal_variant_006"));
+        assert!(html.contains("選択スタイル"));
+        assert!(html.contains("elegant"));
+        assert!(html.contains("線の太さ"));
+        assert!(html.contains("standard"));
+        assert!(html.contains("余白バランス"));
+        assert!(html.contains("balanced"));
+        assert!(html.contains("レシピ要約"));
+        assert!(html.contains("Latin initials with refined spacing"));
+        assert!(!html.contains("AI画像生成"));
+        assert!(!html.contains("AI印影プレビュー"));
+        assert!(!html.contains("AI印影メタデータ"));
+    }
+
+    #[tokio::test]
+    async fn get_order_detail_exposes_customer_confirmation() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        assert!(detail.has_customer_confirmation);
+        assert!(detail.has_customer_confirmation_kanji_and_design);
+        assert!(detail.has_customer_confirmation_custom_made_policy);
+        assert!(detail.has_customer_confirmation_confirmed_at);
+        assert!(detail.has_customer_confirmation_confirmed_seal_text);
+        assert_eq!(
+            detail.customer_confirmation_kanji_and_design_label,
+            "確認済み"
+        );
+        assert_eq!(
+            detail.customer_confirmation_custom_made_policy_label,
+            "確認済み"
+        );
+        assert!(!detail.customer_confirmation_confirmed_at.is_empty());
+        assert_eq!(detail.customer_confirmation_confirmed_seal_text, "JANE");
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_includes_customer_confirmation() {
+        let state = mock_server_state();
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+
+        let html = render_order_detail(&detail).expect("order detail should render");
+
+        assert!(html.contains("顧客確認チェック"));
+        assert!(html.contains("漢字/生成印影確認"));
+        assert!(html.contains("カスタムメイド規約"));
+        assert!(html.contains("確認時刻"));
+        assert!(html.contains("確認時彫刻文字"));
+        assert!(html.contains("確認済み"));
+        assert!(html.contains("JANE"));
+    }
+
+    #[test]
+    fn resolve_order_engraving_text_prefers_customer_confirmation() {
+        let customer_confirmation =
+            btree_from_pairs(vec![("confirmed_seal_text", fs_string(" confirmed text "))]);
+
+        let engraving_text = resolve_order_engraving_text(&customer_confirmation, "AA", "BB");
+
+        assert_eq!(engraving_text, "confirmed text");
+    }
+
+    #[test]
+    fn read_seal_preview_image_storage_path_reads_nested_storage_path() {
+        let seal = btree_from_pairs(vec![(
+            "preview_image",
+            fs_map(btree_from_pairs(vec![(
+                "storage_path",
+                fs_string(" /seal_designs/seal_request_001/seal_variant_001.png "),
+            )])),
+        )]);
+
+        let storage_path = read_seal_preview_image_storage_path(&seal);
+
+        assert_eq!(
+            storage_path,
+            "seal_designs/seal_request_001/seal_variant_001.png"
+        );
+    }
+
+    #[test]
+    fn decode_order_fields_defaults_missing_app_fields_for_legacy_web_order() {
+        let now = Utc::now();
+        let data = btree_from_pairs(vec![
+            ("order_no", fs_string("HF-LEGACY-001")),
+            ("channel", fs_string("web")),
+            ("status", fs_string("paid")),
+            ("created_at", fs_timestamp(now)),
+            ("updated_at", fs_timestamp(now)),
+            (
+                "seal",
+                fs_map(btree_from_pairs(vec![
+                    ("line1", fs_string("佐")),
+                    ("line2", fs_string("藤")),
+                ])),
+            ),
+            (
+                "pricing",
+                fs_map(btree_from_pairs(vec![("total", fs_int(4200))])),
+            ),
+        ]);
+
+        let order = decode_order_fields("ja", "legacy_web_001", &data);
+
+        assert_eq!(order.order_no, "HF-LEGACY-001");
+        assert_eq!(order.channel, "web");
+        assert_eq!(order.locale, "ja");
+        assert_eq!(order.currency, "JPY");
+        assert_eq!(order.status, "paid");
+        assert_eq!(order.payment_status, "paid");
+        assert_eq!(order.fulfillment_status, "pending");
+        assert_eq!(order.engraving_text, "佐藤");
+        assert!(order.ai_generation_id.is_empty());
+        assert!(order.ai_variant_id.is_empty());
+        assert!(order.seal_preview_image_storage_path.is_empty());
+        assert!(order.seal_style_name.is_empty());
+        assert!(order.customer_confirmation_kanji_and_design.is_none());
+        assert!(order.customer_confirmation_custom_made_policy.is_none());
+        assert!(order.customer_confirmation_confirmed_at.is_none());
+        assert!(order.customer_confirmation_confirmed_seal_text.is_empty());
+    }
+
+    #[tokio::test]
+    async fn render_order_detail_handles_legacy_web_order_missing_app_fields() {
+        let now = Utc::now();
+        let data = btree_from_pairs(vec![
+            ("order_no", fs_string("HF-LEGACY-002")),
+            ("channel", fs_string("web")),
+            ("status", fs_string("paid")),
+            ("created_at", fs_timestamp(now)),
+            ("updated_at", fs_timestamp(now)),
+            (
+                "contact",
+                fs_map(btree_from_pairs(vec![(
+                    "email",
+                    fs_string("legacy@example.com"),
+                )])),
+            ),
+            (
+                "shipping",
+                fs_map(btree_from_pairs(vec![("country_code", fs_string("JP"))])),
+            ),
+            (
+                "seal",
+                fs_map(btree_from_pairs(vec![
+                    ("line1", fs_string("佐")),
+                    ("line2", fs_string("藤")),
+                ])),
+            ),
+            (
+                "pricing",
+                fs_map(btree_from_pairs(vec![("total", fs_int(4200))])),
+            ),
+        ]);
+        let mut snapshot = new_mock_snapshot();
+        snapshot.orders.insert(
+            "legacy_web_002".to_owned(),
+            decode_order_fields("ja", "legacy_web_002", &data),
+        );
+        snapshot.refresh_order_ids();
+        let state = ServerState {
+            source_label: "Mock".to_owned(),
+            storage_assets_bucket: "hanko-field-dev".to_owned(),
+            source: DataSource::Mock,
+            data: RwLock::new(snapshot),
+        };
+
+        let detail = state
+            .get_order_detail("legacy_web_002", "", "")
+            .await
+            .expect("legacy web order should exist");
+        let html = render_order_detail(&detail).expect("legacy web order detail should render");
+
+        assert_eq!(detail.order_no, "HF-LEGACY-002");
+        assert_eq!(detail.status_label, "支払い済み");
+        assert_eq!(detail.payment_status_label, "支払い済み");
+        assert_eq!(detail.fulfillment_status_label, "未着手");
+        assert!(!detail.has_seal_preview_image);
+        assert!(!detail.has_ai_seal_metadata);
+        assert!(!detail.has_customer_confirmation);
+        assert!(html.contains("HF-LEGACY-002"));
+        assert!(html.contains("佐 / 藤"));
+        assert!(!html.contains("生成印影プレビュー"));
+        assert!(!html.contains("生成印影レシピ/スタイル"));
+        assert!(!html.contains("顧客確認チェック"));
+    }
+
+    #[tokio::test]
     async fn filter_stone_listings_by_facets() {
         let state = mock_server_state();
         let stone_listings = state
@@ -11192,6 +11793,85 @@ mod tests {
         assert_eq!(detail.status_label, "製造中");
         assert_eq!(detail.payment_status_label, "支払い済み");
         assert_eq!(detail.fulfillment_status_label, "製造中");
+    }
+
+    #[tokio::test]
+    async fn app_order_status_transition_preserves_app_metadata() {
+        let state = mock_server_state();
+
+        let result = state
+            .update_order_status("ord_1006", "manufacturing", "test.admin")
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+        assert_eq!(detail.status_label, "製造中");
+        assert_eq!(detail.ai_generation_id, "seal_request_006");
+        assert_eq!(detail.ai_variant_id, "seal_variant_006");
+        assert!(detail.has_ai_seal_metadata);
+        assert!(detail.has_seal_preview_image);
+        assert!(detail.has_customer_confirmation);
+
+        let data = state.data.read().await;
+        let order = data
+            .orders
+            .get("ord_1006")
+            .expect("app order should remain in mock state");
+        assert!(order.events.iter().any(|event| {
+            event.kind == "status_changed"
+                && event.actor_id == "test.admin"
+                && event.before_status == "paid"
+                && event.after_status == "manufacturing"
+        }));
+    }
+
+    #[tokio::test]
+    async fn app_order_shipping_update_uses_existing_operation() {
+        let state = mock_server_state();
+
+        state
+            .update_order_status("ord_1006", "manufacturing", "test.admin")
+            .await
+            .expect("app order should enter manufacturing before shipping");
+
+        let result = state
+            .update_shipping("ord_1006", "DHL", "APP-TRACK-001", "shipped", "test.admin")
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_order_detail("ord_1006", "", "")
+            .await
+            .expect("app order should exist");
+        assert_eq!(detail.status_label, "出荷済み");
+        assert_eq!(detail.payment_status_label, "支払い済み");
+        assert_eq!(detail.fulfillment_status_label, "出荷済み");
+        assert_eq!(detail.carrier, "DHL");
+        assert_eq!(detail.tracking_no, "APP-TRACK-001");
+        assert!(detail.has_tracking_no);
+        assert_eq!(detail.ai_variant_id, "seal_variant_006");
+        assert!(detail.has_ai_seal_metadata);
+        assert!(detail.has_customer_confirmation);
+
+        let data = state.data.read().await;
+        let order = data
+            .orders
+            .get("ord_1006")
+            .expect("app order should remain in mock state");
+        assert!(order.events.iter().any(|event| {
+            event.kind == "shipment_registered"
+                && event.actor_id == "test.admin"
+                && event.note == "DHL / APP-TRACK-001"
+        }));
+        assert!(order.events.iter().any(|event| {
+            event.kind == "status_changed"
+                && event.actor_id == "test.admin"
+                && event.before_status == "manufacturing"
+                && event.after_status == "shipped"
+        }));
     }
 
     #[test]

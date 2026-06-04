@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CMB-005 Change Stone - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #171b1f;
+        --copy: #23282d;
+        --gold: #b48242;
+        --line: #d6ad76;
+        --paper: #fbf7f0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe8de;
+        color: var(--ink);
+        font-family: "Hanko Serif JP", "Hanko Serif", "Times New Roman", serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          linear-gradient(118deg, transparent 0 38%, rgba(170, 130, 82, 0.052) 38.3%, transparent 39.7%),
+          linear-gradient(132deg, transparent 0 69%, rgba(165, 123, 75, 0.045) 69.2%, transparent 70.4%),
+          radial-gradient(ellipse at 50% 9%, rgba(255, 255, 255, 0.86), transparent 34%),
+          radial-gradient(ellipse at 46% 72%, rgba(255, 255, 255, 0.7), transparent 44%),
+          linear-gradient(126deg, #f3ece4 0%, #fffdf9 43%, #f7efe6 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.34;
+        background:
+          linear-gradient(154deg, transparent 0 18%, rgba(194, 166, 128, 0.16) 18.15%, transparent 18.8%),
+          linear-gradient(146deg, transparent 0 77%, rgba(197, 165, 124, 0.11) 77.1%, transparent 77.8%);
+        filter: blur(0.7px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 60px rgba(124, 96, 68, 0.08);
+      }
+
+      .back-button {
+        position: absolute;
+        z-index: 3;
+        top: 8.45%;
+        left: 5.2%;
+        display: grid;
+        width: 4.85cqw;
+        height: 4.85cqw;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .back-button svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 2;
+        top: 7.62%;
+        left: 50%;
+        margin: 0;
+        color: #111518;
+        font-size: 5.35cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 7px 12px rgba(58, 40, 24, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        position: absolute;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 3.6cqw;
+        color: var(--gold);
+      }
+
+      .header-ornament {
+        top: 12.75%;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 11.8cqw;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 1.9cqw;
+        height: 1.9cqw;
+        border: 0.36cqw solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .card {
+        position: absolute;
+        z-index: 1;
+        border: 0.1cqw solid rgba(226, 213, 201, 0.78);
+        border-radius: 2.35cqw;
+        background: rgba(255, 255, 255, 0.64);
+        box-shadow:
+          0 1.45cqw 3.7cqw rgba(83, 61, 43, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(2px);
+      }
+
+      .seal-card {
+        top: 15.7%;
+        left: 7.1%;
+        width: 85.8%;
+        height: 16.55%;
+      }
+
+      .seal-art {
+        position: absolute;
+        top: 13.2%;
+        left: 10.2%;
+        width: 23.25%;
+        height: auto;
+        mix-blend-mode: multiply;
+      }
+
+      .seal-copy {
+        position: absolute;
+        top: 26.5%;
+        left: 45%;
+        width: 39.8%;
+        color: #22272b;
+      }
+
+      .seal-row {
+        margin: 0;
+        font-size: 3.7cqw;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .seal-separator {
+        position: relative;
+        height: 3.2cqw;
+        margin: 3.35cqw 0 3.05cqw;
+      }
+
+      .seal-separator::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 0;
+        left: 3.2cqw;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line), rgba(214, 173, 118, 0.74));
+      }
+
+      .seal-separator::after {
+        content: "";
+        position: absolute;
+        top: calc(50% - 0.76cqw);
+        left: 0;
+        width: 1.45cqw;
+        height: 1.45cqw;
+        border: 0.32cqw solid var(--gold);
+        transform: rotate(45deg);
+      }
+
+      .section-title {
+        position: absolute;
+        z-index: 2;
+        top: 36.42%;
+        left: 7.2%;
+        display: grid;
+        grid-template-columns: auto 1fr auto 1fr;
+        width: 85.6%;
+        align-items: center;
+        column-gap: 3.2cqw;
+        margin: 0;
+        color: #171b1f;
+        font-size: 4.5cqw;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .section-title .title-line {
+        height: 1px;
+        background: var(--gold);
+      }
+
+      .section-diamond {
+        width: 1.9cqw;
+        height: 1.9cqw;
+        border: 0.34cqw solid var(--gold);
+        transform: rotate(45deg);
+      }
+
+      .stone-card {
+        left: 7.1%;
+        width: 85.8%;
+        height: 16.2%;
+      }
+
+      .stone-card.selected {
+        top: 40.32%;
+        border-color: var(--gold);
+        border-width: 0.18cqw;
+      }
+
+      .stone-card.second {
+        top: 57.63%;
+      }
+
+      .stone-card.third {
+        top: 73.55%;
+      }
+
+      .stone-art {
+        position: absolute;
+        left: 7.2%;
+        top: 17.6%;
+        width: 33.2%;
+        height: auto;
+      }
+
+      .second .stone-art {
+        top: 12.1%;
+        left: 7%;
+        width: 33.6%;
+      }
+
+      .third .stone-art {
+        top: 13.2%;
+        left: 7.2%;
+        width: 33.6%;
+      }
+
+      .stone-copy {
+        position: absolute;
+        top: 21.6%;
+        left: 47.4%;
+        color: #171b1f;
+      }
+
+      .stone-name {
+        margin: 0 0 3.25cqw;
+        font-size: 4.35cqw;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stone-price {
+        margin: 0 0 3.05cqw;
+        color: #22282d;
+        font-size: 4.15cqw;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stock-pill {
+        display: inline-flex;
+        height: 5.2cqw;
+        align-items: center;
+        gap: 1.65cqw;
+        border-radius: 1.22cqw;
+        background: rgba(231, 228, 214, 0.88);
+        padding: 0 2.25cqw;
+        color: #30383b;
+        font-size: 3.03cqw;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stock-pill.rose {
+        background: rgba(245, 230, 232, 0.94);
+      }
+
+      .stock-pill.lapis {
+        background: rgba(232, 234, 242, 0.96);
+      }
+
+      .stock-dot {
+        width: 1.65cqw;
+        height: 1.65cqw;
+        border-radius: 999px;
+        background: #67915d;
+        box-shadow: 0 0 0 0.22cqw rgba(103, 145, 93, 0.1);
+      }
+
+      .stock-dot.rose-dot {
+        background: #df9aa1;
+        box-shadow: 0 0 0 0.22cqw rgba(223, 154, 161, 0.12);
+      }
+
+      .stock-dot.lapis-dot {
+        background: #344f93;
+        box-shadow: 0 0 0 0.22cqw rgba(52, 79, 147, 0.12);
+      }
+
+      .choose-icon {
+        position: absolute;
+        top: 50%;
+        right: 7.3%;
+        color: var(--gold);
+        transform: translateY(-50%);
+      }
+
+      .choose-icon svg {
+        width: 3.4cqw;
+        height: 3.4cqw;
+        stroke-width: 1.9;
+      }
+
+      .selected-icon {
+        display: grid;
+        width: 6.8cqw;
+        height: 6.8cqw;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--gold);
+        color: #fffdf6;
+        box-shadow: 0 0.4cqw 1.4cqw rgba(135, 94, 43, 0.18);
+      }
+
+      .selected-icon svg {
+        width: 4cqw;
+        height: 4cqw;
+        stroke-width: 2.4;
+      }
+
+      .primary-button {
+        position: absolute;
+        z-index: 2;
+        top: 89.95%;
+        left: 6.62%;
+        display: flex;
+        width: 86.82%;
+        height: 6.75%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #fffaf1;
+        font-size: 4.08cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        text-shadow: 0 2px 8px rgba(255, 244, 222, 0.28);
+        background:
+          radial-gradient(ellipse at 24% 28%, rgba(255, 255, 255, 0.12), transparent 39%),
+          linear-gradient(135deg, #242526, #171819 58%, #252626);
+        box-shadow:
+          0 1.2cqw 3.7cqw rgba(24, 24, 24, 0.22),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      }
+
+      .primary-button svg {
+        position: absolute;
+        right: 6.8%;
+        width: 2.55cqw;
+        height: 2.55cqw;
+        color: var(--gold);
+        stroke-width: 1.9;
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .stone-name,
+        .stone-price {
+          font-size: 4cqw;
+        }
+
+        .stock-pill {
+          font-size: 2.9cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen shadow-2xl shadow-stone-300/30 md:shadow-stone-300/40" aria-label="宝石材を変更">
+      <a class="back-button" href="#" aria-label="戻る">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.2 4.8 7 16l11.2 11.2M8.5 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.3"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">宝石材を変更</h1>
+      <div class="ornament header-ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond"></span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <section class="card seal-card" aria-labelledby="seal-heading">
+        <h2 id="seal-heading" class="sr-only">選択中の印影</h2>
+        <img class="seal-art" src="assets/cmb-005-seal-misora.png" alt="美空の印影" />
+        <div class="seal-copy">
+          <p class="seal-row">スタイル：Elegant</p>
+          <div class="seal-separator" aria-hidden="true"></div>
+          <p class="seal-row">形：Square</p>
+        </div>
+      </section>
+
+      <h2 class="section-title">
+        <span>宝石材を選択</span>
+        <span class="title-line" aria-hidden="true"></span>
+        <span class="section-diamond" aria-hidden="true"></span>
+        <span class="title-line" aria-hidden="true"></span>
+      </h2>
+
+      <article class="card stone-card selected" aria-label="翡翠を選択中">
+        <img class="stone-art" src="assets/cmb-005-stone-jade.png" alt="翡翠の印材" />
+        <div class="stone-copy">
+          <h3 class="stone-name">翡翠（ひすい）</h3>
+          <p class="stone-price">¥128,000</p>
+          <p class="stock-pill"><span class="stock-dot" aria-hidden="true"></span>在庫あり</p>
+        </div>
+        <span class="choose-icon selected-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="m5.4 12.4 4.4 4.4 8.8-9.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+      </article>
+
+      <article class="card stone-card second" aria-label="ローズクォーツ">
+        <img class="stone-art" src="assets/cmb-005-stone-rose-quartz.png" alt="ローズクォーツの印材" />
+        <div class="stone-copy">
+          <h3 class="stone-name">ローズクォーツ</h3>
+          <p class="stone-price">¥88,000</p>
+          <p class="stock-pill rose"><span class="stock-dot rose-dot" aria-hidden="true"></span>在庫あり</p>
+        </div>
+        <span class="choose-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+      </article>
+
+      <article class="card stone-card third" aria-label="ラピスラズリ">
+        <img class="stone-art" src="assets/cmb-005-stone-lapis.png" alt="ラピスラズリの印材" />
+        <div class="stone-copy">
+          <h3 class="stone-name">ラピスラズリ</h3>
+          <p class="stone-price">¥118,000</p>
+          <p class="stock-pill lapis"><span class="stock-dot lapis-dot" aria-hidden="true"></span>在庫あり</p>
+        </div>
+        <span class="choose-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+      </article>
+
+      <a class="primary-button" href="#" aria-label="この宝石材に変更">
+        <span>この宝石材に変更</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+    </main>
+  </body>
+</html>

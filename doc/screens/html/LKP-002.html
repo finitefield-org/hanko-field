@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LKP-002 Finding Order - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --screen-h: 836px;
+        --ink: #172328;
+        --copy: #354149;
+        --wine: #7e1518;
+        --gold: #b7782c;
+        --line: #e5d5c5;
+        --paper: #fbf8f3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      h1,
+      h2,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(calc(100cqw / 470.5px));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.92) 0 22%, transparent 58%),
+          radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.7) 0 23%, transparent 60%),
+          radial-gradient(circle at 49% 82%, rgba(255, 255, 255, 0.72) 0 20%, transparent 57%),
+          linear-gradient(135deg, #f2e9df 0%, #fffdf9 44%, #f6eee5 100%);
+        box-shadow: inset 0 0 64px rgba(122, 95, 65, 0.08);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .artboard::before {
+        opacity: 0.38;
+        background:
+          linear-gradient(126deg, transparent 0 64%, rgba(181, 138, 91, 0.045) 64.1%, transparent 65.1%),
+          linear-gradient(143deg, transparent 0 15%, rgba(181, 138, 91, 0.05) 15.2%, transparent 16.4%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.62), transparent 30%),
+          radial-gradient(ellipse at 50% 80%, rgba(255, 255, 255, 0.5), transparent 29%);
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .brand-title {
+        position: absolute;
+        top: 88px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 26.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 9px 16px rgba(87, 46, 36, 0.08);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .brand-ornament {
+        top: 130px;
+      }
+
+      .title-ornament {
+        top: 245px;
+      }
+
+      .ornament-line {
+        width: 42px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .page-title {
+        position: absolute;
+        top: 193px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 36.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 11px 18px rgba(83, 45, 35, 0.08);
+        transform: scaleX(0.92);
+      }
+
+      .seal-stage {
+        position: absolute;
+        top: 264px;
+        left: 50%;
+        z-index: 2;
+        width: 300px;
+        height: 120px;
+        transform: translateX(-50%);
+      }
+
+      .seal-stage::before,
+      .seal-stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .seal-stage::before {
+        opacity: 0.09;
+        background: repeating-conic-gradient(
+          from -10deg at 50% 52%,
+          rgba(185, 121, 38, 0.36) 0 1.6deg,
+          transparent 1.6deg 11deg
+        );
+        mask-image: radial-gradient(ellipse at center, #000 0 46%, transparent 73%);
+      }
+
+      .seal-stage::after {
+        opacity: 0.62;
+        background:
+          radial-gradient(circle at 1% 54%, #d9a468 0 2px, transparent 2.3px),
+          radial-gradient(circle at 7% 20%, #d9a468 0 1.8px, transparent 2px),
+          radial-gradient(circle at 8% 72%, #d9a468 0 1.9px, transparent 2.2px),
+          radial-gradient(circle at 17% 34%, #d9a468 0 2.2px, transparent 2.5px),
+          radial-gradient(circle at 20% 66%, #e7c9a8 0 1.7px, transparent 2px),
+          radial-gradient(circle at 24% 49%, #d9a468 0 1.8px, transparent 2.1px),
+          radial-gradient(circle at 76% 31%, #e7c9a8 0 1.7px, transparent 2px),
+          radial-gradient(circle at 80% 51%, #d9a468 0 2.2px, transparent 2.5px),
+          radial-gradient(circle at 88% 71%, #d9a468 0 2px, transparent 2.3px),
+          radial-gradient(circle at 92% 35%, #d9a468 0 2.1px, transparent 2.4px),
+          radial-gradient(circle at 98% 58%, #d9a468 0 2.2px, transparent 2.5px);
+      }
+
+      .seal-art {
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        z-index: 1;
+        width: 110px;
+        height: 110px;
+        object-fit: contain;
+        transform: translateX(-50%);
+      }
+
+      .status-copy {
+        position: absolute;
+        top: 392px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: #344047;
+        font-size: 15px;
+        font-weight: 400;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .spinner {
+        position: absolute;
+        top: 424px;
+        left: 50%;
+        z-index: 2;
+        width: 39px;
+        height: 39px;
+        border-radius: 999px;
+        background: conic-gradient(from -18deg, #b7782c 0 84deg, rgba(183, 120, 44, 0.28) 84deg 360deg);
+        transform: translateX(-50%);
+      }
+
+      .spinner::after {
+        content: "";
+        position: absolute;
+        inset: 4.8px;
+        border-radius: inherit;
+        background:
+          radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.72), transparent 52%),
+          linear-gradient(135deg, #fbf6ef, #fffdf9);
+      }
+
+      .summary-card {
+        position: absolute;
+        top: 489px;
+        left: 88px;
+        z-index: 2;
+        width: 295px;
+        height: 165px;
+        border: 1px solid rgba(229, 216, 203, 0.9);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.64);
+        box-shadow:
+          0 12px 27px rgba(83, 61, 43, 0.13),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(2px);
+      }
+
+      .summary-row {
+        position: absolute;
+        left: 19px;
+        display: grid;
+        width: 256px;
+        grid-template-columns: 53px minmax(0, 1fr);
+        column-gap: 20px;
+        align-items: center;
+      }
+
+      .summary-row:first-child {
+        top: 19px;
+        height: 56px;
+      }
+
+      .summary-row:last-child {
+        top: 97px;
+        height: 48px;
+      }
+
+      .summary-row + .summary-row::before {
+        content: "";
+        position: absolute;
+        top: -18px;
+        left: 0;
+        right: -1px;
+        height: 1px;
+        background: rgba(229, 213, 197, 0.92);
+      }
+
+      .icon-box {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        place-items: center;
+        border: 1px solid rgba(233, 224, 216, 0.88);
+        border-radius: 8px;
+        background: rgba(250, 245, 240, 0.72);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .info-icon {
+        width: 30px;
+        height: 30px;
+        color: var(--gold);
+        stroke-width: 1.6;
+      }
+
+      .summary-label {
+        display: block;
+        color: #a76416;
+        font-size: 11.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .summary-value {
+        display: block;
+        margin-top: 12px;
+        color: #596168;
+        font-size: 14.3px;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .clock {
+        position: absolute;
+        top: 671px;
+        left: 50%;
+        z-index: 2;
+        width: 20px;
+        height: 20px;
+        color: var(--gold);
+        transform: translateX(-50%);
+        stroke-width: 1.7;
+      }
+
+      .patience-copy {
+        position: absolute;
+        top: 703px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: #344047;
+        font-size: 14.2px;
+        font-weight: 400;
+        line-height: 1.55;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Finding your order screen">
+      <div class="artboard">
+        <h1 class="brand-title serif">Stone Signature</h1>
+
+        <div class="ornament brand-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <h2 class="page-title serif">Finding Your Order</h2>
+
+        <div class="ornament title-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <div class="seal-stage" aria-hidden="true">
+          <img class="seal-art" src="assets/lkp-001-seal.png" alt="" />
+        </div>
+
+        <p class="status-copy">Retrieving your order details...</p>
+        <div class="spinner" aria-label="Loading"></div>
+
+        <section class="summary-card" aria-label="Order lookup summary">
+          <div class="summary-row">
+            <div class="icon-box" aria-hidden="true">
+              <svg class="info-icon" viewBox="0 0 32 32" fill="none">
+                <path d="M9.5 10.5V7.8h12.9l2.9 3.1v6.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M22.4 7.9v4.2h4.3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M7.3 10.5h17.8v10.2H7.3V10.5Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M12.1 14.7h8.3M12.1 18h4.6" stroke="currentColor" stroke-linecap="round" />
+                <circle cx="21.7" cy="22.1" r="4.2" stroke="currentColor" />
+                <path d="m24.8 25.2 3.4 3.4" stroke="currentColor" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div>
+              <span class="summary-label">Order Number</span>
+              <span class="summary-value">SS-2025-XXXX</span>
+            </div>
+          </div>
+
+          <div class="summary-row">
+            <div class="icon-box" aria-hidden="true">
+              <svg class="info-icon" viewBox="0 0 32 32" fill="none">
+                <path d="M6.5 9h19v14h-19V9Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m7.2 9.8 8.8 7.4 8.8-7.4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <span class="summary-label">Email Address</span>
+              <span class="summary-value">your.email@example.com</span>
+            </div>
+          </div>
+        </section>
+
+        <svg class="clock" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" />
+          <path d="M12 6.6V12l4.1 2.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+
+        <p class="patience-copy">
+          This may take a few moments.<br />
+          Thank you for your patience.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STN-010 Sold Out Stone Details - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #12191d;
+        --copy: #51575b;
+        --gold: #aa7b3f;
+        --line: #c99a5a;
+        --panel: #fffefa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dc;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Hanko Serif", "Yu Mincho", "Hiragino Mincho ProN",
+          serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            ellipse at 50% 7%,
+            rgba(255, 255, 255, 0.98),
+            transparent 36%
+          ),
+          radial-gradient(
+            ellipse at 50% 58%,
+            rgba(255, 255, 255, 0.68),
+            transparent 43%
+          ),
+          radial-gradient(
+            ellipse at 50% 92%,
+            rgba(255, 255, 255, 0.58),
+            transparent 38%
+          ),
+          linear-gradient(127deg, #f3ece5 0%, #fffdfa 43%, #f7efe7 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.12;
+        background:
+          linear-gradient(
+            151deg,
+            transparent 0 18%,
+            rgba(174, 136, 91, 0.09) 18.15%,
+            transparent 18.82%
+          ),
+          linear-gradient(
+            35deg,
+            transparent 0 78%,
+            rgba(174, 136, 91, 0.08) 78.1%,
+            transparent 78.75%
+          );
+        filter: blur(0.7px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 8.8cqw rgba(125, 96, 68, 0.07);
+      }
+
+      .top-button {
+        position: absolute;
+        z-index: 5;
+        display: grid;
+        place-items: center;
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      .back-button {
+        top: 8.34%;
+        left: 5.12%;
+        width: 5.85cqw;
+        height: 5.85cqw;
+      }
+
+      .favorite-button {
+        top: 7.88%;
+        right: 5.18%;
+        width: 6.48cqw;
+        height: 6.48cqw;
+      }
+
+      .top-button svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 4;
+        top: 8.18%;
+        left: 50%;
+        margin: 0;
+        color: #12191d;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 5.78cqw;
+        font-weight: 500;
+        line-height: 1;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .card-shell {
+        position: absolute;
+        z-index: 1;
+        top: 12.74%;
+        left: 4.04%;
+        width: 91.82%;
+        height: 85.18%;
+        overflow: hidden;
+        border: 0.12cqw solid rgba(226, 218, 208, 0.78);
+        border-radius: 2.85cqw;
+        background: var(--panel);
+        box-shadow:
+          0 1.8cqw 5.2cqw rgba(93, 70, 44, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .hero-card {
+        position: absolute;
+        z-index: 2;
+        top: 12.74%;
+        left: 4.04%;
+        width: 91.82%;
+        height: auto;
+        border-radius: 2.85cqw 2.85cqw 0 0;
+      }
+
+      .tag-row {
+        position: absolute;
+        z-index: 3;
+        top: 51.55%;
+        left: 8.42%;
+        display: flex;
+        gap: 2.24cqw;
+      }
+
+      .tag {
+        display: inline-flex;
+        min-width: 10.82cqw;
+        height: 3.26cqw;
+        align-items: center;
+        justify-content: center;
+        border: 0.12cqw solid rgba(182, 158, 133, 0.42);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.42);
+        color: #8f6531;
+        font-size: 2.18cqw;
+        font-weight: 400;
+        line-height: 1;
+        padding: 0 2.25cqw;
+        white-space: nowrap;
+      }
+
+      .stone-name {
+        position: absolute;
+        z-index: 3;
+        top: 57.08%;
+        left: 8.44%;
+        margin: 0;
+        color: #141b20;
+        font-size: 5.62cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .price {
+        position: absolute;
+        z-index: 3;
+        top: 62.64%;
+        left: 8.46%;
+        display: flex;
+        align-items: baseline;
+        gap: 1.32cqw;
+        margin: 0;
+        color: #151c21;
+        font-size: 6.34cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .tax {
+        font-size: 3.08cqw;
+      }
+
+      .divider {
+        position: absolute;
+        z-index: 3;
+        top: 68.4%;
+        left: 8.36%;
+        display: flex;
+        width: 83.6%;
+        align-items: center;
+        gap: 4.28cqw;
+        color: var(--line);
+      }
+
+      .divider-line {
+        height: 0.14cqw;
+        flex: 1;
+        background: currentColor;
+      }
+
+      .divider-diamond {
+        width: 1.92cqw;
+        height: 1.92cqw;
+        border: 0.32cqw solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .soldout-copy {
+        position: absolute;
+        z-index: 3;
+        top: 72.56%;
+        left: 50%;
+        width: 78%;
+        margin: 0;
+        color: #161d21;
+        font-size: 3.52cqw;
+        font-weight: 400;
+        line-height: 1.6;
+        text-align: center;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .soldout-note {
+        display: block;
+        margin-top: 1.55cqw;
+        color: #5e6468;
+        font-size: 2.74cqw;
+      }
+
+      .notice-button {
+        position: absolute;
+        z-index: 3;
+        top: 82.08%;
+        left: 8.34%;
+        display: grid;
+        width: 83.52%;
+        height: 9.48%;
+        grid-template-columns: 17.2cqw 1fr 7.8cqw;
+        align-items: center;
+        border: 0.12cqw solid rgba(173, 123, 62, 0.72);
+        border-radius: 2.28cqw;
+        background: rgba(255, 253, 249, 0.5);
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      .notice-button svg {
+        justify-self: center;
+      }
+
+      .bell-icon {
+        width: 6.2cqw;
+        height: 6.2cqw;
+      }
+
+      .notice-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 1.24cqw;
+      }
+
+      .notice-title {
+        color: var(--gold);
+        font-size: 4.34cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .notice-subtitle {
+        color: #6b7074;
+        font-size: 2.7cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .chevron-icon {
+        width: 3.08cqw;
+        height: 3.08cqw;
+      }
+
+      .back-link {
+        position: absolute;
+        z-index: 3;
+        top: 94.28%;
+        left: 50%;
+        color: #51575a;
+        font-size: 3.62cqw;
+        font-weight: 400;
+        line-height: 1;
+        text-decoration: none;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .stone-name {
+          font-size: 5.25cqw;
+        }
+
+        .soldout-copy {
+          font-size: 3.22cqw;
+        }
+
+        .notice-title {
+          font-size: 4.02cqw;
+        }
+
+        .notice-subtitle {
+          font-size: 2.52cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/50"
+      aria-label="赤瑪瑙の詳細"
+    >
+      <a class="top-button back-button" href="#" aria-label="戻る">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.1 4.8 7 16l11.1 11.2M8.6 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.25"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">Stone Details</h1>
+
+      <a
+        class="top-button favorite-button"
+        href="#"
+        aria-label="お気に入りに追加"
+      >
+        <svg viewBox="0 0 34 34" aria-hidden="true">
+          <path
+            d="M17 28.2S5.9 21.6 5.9 13.2c0-4.1 2.7-7 6.4-7 2.2 0 3.9 1.1 4.7 2.8.8-1.7 2.5-2.8 4.7-2.8 3.7 0 6.4 2.9 6.4 7 0 8.4-11.1 15-11.1 15Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </a>
+
+      <section class="card-shell" aria-hidden="true"></section>
+
+      <img
+        class="hero-card"
+        src="assets/stn-010-hero-card.png"
+        alt="売り切れの赤瑪瑙の印材"
+      />
+
+      <div class="tag-row" aria-label="特徴">
+        <span class="tag">一点物</span>
+        <span class="tag">手仕上げ</span>
+      </div>
+
+      <h2 class="stone-name">赤瑪瑙（あかめのう）</h2>
+
+      <p class="price">
+        <span>¥95,800</span>
+        <span class="tax">（税込）</span>
+      </p>
+
+      <div class="divider" aria-hidden="true">
+        <span class="divider-line"></span>
+        <span class="divider-diamond"></span>
+        <span class="divider-line"></span>
+      </div>
+
+      <p class="soldout-copy">
+        こちらの一点物は、現在売り切れです。
+        <span class="soldout-note"
+          >唯一無二の天然石のため、再入荷の予定は未定です。</span
+        >
+      </p>
+
+      <a class="notice-button" href="#" aria-label="入荷通知を受け取る">
+        <svg class="bell-icon" viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M9.8 24.7h12.4M12.1 24.2V14.1c0-3.4 2.2-5.9 5.9-5.9s5.9 2.5 5.9 5.9v10.1M14 24.9c.5 2 1.7 3.2 4 3.2s3.5-1.2 4-3.2"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span class="notice-copy">
+          <span class="notice-title">入荷通知を受け取る</span>
+          <span class="notice-subtitle"
+            >再入荷時にプッシュ通知でお知らせします</span
+          >
+        </span>
+        <svg class="chevron-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="m8.7 4.7 7.6 7.3-7.6 7.3"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.9"
+          />
+        </svg>
+      </a>
+
+      <a class="back-link" href="#">← 一覧に戻る</a>
+    </main>
+  </body>
+</html>

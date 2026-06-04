@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-010 Stripe Checkout - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #151a1f;
+        --copy: #454f59;
+        --muted: #848b92;
+        --wine: #8c1216;
+        --wine-dark: #770d12;
+        --gold: #b77b35;
+        --gold-soft: #d8bd9b;
+        --line: #decbb8;
+        --card: rgba(255, 255, 255, 0.66);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 13%, rgba(255, 255, 255, 0.94) 0 24%, transparent 57%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      button,
+      h1,
+      h2,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .phone {
+        --side: clamp(20px, 5.2vw, 24px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        padding: 55px var(--side) 15px;
+        background:
+          radial-gradient(circle at 50% 7%, rgba(255, 255, 255, 0.96) 0 28%, transparent 60%),
+          radial-gradient(circle at 45% 47%, rgba(255, 255, 255, 0.76) 0 26%, transparent 62%),
+          radial-gradient(circle at 61% 91%, rgba(255, 255, 255, 0.7) 0 29%, transparent 64%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdfa 44%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 63px;
+        left: 24px;
+        display: grid;
+        width: 29px;
+        height: 29px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 26px;
+        height: 25px;
+      }
+
+      .screen-title {
+        margin: 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 38px;
+        font-weight: 600;
+        line-height: 0.96;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        color: var(--gold);
+      }
+
+      .header-ornament {
+        margin-top: 10px;
+      }
+
+      .ornament-line {
+        width: 43px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 7px;
+        width: 342px;
+        margin: 2px 0 0 84px;
+        color: #38424d;
+      }
+
+      .intro-icon {
+        width: 34px;
+        height: 34px;
+        margin-top: 2px;
+        color: var(--gold);
+      }
+
+      .intro p {
+        margin: 0;
+        font-size: 13.6px;
+        line-height: 1.48;
+      }
+
+      .glass-card {
+        border: 1px solid rgba(226, 213, 199, 0.86);
+        border-radius: 13px;
+        background: var(--card);
+        box-shadow:
+          0 10px 24px rgba(82, 54, 33, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(2px);
+      }
+
+      .express {
+        position: relative;
+        height: 96px;
+        margin-top: 17px;
+        padding: 32px 16px 15px;
+      }
+
+      .express-title {
+        position: absolute;
+        top: -18px;
+        left: 50%;
+        margin: 0;
+        padding: 0 14px;
+        color: #a56c2d;
+        background:
+          linear-gradient(90deg, transparent 0, #fbf6ee 18%, #fbf8f1 82%, transparent 100%);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .wallet-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 13px;
+      }
+
+      .wallet-button {
+        display: flex;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .apple-pay {
+        gap: 7px;
+        border: 1px solid #050505;
+        background: #020202;
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "Hanko Sans", sans-serif;
+        font-size: 21px;
+      }
+
+      .apple-mark {
+        width: 18px;
+        height: 22px;
+        fill: currentColor;
+      }
+
+      .google-pay {
+        gap: 4px;
+        border: 1px solid #7b858e;
+        background: rgba(255, 255, 255, 0.72);
+        color: #68717c;
+        font-size: 21px;
+      }
+
+      .google-mark {
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: conic-gradient(#4285f4 0 25%, #34a853 0 50%, #fbbc05 0 73%, #ea4335 0 100%);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 20px;
+        text-align: center;
+      }
+
+      .card-divider {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 11px;
+        margin-top: 22px;
+        color: #59636d;
+        font-size: 13.5px;
+        line-height: 1;
+      }
+
+      .card-divider::before,
+      .card-divider::after {
+        content: "";
+        height: 1px;
+        background: #cda675;
+      }
+
+      .form-card {
+        height: 253px;
+        margin-top: 9px;
+        padding: 18px 14px 12px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .section-icon {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid #bb823b;
+        border-radius: 999px;
+        color: #a56725;
+      }
+
+      .section-icon svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .section-title h2 {
+        margin: 0;
+        color: #11181e;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 10px 19px;
+        margin-top: 8px;
+      }
+
+      .section-title + .field-grid {
+        margin-top: 11px;
+      }
+
+      .field-grid.two {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+
+      .field {
+        min-width: 0;
+      }
+
+      .field label {
+        display: block;
+        margin: 0 0 4px;
+        color: #252d34;
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 12.7px;
+        line-height: 1;
+      }
+
+      .required {
+        color: var(--wine);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-weight: 700;
+      }
+
+      .input-box {
+        display: flex;
+        height: 27px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 9px;
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.4);
+        padding: 0 11px;
+        color: #8b9299;
+        font-size: 13px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .input-box .placeholder {
+        overflow: hidden;
+        min-width: 0;
+        text-overflow: ellipsis;
+      }
+
+      .input-icon {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        color: #a56725;
+      }
+
+      .input-icon.wine {
+        color: var(--wine);
+      }
+
+      .input-icon.small {
+        width: 15px;
+        height: 15px;
+      }
+
+      .order-card {
+        height: 203px;
+        margin-top: 8px;
+        padding: 13px 14px 11px;
+      }
+
+      .order-card .section-title {
+        gap: 12px;
+      }
+
+      .order-card .section-title h2 {
+        font-size: 23px;
+      }
+
+      .order-lines {
+        margin-top: 9px;
+      }
+
+      .order-item {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        min-height: 41px;
+      }
+
+      .order-item + .order-item {
+        margin-top: 4px;
+      }
+
+      .item-thumb {
+        width: 56px;
+        height: 36px;
+        border-radius: 4px;
+        object-fit: cover;
+        box-shadow: 0 2px 7px rgba(93, 64, 42, 0.08);
+      }
+
+      .item-copy {
+        min-width: 0;
+      }
+
+      .item-name {
+        margin: 0;
+        color: #12181d;
+        font-family: "Hanko JP", "Hanko Serif", "Times New Roman", serif;
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1.05;
+        white-space: nowrap;
+      }
+
+      .item-kind {
+        margin: 5px 0 0;
+        color: #3e4851;
+        font-size: 10.5px;
+        line-height: 1;
+      }
+
+      .item-price {
+        color: #111820;
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 16px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .summary-rule {
+        height: 1px;
+        margin: 8px 0 6px;
+        background: #d1a979;
+      }
+
+      .summary-line {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        color: #12191f;
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 14.5px;
+        line-height: 1.08;
+      }
+
+      .summary-line + .summary-line {
+        margin-top: 8px;
+      }
+
+      .summary-line span:last-child {
+        white-space: nowrap;
+      }
+
+      .total-line {
+        margin-top: 9px;
+        padding-top: 10px;
+        border-top: 1px solid #d1a979;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .pay-button {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        width: 100%;
+        height: 43px;
+        margin-top: 7px;
+        border: 0;
+        border-radius: 7px;
+        background:
+          radial-gradient(circle at 38% 50%, rgba(202, 50, 44, 0.18) 0 18%, transparent 43%),
+          linear-gradient(90deg, #8e1015 0%, #a1161a 48%, #870f14 100%);
+        box-shadow: 0 6px 15px rgba(111, 22, 18, 0.24);
+        color: #fff9f2;
+        cursor: default;
+        font-family: "Hanko Serif", "Times New Roman", serif;
+      }
+
+      .pay-center {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        justify-self: center;
+        font-size: 22px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .pay-lock {
+        width: 18px;
+        height: 18px;
+      }
+
+      .pay-arrow {
+        width: 23px;
+        height: 22px;
+        justify-self: end;
+        margin-right: 18px;
+      }
+
+      .secure-footer {
+        display: grid;
+        grid-template-columns: 28px 162px 1px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        width: min(380px, calc(100% - 42px));
+        margin: 11px auto 0;
+        color: #44505b;
+      }
+
+      .footer-shield {
+        width: 23px;
+        height: 23px;
+        justify-self: center;
+        color: var(--gold);
+      }
+
+      .stripe-copy {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12.2px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stripe-word {
+        color: #535d67;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .footer-rule {
+        width: 1px;
+        height: 23px;
+        background: #c9a477;
+      }
+
+      .secure-text {
+        margin: 0;
+        font-size: 12.1px;
+        line-height: 1.32;
+      }
+
+      @media (max-width: 430px) {
+        .phone {
+          --side: 19px;
+          padding-top: 52px;
+        }
+
+        .back-button {
+          top: 60px;
+          left: 20px;
+        }
+
+        .screen-title {
+          font-size: 34px;
+        }
+
+        .header-ornament {
+          margin-top: 9px;
+        }
+
+        .intro {
+          width: min(318px, 100%);
+          margin-top: 2px;
+          margin-left: 33px;
+          gap: 7px;
+        }
+
+        .intro p {
+          font-size: 12.3px;
+        }
+
+        .express {
+          margin-top: 15px;
+          padding-right: 14px;
+          padding-left: 14px;
+        }
+
+        .express-title {
+          font-size: 20px;
+        }
+
+        .wallet-button {
+          height: 35px;
+        }
+
+        .apple-pay,
+        .google-pay {
+          font-size: 18px;
+        }
+
+        .form-card {
+          padding-right: 12px;
+          padding-left: 12px;
+        }
+
+        .section-title h2 {
+          font-size: 22px;
+        }
+
+        .field-grid {
+          gap: 8px 13px;
+        }
+
+        .field label {
+          font-size: 12px;
+        }
+
+        .input-box {
+          padding: 0 9px;
+          font-size: 12px;
+        }
+
+        .order-card {
+          padding-right: 12px;
+          padding-left: 12px;
+        }
+
+        .order-item {
+          grid-template-columns: 53px minmax(0, 1fr) auto;
+          gap: 11px;
+        }
+
+        .item-thumb {
+          width: 53px;
+          height: 35px;
+        }
+
+        .item-name {
+          font-size: 15px;
+        }
+
+        .item-price {
+          font-size: 14px;
+        }
+
+        .total-line {
+          font-size: 25px;
+        }
+
+        .pay-center {
+          gap: 11px;
+          font-size: 20px;
+        }
+
+        .pay-arrow {
+          margin-right: 14px;
+        }
+
+        .secure-footer {
+          grid-template-columns: 25px 145px 1px minmax(0, 1fr);
+          gap: 7px;
+          width: calc(100% - 32px);
+        }
+
+        .stripe-copy,
+        .secure-text {
+          font-size: 11.2px;
+        }
+
+        .stripe-word {
+          font-size: 17px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="phone" aria-label="Stripe Checkout">
+      <a class="back-button" aria-label="Back">
+        <svg viewBox="0 0 28 24" aria-hidden="true">
+          <path
+            d="M11.7 2 2 11.9l9.7 9.9M3.4 11.9H27"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.7"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">Stripe Checkout</h1>
+      <div class="ornament header-ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond"></span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <section class="intro" aria-label="Secure payment notice">
+        <svg class="intro-icon" viewBox="0 0 40 40" aria-hidden="true">
+          <path
+            d="M20 4.7c5 3.5 10.2 3.8 13.1 3.7v10.4c0 7.4-5.4 12.9-13.1 16.4C12.3 31.7 6.9 26.2 6.9 18.8V8.4C9.8 8.5 15 8.2 20 4.7Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.7"
+          />
+          <rect x="15.1" y="18.7" width="9.8" height="8" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M17.2 18.7v-3.2a2.8 2.8 0 0 1 5.6 0v3.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M20 21.5v2.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6" />
+        </svg>
+        <p>You are being redirected to our secure payment partner to complete your purchase.</p>
+      </section>
+
+      <section class="glass-card express" aria-label="Express checkout">
+        <h2 class="express-title">Express Checkout</h2>
+        <div class="wallet-row">
+          <div class="wallet-button apple-pay">
+            <svg class="apple-mark" viewBox="0 0 22 26" aria-hidden="true">
+              <path d="M16.4 13.7c0-3 2.4-4.5 2.5-4.6-1.4-2.1-3.6-2.3-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1S7.4 6.7 5.8 6.8C3.7 6.8 1.8 8 0.8 9.9c-2.2 3.8-.6 9.5 1.6 12.6 1 1.5 2.3 3.2 3.9 3.1 1.6-.1 2.2-1 4-1s2.3 1 4 1c1.7 0 2.7-1.5 3.8-3 1.2-1.7 1.7-3.4 1.7-3.5 0-.1-3.4-1.4-3.4-5.4ZM13.2 4.8c.9-1.1 1.5-2.6 1.3-4.1-1.3.1-2.8.8-3.7 1.9-.8.9-1.5 2.5-1.3 3.9 1.4.1 2.8-.7 3.7-1.7Z" />
+            </svg>
+            <span>Pay</span>
+          </div>
+          <div class="wallet-button google-pay">
+            <span class="google-mark">G</span>
+            <span>Pay</span>
+          </div>
+        </div>
+        <div class="card-divider"><span>or pay with card</span></div>
+      </section>
+
+      <section class="glass-card form-card" aria-label="Card information">
+        <div class="section-title">
+          <span class="section-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.4" y="6.2" width="17.2" height="11.6" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <path d="M4.1 10.3h15.8M7 14.5h4.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+            </svg>
+          </span>
+          <h2>Card Information</h2>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Card number <span class="required">*</span></label>
+            <div class="input-box">
+              <span class="placeholder">1234 1234 1234 1234</span>
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3.3" y="5" width="17.4" height="14" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                <path d="M4.2 9.8h15.6" fill="none" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid two">
+          <div class="field">
+            <label>Expiration date <span class="required">*</span></label>
+            <div class="input-box"><span class="placeholder">MM / YY</span></div>
+          </div>
+          <div class="field">
+            <label>CVC <span class="required">*</span></label>
+            <div class="input-box">
+              <span class="placeholder">CVC</span>
+              <svg class="input-icon small" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.9" />
+                <path d="M9.8 9.1a2.3 2.3 0 1 1 3.7 1.8c-1.2.8-1.5 1.2-1.5 2.4M12 16.6h.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Name on card <span class="required">*</span></label>
+            <div class="input-box">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8.2" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <path d="M4.4 20.1c.7-4 3.5-6.1 7.6-6.1s6.9 2.1 7.6 6.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.7" />
+              </svg>
+              <span class="placeholder">Full name as shown on card</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-grid two">
+          <div class="field">
+            <label>Country / Region <span class="required">*</span></label>
+            <div class="input-box">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <path d="M3.3 12h17.4M12 3c2.4 2.6 3.5 5.6 3.5 9s-1.1 6.4-3.5 9c-2.4-2.6-3.5-5.6-3.5-9S9.6 5.6 12 3Z" fill="none" stroke="currentColor" stroke-width="1.5" />
+              </svg>
+              <span class="placeholder">United States</span>
+              <svg class="input-icon small" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" />
+              </svg>
+            </div>
+          </div>
+          <div class="field">
+            <label>ZIP / Postal code <span class="required">*</span></label>
+            <div class="input-box">
+              <svg class="input-icon wine" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 21s6.3-6 6.3-11.2A6.3 6.3 0 0 0 5.7 9.8C5.7 15 12 21 12 21Z" fill="none" stroke="currentColor" stroke-width="1.8" />
+                <circle cx="12" cy="9.8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+              <span class="placeholder">ZIP / Postal code</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card order-card" aria-label="Order summary">
+        <div class="section-title">
+          <span class="section-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3.7c3 2.1 6 2.3 7.7 2.2v6.2c0 4.3-3.2 7.6-7.7 9.6-4.5-2-7.7-5.3-7.7-9.6V5.9C6 6 9 5.8 12 3.7Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" />
+              <rect x="9" y="11.6" width="6" height="4.9" rx=".8" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <path d="M10.2 11.6V9.8a1.8 1.8 0 0 1 3.6 0v1.8" fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </span>
+          <h2>Order Summary</h2>
+        </div>
+
+        <div class="order-lines">
+          <div class="order-item">
+            <img class="item-thumb" src="assets/chk-006-seal-frame.png" alt="" />
+            <div class="item-copy">
+              <p class="item-name">美空</p>
+              <p class="item-kind">Seal</p>
+            </div>
+            <span class="item-price">&yen;18,000</span>
+          </div>
+          <div class="order-item">
+            <img class="item-thumb" src="assets/chk-006-stone-frame.png" alt="" />
+            <div class="item-copy">
+              <p class="item-name">Soft Pink Rose Quartz</p>
+              <p class="item-kind">Gemstone</p>
+            </div>
+            <span class="item-price">&yen;3,000</span>
+          </div>
+        </div>
+
+        <div class="summary-rule"></div>
+        <div class="summary-line"><span>Subtotal</span><span>&yen;21,000</span></div>
+        <div class="summary-line"><span>Shipping</span><span>&yen;0</span></div>
+        <div class="summary-line total-line"><span>Total</span><span>&yen;21,000</span></div>
+      </section>
+
+      <button class="pay-button" type="button">
+        <span></span>
+        <span class="pay-center">
+          <svg class="pay-lock" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="5" y="10" width="14" height="10" rx="1.7" fill="currentColor" />
+            <path d="M8.2 10V7.4a3.8 3.8 0 0 1 7.6 0V10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.4" />
+            <path d="M12 14.1v2.3" fill="none" stroke="#8b1116" stroke-linecap="round" stroke-width="1.8" />
+          </svg>
+          <span>Pay &yen;21,000</span>
+        </span>
+        <svg class="pay-arrow" viewBox="0 0 28 24" aria-hidden="true">
+          <path d="M2 12h22M16 4l8 8-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" />
+        </svg>
+      </button>
+
+      <footer class="secure-footer" aria-label="Secure payment">
+        <svg class="footer-shield" viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M20 4.8c5 3.5 10.1 3.8 13 3.7v10.3c0 7.4-5.3 12.9-13 16.3C12.3 31.7 7 26.2 7 18.8V8.5c2.9.1 8-.2 13-3.7Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
+          <rect x="15.1" y="18.7" width="9.8" height="8" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+          <path d="M17.2 18.7v-3.2a2.8 2.8 0 0 1 5.6 0v3.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+        <span class="stripe-copy">Secure payment by <span class="stripe-word">stripe</span></span>
+        <span class="footer-rule" aria-hidden="true"></span>
+        <p class="secure-text">Your payment information is encrypted and secure.</p>
+      </footer>
+    </main>
+  </body>
+</html>

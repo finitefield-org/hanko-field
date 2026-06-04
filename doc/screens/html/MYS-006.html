@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MYS-006 Compare Seals Result - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #11161a;
+        --copy: #626a71;
+        --wine: #951719;
+        --deep-wine: #821214;
+        --gold: #a86d26;
+        --soft-line: #e8ddd2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 44%, #f4ece3 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button {
+        font: inherit;
+      }
+
+      .stage {
+        width: min(100vw, 470.5px);
+        height: 836px;
+        overflow: hidden;
+      }
+
+      .phone {
+        position: relative;
+        width: 470.5px;
+        height: 836px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 3%, rgba(255, 255, 255, 0.96) 0 25%, transparent 58%),
+          radial-gradient(circle at 49% 46%, rgba(255, 255, 255, 0.58) 0 26%, transparent 58%),
+          radial-gradient(circle at 51% 87%, rgba(255, 255, 255, 0.56) 0 24%, transparent 57%),
+          linear-gradient(139deg, #f4ece3 0%, #fffdf9 45%, #f7eee5 100%);
+        transform-origin: top left;
+      }
+
+      .top-bar {
+        position: relative;
+        height: 179px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 70px;
+        left: 28px;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--wine);
+        padding: 0;
+      }
+
+      .back-button svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 2.15;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 68px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: var(--deep-wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 31px;
+        font-weight: 600;
+        line-height: 0.84;
+        text-shadow: 0 10px 16px rgba(112, 65, 41, 0.11);
+        white-space: nowrap;
+        word-spacing: 0.13em;
+      }
+
+      .title-ornament,
+      .card-ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gold);
+      }
+
+      .title-ornament {
+        position: absolute;
+        top: 108px;
+        right: 0;
+        left: 0;
+        gap: 14px;
+      }
+
+      .ornament-line {
+        width: 34px;
+        height: 1px;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      .instructions {
+        position: absolute;
+        top: 127px;
+        right: 58px;
+        left: 58px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 15px;
+        line-height: 1.5;
+        word-spacing: 0.05em;
+      }
+
+      .compare-pair {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0 29px;
+      }
+
+      .comparison-card {
+        position: relative;
+        height: 453px;
+        overflow: hidden;
+        border: 0.8px solid rgba(232, 221, 210, 0.96);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.74);
+        box-shadow:
+          0 12px 28px rgba(80, 55, 36, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        text-align: center;
+        backdrop-filter: blur(2px);
+      }
+
+      .comparison-card.is-selected {
+        border-color: rgba(149, 23, 25, 0.98);
+        box-shadow:
+          0 13px 30px rgba(95, 48, 31, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      }
+
+      .selected-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        display: inline-grid;
+        grid-auto-flow: column;
+        align-items: center;
+        gap: 5px;
+        height: 21px;
+        padding: 0 9px 1px 8px;
+        border-radius: 4px;
+        background: var(--wine);
+        color: #fffdf9;
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .selected-badge svg {
+        width: 12px;
+        height: 12px;
+        stroke-width: 1.7;
+      }
+
+      .corner-sparkle {
+        position: absolute;
+        top: 15px;
+        right: 13px;
+        width: 21px;
+        height: 21px;
+        color: var(--gold);
+      }
+
+      .seal-art {
+        position: absolute;
+        top: 30px;
+        left: 50%;
+        display: block;
+        width: 142px;
+        height: 142px;
+        object-fit: contain;
+        transform: translateX(-50%);
+      }
+
+      .seal-name {
+        position: absolute;
+        top: 178px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: #11161a;
+        font-family: "Hanko JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 29px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .card-ornament {
+        position: absolute;
+        top: 216px;
+        right: 0;
+        left: 0;
+        gap: 10px;
+      }
+
+      .card-ornament .ornament-line {
+        width: 30px;
+      }
+
+      .card-ornament .ornament-diamond {
+        width: 8px;
+        height: 8px;
+      }
+
+      .meaning {
+        position: absolute;
+        top: 239px;
+        right: 0;
+        left: 0;
+        display: grid;
+        gap: 8px;
+        color: var(--copy);
+        font-size: 13px;
+        line-height: 1;
+      }
+
+      .meaning-value {
+        font-size: 13px;
+        word-spacing: 0.08em;
+      }
+
+      .attribute-list {
+        position: absolute;
+        right: 21px;
+        bottom: 9px;
+        left: 21px;
+      }
+
+      .attribute-row {
+        display: grid;
+        min-height: 44px;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 7px;
+        border-top: 1px solid var(--soft-line);
+        text-align: left;
+      }
+
+      .attribute-row:first-child {
+        border-top: 0;
+      }
+
+      .attribute-icon {
+        display: grid;
+        width: 29px;
+        height: 29px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(241, 236, 229, 0.96);
+        color: var(--wine);
+      }
+
+      .attribute-icon svg {
+        width: 20px;
+        height: 20px;
+        stroke-width: 1.65;
+      }
+
+      .attribute-label {
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 11.7px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .attribute-value {
+        color: var(--copy);
+        font-size: 12px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .choose-action {
+        position: relative;
+        display: flex;
+        height: 51px;
+        align-items: center;
+        justify-content: center;
+        margin: 20px 30px 0;
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 20% 25%, rgba(198, 31, 34, 0.48), transparent 48%),
+          linear-gradient(135deg, #9d1217 0%, #871014 100%);
+        color: #fffdf9;
+        box-shadow:
+          0 8px 15px rgba(111, 50, 30, 0.17),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        font-family: "Bodoni 72", "Cormorant Garamond", Georgia, serif;
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        word-spacing: 0.16em;
+      }
+
+      .choose-action span {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .choose-action svg {
+        position: absolute;
+        right: 22px;
+        width: 23px;
+        height: 23px;
+        stroke-width: 1.7;
+      }
+
+      .review-note {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        margin: 14px 28px 0;
+        color: var(--copy);
+        font-size: 12.8px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .review-note svg {
+        width: 13px;
+        height: 13px;
+        stroke-width: 1.8;
+      }
+
+      .bottom-nav {
+        position: absolute;
+        z-index: 3;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 96px;
+        border-top: 1px solid rgba(230, 220, 211, 0.98);
+        background: rgba(255, 253, 250, 0.94);
+        box-shadow: 0 -8px 18px rgba(87, 60, 40, 0.04);
+        backdrop-filter: blur(8px);
+      }
+
+      .active-tab-marker {
+        position: absolute;
+        top: -2px;
+        left: 50%;
+        width: 37px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--wine);
+        font-size: 0;
+        transform: translateX(-50%);
+      }
+
+      .tab-list {
+        display: grid;
+        height: 100%;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 17px 29px 14px;
+      }
+
+      .tab-item {
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 6px;
+        color: #11161a;
+        text-decoration: none;
+      }
+
+      .tab-item svg {
+        width: 31px;
+        height: 31px;
+        stroke-width: 1.55;
+      }
+
+      .tab-label {
+        font-size: 13px;
+        line-height: 1;
+      }
+
+      .tab-item.is-active {
+        color: var(--wine);
+      }
+
+      .tab-item.is-active .shield {
+        width: 30px;
+        height: 31px;
+        color: var(--wine);
+      }
+
+      .tab-item.is-active .tab-label {
+        color: var(--wine);
+        font-weight: 600;
+      }
+
+      @media (max-width: 470.5px) {
+        .stage {
+          width: 100vw;
+          height: 100vh;
+          min-height: 820px;
+        }
+
+        .phone {
+          width: 100vw;
+          height: 100%;
+          transform: none;
+        }
+
+        .back-button {
+          left: 27px;
+        }
+
+        .screen-title {
+          font-size: 29px;
+        }
+
+        .instructions {
+          right: 42px;
+          left: 42px;
+          font-size: 14px;
+        }
+
+        .compare-pair {
+          gap: 9px;
+          margin-right: 18px;
+          margin-left: 18px;
+        }
+
+        .comparison-card {
+          height: 453px;
+        }
+
+        .selected-badge {
+          left: 9px;
+          padding-right: 7px;
+          padding-left: 7px;
+          font-size: 12px;
+        }
+
+        .corner-sparkle {
+          right: 10px;
+        }
+
+        .seal-art {
+          top: 36px;
+          width: 126px;
+          height: 126px;
+        }
+
+        .seal-name {
+          top: 178px;
+          font-size: 25px;
+        }
+
+        .card-ornament {
+          top: 214px;
+        }
+
+        .meaning {
+          top: 238px;
+          gap: 8px;
+          font-size: 12.4px;
+        }
+
+        .meaning-value {
+          font-size: 12.4px;
+        }
+
+        .attribute-list {
+          right: 14px;
+          left: 14px;
+        }
+
+        .attribute-row {
+          grid-template-columns: 29px minmax(0, 1fr) auto;
+          gap: 5px;
+        }
+
+        .attribute-icon {
+          width: 27px;
+          height: 27px;
+        }
+
+        .attribute-icon svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .attribute-label {
+          font-size: 10.4px;
+        }
+
+        .attribute-value {
+          font-size: 10.5px;
+        }
+
+        .choose-action {
+          margin-right: 28px;
+          margin-left: 28px;
+          font-size: 20px;
+        }
+
+        .review-note {
+          margin-right: 18px;
+          margin-left: 18px;
+          font-size: 11.7px;
+        }
+
+        .tab-list {
+          padding-right: 23px;
+          padding-left: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-start justify-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+        <path d="M11 5 4 12l7 7M5 12h15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M4 12h15.8M13.7 5.7 20 12l-6.3 6.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-sparkle" viewBox="0 0 24 24">
+        <path d="M12 2.8c1.1 5.1 3.1 7.1 8.2 8.2-5.1 1.1-7.1 3.1-8.2 8.2-1.1-5.1-3.1-7.1-8.2-8.2 5.1-1.1 7.1-3.1 8.2-8.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-flower" viewBox="0 0 32 32">
+        <path d="M16 13.1c-4.5-8.2 4.5-8.2 0 0Zm0 5.8c-4.5 8.2 4.5 8.2 0 0Zm2.9-2.9c8.2-4.5 8.2 4.5 0 0ZM13.1 16c-8.2-4.5-8.2 4.5 0 0Zm5-.1c7.2 2.8.8 9.2-2.1 2.1m-2.1-2.1c-7.2-2.8-.8-9.2 2.1-2.1m.1 4.3c-2.8 7.2-9.2.8-2.1-2.1m3.9-2c2.8-7.2 9.2-.8 2.1 2.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-brush" viewBox="0 0 32 32">
+        <path d="M20 5.3c.9-.9 2.3-.9 3.2 0 .8.8.9 2.2.2 3.1l-7.8 12.2c-.5.8-1.2 1.4-2.1 1.7l-4.8 1.6 1.7-4.7c.3-.9.9-1.7 1.7-2.2Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7.3 21.4c-2.7.8-4.2 1.9-4.2 3.2 0 2 5.2 3.7 11.6 3.7s11.6-1.7 11.6-3.7c0-1.4-2.4-2.6-6-3.3M18 8l3.4 3.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-scale" viewBox="0 0 32 32">
+        <path d="M16 5v20M8 10h16M16 10 8 22h16Zm-7.6 0L4 18h8.8Zm15.2 0L19.2 18H28Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield" viewBox="0 0 32 32">
+        <path d="M16 4.3 25 7.8v7.1c0 5.5-3.5 10.2-9 12.4-5.5-2.2-9-6.9-9-12.4V7.8Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="m16 11.1 1.25 2.9 3.1.28-2.34 2.05.7 3.03L16 17.78l-2.7 1.58.7-3.03-2.34-2.05 3.1-.28Z" fill="currentColor" />
+      </symbol>
+      <symbol id="icon-tab-design" viewBox="0 0 32 32">
+        <path d="M19.4 5.3c.8-.8 2.1-.8 2.9 0 .7.7.8 1.8.2 2.6L14.3 21c-.5.8-1.2 1.3-2.1 1.6l-4.7 1.6 1.7-4.6c.3-.9.9-1.7 1.7-2.2Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7.1 21.7c-2.6.8-4.1 1.9-4.1 3.1 0 2 5.2 3.6 11.5 3.6S26 26.8 26 24.8c0-1.4-2.4-2.6-5.9-3.2M17.5 8.1l3.5 3.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-star" viewBox="0 0 32 32">
+        <path d="M16 3.3 25 6.8v7.6c0 5.6-3.5 10.5-9 12.6-5.5-2.1-9-7-9-12.6V6.8Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.9" />
+        <path d="m16 10.2 1.45 3.4 3.65.32-2.75 2.42.82 3.56L16 18.04l-3.17 1.86.82-3.56-2.75-2.42 3.65-.32Z" fill="currentColor" />
+      </symbol>
+      <symbol id="icon-diamond" viewBox="0 0 32 32">
+        <path d="M5.6 10.7 10.2 5h11.6l4.6 5.7L16 27Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M5.6 10.7h20.8M10.2 5l2.5 5.7L16 27l3.3-16.3L21.8 5M12.7 10.7h6.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-lock" viewBox="0 0 24 24">
+        <path d="M7 10V8a5 5 0 0 1 10 0v2M6.6 10h10.8c.9 0 1.6.7 1.6 1.6v7.8c0 .9-.7 1.6-1.6 1.6H6.6c-.9 0-1.6-.7-1.6-1.6v-7.8c0-.9.7-1.6 1.6-1.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M12 15v2.2" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
+    <div class="stage">
+      <main class="phone" aria-label="Compare Seals result screen preview">
+        <header class="top-bar">
+          <a class="back-button" href="#" aria-label="Back">
+            <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+          </a>
+          <h1 class="screen-title">Compare Seals</h1>
+          <div class="title-ornament" aria-hidden="true">
+            <span class="ornament-line">&nbsp;</span>
+            <span class="ornament-diamond">&nbsp;</span>
+            <span class="ornament-line">&nbsp;</span>
+          </div>
+          <p class="instructions">Compare your selected designs and choose the one that speaks to you.</p>
+        </header>
+
+        <section class="compare-pair" aria-label="Selected seal comparison">
+          <article class="comparison-card is-selected" aria-label="美空 Beautiful sky selected">
+            <span class="selected-badge"><svg aria-hidden="true"><use href="#icon-sparkle" /></svg>Selected</span>
+            <svg class="corner-sparkle" aria-hidden="true"><use href="#icon-sparkle" /></svg>
+            <img class="seal-art" src="assets/mys-006-seal-misora.png" alt="" />
+            <h2 class="seal-name">美空</h2>
+            <div class="card-ornament" aria-hidden="true">
+              <span class="ornament-line">&nbsp;</span>
+              <span class="ornament-diamond">&nbsp;</span>
+              <span class="ornament-line">&nbsp;</span>
+            </div>
+            <p class="meaning">
+              <span>Meaning</span>
+              <span class="meaning-value">Beautiful sky</span>
+            </p>
+            <div class="attribute-list" aria-label="美空 attributes">
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-flower" /></svg></span>
+                <span class="attribute-label">Style</span>
+                <span class="attribute-value">Elegant</span>
+              </div>
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-brush" /></svg></span>
+                <span class="attribute-label">Stroke</span>
+                <span class="attribute-value">Standard</span>
+              </div>
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-scale" /></svg></span>
+                <span class="attribute-label">Balance</span>
+                <span class="attribute-value">Balanced</span>
+              </div>
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-shield" /></svg></span>
+                <span class="attribute-label">Design Rule</span>
+                <span class="attribute-value">Standard</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="comparison-card" aria-label="光 Light radiance">
+            <svg class="corner-sparkle" aria-hidden="true"><use href="#icon-sparkle" /></svg>
+            <img class="seal-art" src="assets/mys-006-seal-light.png" alt="" />
+            <h2 class="seal-name">光</h2>
+            <div class="card-ornament" aria-hidden="true">
+              <span class="ornament-line">&nbsp;</span>
+              <span class="ornament-diamond">&nbsp;</span>
+              <span class="ornament-line">&nbsp;</span>
+            </div>
+            <p class="meaning">
+              <span>Meaning</span>
+              <span class="meaning-value">Light, radiance</span>
+            </p>
+            <div class="attribute-list" aria-label="光 attributes">
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-flower" /></svg></span>
+                <span class="attribute-label">Style</span>
+                <span class="attribute-value">Bold</span>
+              </div>
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-brush" /></svg></span>
+                <span class="attribute-label">Stroke</span>
+                <span class="attribute-value">Standard</span>
+              </div>
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-scale" /></svg></span>
+                <span class="attribute-label">Balance</span>
+                <span class="attribute-value">Dense</span>
+              </div>
+              <div class="attribute-row">
+                <span class="attribute-icon"><svg aria-hidden="true"><use href="#icon-shield" /></svg></span>
+                <span class="attribute-label">Design Rule</span>
+                <span class="attribute-value">Standard</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <a class="choose-action" href="#" aria-label="Choose This Design">
+          <span>Choose This Design</span>
+          <svg aria-hidden="true"><use href="#icon-arrow-right" /></svg>
+        </a>
+
+        <p class="review-note">
+          <svg aria-hidden="true"><use href="#icon-lock" /></svg>
+          <span>You can review again before placing your order.</span>
+        </p>
+
+        <nav class="bottom-nav" aria-label="Primary">
+          <span class="active-tab-marker" aria-hidden="true">&nbsp;</span>
+          <div class="tab-list">
+            <a class="tab-item" href="#" aria-label="Design">
+              <svg aria-hidden="true"><use href="#icon-tab-design" /></svg>
+              <span class="tab-label">Design</span>
+            </a>
+            <a class="tab-item is-active" href="#" aria-label="My Seals">
+              <svg class="shield" aria-hidden="true"><use href="#icon-shield-star" /></svg>
+              <span class="tab-label">My Seals</span>
+            </a>
+            <a class="tab-item" href="#" aria-label="Stones">
+              <svg aria-hidden="true"><use href="#icon-diamond" /></svg>
+              <span class="tab-label">Stones</span>
+            </a>
+          </div>
+        </nav>
+      </main>
+    </div>
+  </body>
+</html>

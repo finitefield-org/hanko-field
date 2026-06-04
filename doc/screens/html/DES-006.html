@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-006 Choose Seal Style - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 431.5px;
+        --screen-h: 911px;
+        --ink: #172328;
+        --copy: #52616b;
+        --wine: #821719;
+        --deep-wine: #7f1013;
+        --gold: #b7782c;
+        --line: #e5d7c8;
+        --paper: #fbf8f3;
+        --screen-scale: 1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      h1,
+      h2,
+      h3,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(var(--screen-scale));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.95) 0 25%, transparent 58%),
+          radial-gradient(circle at 50% 54%, rgba(255, 255, 255, 0.72) 0 25%, transparent 63%),
+          linear-gradient(135deg, #f2e9df 0%, #fffdf9 45%, #f6eee5 100%);
+        box-shadow: inset 0 0 64px rgba(122, 95, 65, 0.08);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .artboard::before {
+        opacity: 0.34;
+        background:
+          linear-gradient(126deg, transparent 0 62%, rgba(181, 138, 91, 0.043) 62.1%, transparent 63.1%),
+          linear-gradient(144deg, transparent 0 17%, rgba(181, 138, 91, 0.045) 17.1%, transparent 18.3%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 50% 29%, rgba(255, 255, 255, 0.48), transparent 31%),
+          radial-gradient(ellipse at 50% 75%, rgba(255, 255, 255, 0.44), transparent 31%);
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .jp {
+        font-family: "Hanko Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 69px;
+        left: 20px;
+        z-index: 3;
+        display: grid;
+        width: 28px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 27px;
+        height: 24px;
+        stroke-width: 1.65;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 65px;
+        left: 0;
+        z-index: 3;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 27px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(83, 45, 35, 0.08);
+        transform: scaleX(0.88);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .top-ornament {
+        top: 109px;
+      }
+
+      .ornament-line {
+        width: 48px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .intro-copy {
+        position: absolute;
+        top: 126px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: #52616b;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .kanji-preview-card,
+      .seal-preview-card,
+      .option-card {
+        position: absolute;
+        z-index: 2;
+        border: 1px solid rgba(229, 214, 201, 0.84);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.56);
+        box-shadow:
+          0 12px 24px rgba(84, 56, 35, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(2px);
+      }
+
+      .kanji-preview-card {
+        top: 197px;
+        left: 31px;
+        width: 130px;
+        height: 145px;
+        text-align: center;
+      }
+
+      .preview-label {
+        margin: 22px 0 0;
+        color: #52616b;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .kanji-preview {
+        display: flex;
+        height: 57px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 10px;
+        color: var(--wine);
+        font-size: 36px;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 7px 10px rgba(111, 33, 22, 0.08);
+      }
+
+      .selected-label {
+        margin: 6px 0 0;
+        color: #52616b;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .mini-ornament {
+        position: absolute;
+        bottom: 18px;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .mini-ornament .ornament-line {
+        width: 35px;
+      }
+
+      .mini-ornament .ornament-diamond {
+        width: 7px;
+        height: 7px;
+      }
+
+      .seal-preview-card {
+        top: 155px;
+        left: 188px;
+        width: 211px;
+        height: 222px;
+        overflow: hidden;
+        text-align: center;
+      }
+
+      .seal-preview-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.36;
+        background:
+          linear-gradient(142deg, transparent 0 55%, rgba(180, 142, 94, 0.1) 55.2%, transparent 56.2%),
+          radial-gradient(ellipse at 72% 18%, rgba(185, 143, 92, 0.15), transparent 38%);
+      }
+
+      .seal-label {
+        position: relative;
+        z-index: 2;
+        margin: 17px 0 0;
+        color: #52616b;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .seal-mark {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        width: 104px;
+        height: 104px;
+        margin: 11px auto 0;
+        place-items: center;
+        border: 3px solid var(--wine);
+        border-radius: 999px;
+        color: var(--wine);
+      }
+
+      .seal-mark::after {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border: 1.5px solid rgba(130, 23, 25, 0.92);
+        border-radius: inherit;
+      }
+
+      .seal-kanji {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        color: var(--wine);
+        font-size: 45px;
+        font-weight: 700;
+        line-height: 0.78;
+        text-shadow: 0 5px 8px rgba(111, 33, 22, 0.08);
+      }
+
+      .preview-note {
+        position: relative;
+        z-index: 2;
+        margin: 18px 0 0;
+        color: #52616b;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1.55;
+      }
+
+      .option-card {
+        left: 29px;
+        display: grid;
+        width: 370px;
+        height: 84px;
+        grid-template-columns: 83px minmax(0, 1fr);
+        align-items: center;
+      }
+
+      .shape-card {
+        top: 393px;
+      }
+
+      .style-card {
+        top: 490px;
+      }
+
+      .stroke-card {
+        top: 588px;
+      }
+
+      .balance-card {
+        top: 686px;
+      }
+
+      .option-icon-wrap {
+        display: grid;
+        width: 57px;
+        height: 57px;
+        place-items: center;
+        justify-self: center;
+        border-radius: 999px;
+        background: rgba(244, 236, 225, 0.72);
+        color: var(--wine);
+      }
+
+      .option-icon-wrap svg {
+        width: 32px;
+        height: 32px;
+        stroke-width: 1.45;
+      }
+
+      .option-content {
+        padding: 0 10px 0 0;
+      }
+
+      .option-title {
+        margin: 0 0 9px;
+        color: #172328;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .choice-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .choice {
+        position: relative;
+        display: inline-flex;
+        height: 36px;
+        min-width: 110px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(226, 207, 187, 0.88);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.42);
+        color: #344047;
+        font-size: 11.5px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .style-card .choice,
+      .balance-card .choice {
+        min-width: 62px;
+      }
+
+      .style-card .choice-row,
+      .balance-card .choice-row {
+        gap: 8px;
+      }
+
+      .choice.selected {
+        border-color: rgba(183, 120, 44, 0.92);
+        background: rgba(255, 250, 245, 0.74);
+        color: #172328;
+      }
+
+      .choice.selected::after {
+        content: "✓";
+        position: absolute;
+        right: -7px;
+        bottom: -7px;
+        display: grid;
+        width: 16px;
+        height: 16px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--gold);
+        color: #fffaf6;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .primary-action {
+        position: absolute;
+        top: 789px;
+        left: 29px;
+        z-index: 2;
+        display: flex;
+        width: 370px;
+        height: 56px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 27% 28%, rgba(255, 255, 255, 0.09), transparent 24%),
+          linear-gradient(120deg, #a21518 0%, #8f1014 47%, #7d0d10 100%);
+        box-shadow:
+          0 10px 20px rgba(96, 31, 24, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        color: #fffaf6;
+        text-decoration: none;
+      }
+
+      .primary-text {
+        color: #fffaf6;
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .action-arrow {
+        position: absolute;
+        top: 16px;
+        right: 18px;
+        width: 25px;
+        height: 25px;
+        color: #fffaf3;
+        stroke-width: 1.65;
+      }
+
+      .security-note {
+        position: absolute;
+        top: 861px;
+        left: 0;
+        z-index: 2;
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: #52616b;
+        font-size: 11px;
+        font-weight: 400;
+      }
+
+      .security-note svg {
+        width: 19px;
+        height: 19px;
+        color: var(--gold);
+        stroke-width: 1.45;
+      }
+
+      .home-indicator {
+        position: absolute;
+        bottom: 7px;
+        left: 50%;
+        z-index: 2;
+        width: 139px;
+        height: 5px;
+        border-radius: 999px;
+        background: #000;
+        transform: translateX(-50%);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Choose seal style screen">
+      <div class="artboard">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15.5 4.5 8 12l7.5 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M8.5 12h12" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+        </a>
+        <h1 class="screen-title serif">Choose Your Seal Style</h1>
+        <div class="ornament top-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="intro-copy">Customize the look and feel of your seal.</p>
+
+        <section class="kanji-preview-card" aria-label="Selected kanji">
+          <p class="preview-label">Your Kanji</p>
+          <div class="kanji-preview jp">美空</div>
+          <p class="selected-label">Selected</p>
+          <div class="mini-ornament" aria-hidden="true">
+            <span class="ornament-line"></span>
+            <span class="ornament-diamond"></span>
+            <span class="ornament-line"></span>
+          </div>
+        </section>
+
+        <section class="seal-preview-card" aria-label="Seal preview">
+          <p class="seal-label">Seal Preview</p>
+          <div class="seal-mark">
+            <span class="seal-kanji jp"><span>美</span><span>空</span></span>
+          </div>
+          <p class="preview-note">
+            This is a preview.<br />
+            Final design may vary slightly.
+          </p>
+        </section>
+
+        <section class="option-card shape-card" aria-label="Shape">
+          <span class="option-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5.3 5.3h13.4v13.4H5.3V5.3Z" stroke="currentColor" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <div class="option-content">
+            <h2 class="option-title serif">Shape</h2>
+            <div class="choice-row">
+              <span class="choice selected">Square</span>
+              <span class="choice">Round</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="option-card style-card" aria-label="Style">
+          <span class="option-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9.3 3.2c1.4 5.4 4.4 8.4 9.8 9.7-5.4 1.4-8.4 4.4-9.8 9.8-1.3-5.4-4.3-8.4-9.7-9.8 5.4-1.3 8.4-4.3 9.7-9.7Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M18.2 2.5v5.2M15.6 5.1h5.2" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </span>
+          <div class="option-content">
+            <h2 class="option-title serif">Style</h2>
+            <div class="choice-row">
+              <span class="choice">Traditional</span>
+              <span class="choice selected">Elegant</span>
+              <span class="choice">Soft</span>
+              <span class="choice">Bold</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="option-card stroke-card" aria-label="Stroke weight">
+          <span class="option-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4.1 20.2c3.9-.7 6-2.7 6.4-6.1l5.8-5.8a2 2 0 0 0-2.8-2.8l-5.8 5.8c-3.4.4-5.5 2.5-6.1 6.4l2.5 2.5Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M7.7 11.3 12.7 16.3M13.5 7.1l3 3M3.5 17.8l2.7 2.7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <div class="option-content">
+            <h2 class="option-title serif">Stroke Weight</h2>
+            <div class="choice-row">
+              <span class="choice selected">Standard</span>
+              <span class="choice">Bold</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="option-card balance-card" aria-label="Balance">
+          <span class="option-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3.8c5.4 5.3 5.7 11.3 1.7 14.6-2.3 1.9-5.6 1.1-6.9-1.4-1.3-2.7.2-5.4 2.7-6 3.1-.8 6.2 1.2 7 4.3.6 2.4-.5 4.3-2.5 5.4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M8.2 5.4c-2.8 2.8-3.5 6.6-2 9.2" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </span>
+          <div class="option-content">
+            <h2 class="option-title serif">Balance</h2>
+            <div class="choice-row">
+              <span class="choice">Airy</span>
+              <span class="choice selected">Balanced</span>
+              <span class="choice">Dense</span>
+            </div>
+          </div>
+        </section>
+
+        <a class="primary-action" href="#">
+          <span class="primary-text serif">Generate Seal Designs</span>
+          <svg class="action-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <p class="security-note">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.8 4.9 5.9v5.8c0 4.4 2.9 7.8 7.1 9.5 4.2-1.7 7.1-5.1 7.1-9.5V5.9L12 2.8Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M9 11.1h6v5.3H9v-5.3Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M10.4 11.1V9.8a1.6 1.6 0 0 1 3.2 0v1.3" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          Your design is private and secure.
+        </p>
+        <span class="home-indicator" aria-hidden="true"></span>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const screen = document.querySelector(".screen");
+        const setScale = () => {
+          document.documentElement.style.setProperty("--screen-scale", Math.min(screen.clientWidth / 431.5, 1));
+        };
+
+        setScale();
+        window.addEventListener("resize", setScale, { passive: true });
+      })();
+    </script>
+  </body>
+</html>

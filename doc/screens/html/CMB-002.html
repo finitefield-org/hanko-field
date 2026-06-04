@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CMB-002 Missing Seal - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #171b1f;
+        --copy: #23282d;
+        --gold: #b48242;
+        --line: #d6ad76;
+        --paper: #fbf7f0;
+        --pale-line: #dfc59f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe8de;
+        color: var(--ink);
+        font-family: "Hanko Serif JP", "Hanko Serif", "Times New Roman", serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          linear-gradient(118deg, transparent 0 39%, rgba(170, 130, 82, 0.05) 39.2%, transparent 40.4%),
+          linear-gradient(132deg, transparent 0 67%, rgba(165, 123, 75, 0.045) 67.2%, transparent 68.3%),
+          radial-gradient(ellipse at 48% 9%, rgba(255, 255, 255, 0.86), transparent 34%),
+          radial-gradient(ellipse at 44% 71%, rgba(255, 255, 255, 0.72), transparent 44%),
+          linear-gradient(126deg, #f3ece4 0%, #fffdf9 43%, #f7efe6 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.34;
+        background:
+          linear-gradient(154deg, transparent 0 18%, rgba(194, 166, 128, 0.16) 18.15%, transparent 18.8%),
+          linear-gradient(146deg, transparent 0 75%, rgba(197, 165, 124, 0.12) 75.1%, transparent 75.8%);
+        filter: blur(0.7px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 60px rgba(124, 96, 68, 0.08);
+      }
+
+      .back-button {
+        position: absolute;
+        z-index: 2;
+        top: 7.72%;
+        left: 5.2%;
+        display: grid;
+        width: 4.7cqw;
+        height: 4.7cqw;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .back-button svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 2;
+        top: 7.44%;
+        left: 50%;
+        margin: 0;
+        color: #111518;
+        font-size: 5.25cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 7px 12px rgba(58, 40, 24, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        position: absolute;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 3.6cqw;
+        color: var(--gold);
+      }
+
+      .header-ornament {
+        top: 12.93%;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 11.8cqw;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 1.9cqw;
+        height: 1.9cqw;
+        border: 0.36cqw solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .card {
+        position: absolute;
+        z-index: 1;
+        left: 5.62%;
+        width: 88.94%;
+        border: 0.1cqw solid rgba(226, 213, 201, 0.78);
+        border-radius: 2.35cqw;
+        background: rgba(255, 255, 255, 0.64);
+        box-shadow:
+          0 1.45cqw 3.7cqw rgba(83, 61, 43, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(2px);
+      }
+
+      .stone-card {
+        top: 15.84%;
+        height: 29.85%;
+      }
+
+      .missing-card {
+        top: 47.45%;
+        height: 31.48%;
+      }
+
+      .notice-card {
+        top: 80.43%;
+        height: 7.42%;
+        display: flex;
+        align-items: center;
+        gap: 4.2cqw;
+        padding: 0 5cqw;
+      }
+
+      .stone-art {
+        position: absolute;
+        top: 27.7%;
+        left: 5.75%;
+        width: 44.55%;
+        height: auto;
+      }
+
+      .stone-title {
+        position: absolute;
+        top: 14.4%;
+        left: 52.1%;
+        margin: 0;
+        color: #111519;
+        font-size: 5.15cqw;
+        font-weight: 600;
+        line-height: 1.08;
+        white-space: nowrap;
+      }
+
+      .stone-price {
+        position: absolute;
+        top: 33%;
+        left: 52.1%;
+        margin: 0;
+        color: #4f555a;
+        font-size: 4.1cqw;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stock-pill {
+        position: absolute;
+        top: 48.4%;
+        left: 52.1%;
+        display: flex;
+        height: 11.8%;
+        align-items: center;
+        gap: 1.9cqw;
+        border-radius: 1.3cqw;
+        background: rgba(231, 228, 214, 0.88);
+        padding: 0 2.25cqw;
+        color: #30383b;
+        font-size: 3.02cqw;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stock-dot {
+        width: 1.65cqw;
+        height: 1.65cqw;
+        border-radius: 999px;
+        background: #67915d;
+        box-shadow: 0 0 0 0.22cqw rgba(103, 145, 93, 0.1);
+      }
+
+      .change-button {
+        position: absolute;
+        right: 8.05%;
+        bottom: 12.2%;
+        display: flex;
+        width: 38.95%;
+        height: 15.9%;
+        align-items: center;
+        justify-content: center;
+        gap: 5.4cqw;
+        border: 0.14cqw solid var(--gold);
+        border-radius: 1.15cqw;
+        color: #8e6632;
+        font-size: 3.18cqw;
+        line-height: 1;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .change-button svg,
+      .select-button svg {
+        width: 2.45cqw;
+        height: 2.45cqw;
+        stroke-width: 1.8;
+      }
+
+      .placeholder {
+        position: absolute;
+        top: 11.9%;
+        left: 4.7%;
+        display: grid;
+        width: 39.75%;
+        height: 75.2%;
+        place-items: center;
+        border: 0.18cqw solid rgba(217, 187, 145, 0.72);
+        border-radius: 1.75cqw;
+        color: rgba(222, 200, 172, 0.86);
+        background: rgba(255, 252, 247, 0.32);
+      }
+
+      .placeholder::before {
+        content: "";
+        position: absolute;
+        inset: 1.05cqw;
+        border: 0.16cqw dashed rgba(205, 173, 129, 0.82);
+        border-radius: 1.45cqw;
+      }
+
+      .placeholder svg {
+        position: relative;
+        z-index: 1;
+        width: 56%;
+        height: auto;
+        transform: translateY(3%);
+      }
+
+      .missing-title {
+        position: absolute;
+        top: 16.6%;
+        left: 50.25%;
+        margin: 0;
+        color: #111519;
+        font-size: 5.1cqw;
+        font-weight: 600;
+        line-height: 1.08;
+        white-space: nowrap;
+      }
+
+      .missing-ornament {
+        top: 34.8%;
+        left: 49.4%;
+        gap: 3.05cqw;
+      }
+
+      .missing-ornament .ornament-line {
+        width: 16.2cqw;
+      }
+
+      .missing-copy {
+        position: absolute;
+        top: 46.8%;
+        left: 50.15%;
+        margin: 0;
+        color: var(--copy);
+        font-size: 3.18cqw;
+        line-height: 1.72;
+        white-space: nowrap;
+      }
+
+      .select-button {
+        position: absolute;
+        right: 8.05%;
+        bottom: 14.7%;
+        display: flex;
+        width: 41.35%;
+        height: 16.35%;
+        align-items: center;
+        justify-content: center;
+        gap: 6.5cqw;
+        border: 0.14cqw solid var(--gold);
+        border-radius: 1.15cqw;
+        color: #8e6632;
+        font-size: 3.55cqw;
+        line-height: 1;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.28);
+      }
+
+      .notice-icon {
+        flex: 0 0 auto;
+        width: 6.7cqw;
+        height: 6.7cqw;
+        color: var(--gold);
+      }
+
+      .notice-copy {
+        margin: 0;
+        color: #22272b;
+        font-size: 3.05cqw;
+        line-height: 1.62;
+      }
+
+      .primary-button {
+        position: absolute;
+        z-index: 2;
+        top: 90.07%;
+        left: 6.05%;
+        display: flex;
+        width: 87.8%;
+        height: 6.88%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #fffaf1;
+        font-size: 4.25cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        text-shadow: 0 2px 8px rgba(255, 244, 222, 0.28);
+        background:
+          radial-gradient(ellipse at 24% 28%, rgba(255, 255, 255, 0.12), transparent 39%),
+          linear-gradient(135deg, #242526, #171819 58%, #252626);
+        box-shadow:
+          0 1.2cqw 3.7cqw rgba(24, 24, 24, 0.22),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      }
+
+      .primary-button svg {
+        position: absolute;
+        right: 6.9%;
+        width: 2.65cqw;
+        height: 2.65cqw;
+        color: var(--gold);
+        stroke-width: 1.9;
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .missing-copy {
+          font-size: 3.02cqw;
+          line-height: 1.68;
+        }
+
+        .notice-copy {
+          font-size: 2.92cqw;
+          line-height: 1.55;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen shadow-2xl shadow-stone-300/30" aria-label="印影未選択の注文内容確認">
+      <a class="back-button" href="#" aria-label="戻る">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.2 4.8 7 16l11.2 11.2M8.5 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.3"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">ご注文内容確認</h1>
+      <div class="ornament header-ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond"></span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <section class="card stone-card" aria-labelledby="stone-heading">
+        <img class="stone-art" src="assets/cmb-002-stone.png" alt="翡翠の印材" />
+        <h2 id="stone-heading" class="stone-title">翡翠（ひすい）</h2>
+        <p class="stone-price">¥128,000（税込）</p>
+        <p class="stock-pill"><span class="stock-dot" aria-hidden="true"></span>在庫あり</p>
+        <a class="change-button" href="#" aria-label="宝石材を変更">
+          <span>宝石材を変更</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      </section>
+
+      <section class="card missing-card" aria-labelledby="missing-seal-heading">
+        <div class="placeholder" aria-hidden="true">
+          <svg viewBox="0 0 160 160">
+            <path
+              d="M58 108V54c0-9.5 7.7-17.2 17.2-17.2h40.5c9.5 0 17.2 7.7 17.2 17.2v52.7"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="7"
+            />
+            <path
+              d="M24 119.5c14.8-2.6 24.5-8.7 32.7-23.4 7.4-13.2 13.6-20.1 24.6-20.1 11.6 0 18.5 8.6 25.7 16.3 6.4 6.8 14 8.2 28.7 8.2"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="7"
+            />
+            <path d="M101.5 101.5h38.2c7.3 0 13.1 5.9 13.1 13.1s-5.9 13.1-13.1 13.1h-38.2c-7.3 0-13.1-5.9-13.1-13.1s5.9-13.1 13.1-13.1Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="7" />
+            <path d="M20 123.5c16.6-4 31.1-4.1 47.2 0 12.3 3.2 28.2 3.6 45.7-1.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="6" />
+          </svg>
+        </div>
+
+        <h2 id="missing-seal-heading" class="missing-title">印影が未選択です</h2>
+        <div class="ornament missing-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="missing-copy">ご注文に進む前に、<br />印影デザインを選択してください。</p>
+        <a class="select-button" href="#" aria-label="印影を選ぶ">
+          <span>印影を選ぶ</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      </section>
+
+      <aside class="card notice-card" aria-label="印影デザイン選択について">
+        <svg class="notice-icon" viewBox="0 0 48 54" aria-hidden="true">
+          <path
+            d="M24 2.8 42.5 9.4v15.1c0 12.1-7.5 20.6-18.5 26.5C13 45.1 5.5 36.6 5.5 24.5V9.4L24 2.8Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.6"
+          />
+          <path d="M24 16.8v20.5M24 43.1v.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="3.2" />
+        </svg>
+        <p class="notice-copy">印影デザインは、ご注文を完了するために<br />必要な項目です。必ずご選択ください。</p>
+      </aside>
+
+      <a class="primary-button" href="#" aria-label="印影を選ぶ">
+        <span>印影を選ぶ</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-001 Checkout Information - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #12161a;
+        --copy: #4d555d;
+        --muted: #7d8088;
+        --wine: #941619;
+        --deep-wine: #7e0f12;
+        --gold: #a66b24;
+        --paper-line: #eaded2;
+        --field-line: #dcc5ac;
+        --paper: #fffdf9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.94) 0 24%, transparent 56%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(24px, 6.8vw, 32px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 27%, transparent 58%),
+          radial-gradient(circle at 47% 51%, rgba(255, 255, 255, 0.68) 0 24%, transparent 61%),
+          radial-gradient(circle at 48% 87%, rgba(255, 255, 255, 0.56) 0 24%, transparent 58%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .hero {
+        position: relative;
+        height: 92px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 38px;
+        left: var(--side);
+        display: grid;
+        width: 28px;
+        height: 24px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 24px;
+        height: 22px;
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 31px;
+        color: var(--deep-wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: clamp(30px, 7.65vw, 36px);
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 9px 15px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 18px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 38px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 9px;
+        height: 9px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .lede {
+        margin: 7px var(--side) 0;
+        color: #414a52;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .card {
+        margin-right: var(--side);
+        margin-left: var(--side);
+        border: 1px solid rgba(233, 222, 212, 0.96);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.68);
+        box-shadow:
+          0 12px 26px rgba(80, 53, 34, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(2px);
+      }
+
+      .contact-card {
+        margin-top: 6px;
+        padding: 12px 13px 13px;
+      }
+
+      .shipping-card {
+        margin-top: 8px;
+        padding: 12px 13px 7px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .icon-disc {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 42% 36%, rgba(255, 255, 255, 0.82), #f4eee8 76%);
+      }
+
+      .section-icon {
+        width: 23px;
+        height: 23px;
+        color: currentColor;
+        stroke-width: 1.55;
+      }
+
+      .section-title {
+        margin: 0;
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 23px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .form-grid {
+        margin-top: 14px;
+      }
+
+      .shipping-card .form-grid {
+        margin-top: 12px;
+      }
+
+      .form-row + .form-row,
+      .field-pair + .form-row,
+      .form-row + .field-pair {
+        margin-top: 4px;
+      }
+
+      .contact-card .form-row + .form-row {
+        margin-top: 9px;
+      }
+
+      .field-pair {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .field-label {
+        display: block;
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1.1;
+      }
+
+      .required {
+        color: var(--wine);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        vertical-align: 12%;
+      }
+
+      .field {
+        display: grid;
+        height: 33px;
+        grid-template-columns: 38px minmax(0, 1fr) 23px;
+        align-items: center;
+        margin-top: 6px;
+        border: 1px solid var(--field-line);
+        border-radius: 6px;
+        background: rgba(255, 253, 250, 0.5);
+        color: var(--wine);
+      }
+
+      .field.is-text {
+        grid-template-columns: 38px minmax(0, 1fr);
+      }
+
+      .field-icon {
+        width: 16px;
+        height: 16px;
+        justify-self: center;
+        color: currentColor;
+        stroke-width: 1.85;
+      }
+
+      .field-control,
+      .select-label {
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--muted);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-size: 12.5px;
+        line-height: 1;
+      }
+
+      .field-control::placeholder {
+        color: var(--muted);
+        opacity: 1;
+      }
+
+      .select-field {
+        width: 100%;
+        padding: 0;
+        cursor: default;
+        text-align: left;
+      }
+
+      .chevron {
+        width: 17px;
+        height: 17px;
+        justify-self: center;
+        color: var(--gold);
+        stroke-width: 1.9;
+      }
+
+      .continue {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        height: 42px;
+        margin: 8px var(--side) 0;
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 15% 24%, rgba(190, 31, 34, 0.52), transparent 42%),
+          linear-gradient(135deg, #990f13 0%, #7f0e11 100%);
+        color: #fff;
+        box-shadow:
+          0 5px 11px rgba(99, 46, 27, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .continue svg {
+        width: 19px;
+        height: 19px;
+        color: #c18a48;
+        stroke-width: 1.7;
+      }
+
+      .secure-note {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin: 10px var(--side) 0;
+        color: #4d555d;
+        text-align: center;
+      }
+
+      .secure-note svg {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 auto;
+        color: var(--gold);
+        stroke-width: 1.55;
+      }
+
+      .secure-note p {
+        margin: 0;
+        max-width: 250px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 390px) {
+        .phone {
+          --side: 25px;
+        }
+
+        .hero {
+          height: 88px;
+        }
+
+        .back-button {
+          top: 36px;
+        }
+
+        .screen-title {
+          padding-top: 30px;
+          font-size: 29px;
+        }
+
+        .ornament {
+          margin-top: 16px;
+        }
+
+        .lede {
+          font-size: 12px;
+        }
+
+        .field-pair {
+          gap: 10px;
+        }
+
+        .field-label {
+          font-size: 13px;
+        }
+
+        .field-control,
+        .select-label {
+          font-size: 11.4px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 28 24">
+        <path d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+      </symbol>
+      <symbol id="icon-user" viewBox="0 0 24 24">
+        <path d="M12 12.3a4.3 4.3 0 1 0 0-8.6 4.3 4.3 0 0 0 0 8.6Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M4.2 20.3c.8-4.2 3.6-6.3 7.8-6.3s7 2.1 7.8 6.3" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-mail" viewBox="0 0 24 24">
+        <path d="M4.2 6.2h15.6v11.6H4.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="m4.6 6.8 7.4 6 7.4-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-home" viewBox="0 0 24 24">
+        <path d="m3.6 11.5 8.4-7 8.4 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M5.8 10.4v9.2h12.4v-9.2" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M9.7 19.6v-5.8h4.6v5.8" fill="none" stroke="currentColor" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-globe" viewBox="0 0 24 24">
+        <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" fill="none" stroke="currentColor" />
+        <path d="M3.5 12h17M12 3c2.1 2.4 3.2 5.4 3.2 9S14.1 18.6 12 21M12 3c-2.1 2.4-3.2 5.4-3.2 9s1.1 6.6 3.2 9" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-postal" viewBox="0 0 24 24">
+        <path d="M6.5 9.2h11v10.3h-11Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M8.8 9.1V6.9a3.2 3.2 0 0 1 6.4 0v2.2" fill="none" stroke="currentColor" stroke-linecap="round" />
+        <path d="M12 13.2v3.1M10.8 14.2l1.2-1.1 1.2 1.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-city" viewBox="0 0 24 24">
+        <path d="M5.5 19.5V9.1h4.1v10.4M9.6 19.5V4.4h5v15.1M14.6 19.5v-7h3.9v7" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M3.9 19.5h16.2M7.2 12.1h.1M7.2 15h.1M12.1 7.4h.1M12.1 10.4h.1M12.1 13.4h.1M16.6 15.2h.1" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-pin" viewBox="0 0 24 24">
+        <path d="M12 21s6.4-5.7 6.4-11a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21 12 21Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M12 12.4a2.4 2.4 0 1 0 0-4.8 2.4 2.4 0 0 0 0 4.8Z" fill="none" stroke="currentColor" />
+      </symbol>
+      <symbol id="icon-house-small" viewBox="0 0 24 24">
+        <path d="m5.2 11.1 6.8-5.7 6.8 5.7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7 10.4v8.1h10v-8.1" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M10.4 18.5v-4.3h3.2v4.3" fill="none" stroke="currentColor" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-map" viewBox="0 0 24 24">
+        <path d="m4.5 6.2 5-2.1 5 2.1 5-2.1v13.7l-5 2.1-5-2.1-5 2.1Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M9.5 4.1v13.7M14.5 6.2v13.7" fill="none" stroke="currentColor" />
+      </symbol>
+      <symbol id="icon-phone" viewBox="0 0 24 24">
+        <path d="M8.1 4.5 5.5 6.1c-.7.4-.8 1.2-.5 2 2.2 5.4 6.4 9.5 11 11 .8.3 1.6.1 2-.6l1.4-2.4-4.1-2.6-1.5 1.8c-2.2-1-4-2.8-5.1-5.1l1.9-1.6Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+        <path d="m6.2 9.2 5.8 5.8 5.8-5.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M4.4 12h14.8M13.5 5.6l6.4 6.4-6.4 6.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-lock" viewBox="0 0 24 24">
+        <path d="M12 2.9 19 5.7v5.8c0 4.3-2.7 8-7 9.6-4.3-1.6-7-5.3-7-9.6V5.7Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M9.3 12h5.4v4.2H9.3Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M10.2 12v-1.3a1.8 1.8 0 1 1 3.6 0V12" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Checkout Information screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+        </a>
+        <h1 class="screen-title">Checkout Information</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+      </header>
+
+      <p class="lede">Please provide your contact and shipping details to continue.</p>
+
+      <form aria-label="Checkout information form">
+        <section class="card contact-card" aria-labelledby="contact-title">
+          <div class="section-heading">
+            <span class="icon-disc text-[#941619]" aria-hidden="true">
+              <svg class="section-icon"><use href="#icon-user" /></svg>
+            </span>
+            <h2 class="section-title" id="contact-title">Contact</h2>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label class="field-label" for="email">Email <span class="required">*</span></label>
+              <div class="field is-text">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-mail" /></svg>
+                <input class="field-control" id="email" name="email" type="email" placeholder="you@example.com" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="field-label" for="full-name">Full name <span class="required">*</span></label>
+              <div class="field is-text">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-user" /></svg>
+                <input class="field-control" id="full-name" name="full-name" type="text" placeholder="Enter your full name" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card shipping-card" aria-labelledby="shipping-title">
+          <div class="section-heading">
+            <span class="icon-disc text-[#a66b24]" aria-hidden="true">
+              <svg class="section-icon"><use href="#icon-home" /></svg>
+            </span>
+            <h2 class="section-title" id="shipping-title">Shipping Address</h2>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <span class="field-label" id="country-label">Country / Region <span class="required">*</span></span>
+              <button class="field select-field" type="button" aria-labelledby="country-label">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-globe" /></svg>
+                <span class="select-label">Select country / region</span>
+                <svg class="chevron" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
+              </button>
+            </div>
+
+            <div class="field-pair">
+              <div>
+                <label class="field-label" for="postal-code">Postal code <span class="required">*</span></label>
+                <div class="field is-text">
+                  <svg class="field-icon" aria-hidden="true"><use href="#icon-postal" /></svg>
+                  <input class="field-control" id="postal-code" name="postal-code" type="text" placeholder="Enter postal code" />
+                </div>
+              </div>
+              <div>
+                <label class="field-label" for="city">City <span class="required">*</span></label>
+                <div class="field is-text">
+                  <svg class="field-icon" aria-hidden="true"><use href="#icon-city" /></svg>
+                  <input class="field-control" id="city" name="city" type="text" placeholder="Enter city" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="field-label" for="address-line-1">Address line 1 <span class="required">*</span></label>
+              <div class="field is-text">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-pin" /></svg>
+                <input class="field-control" id="address-line-1" name="address-line-1" type="text" placeholder="Street address or P.O. Box" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="field-label" for="address-line-2">Address line 2</label>
+              <div class="field is-text">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-house-small" /></svg>
+                <input class="field-control" id="address-line-2" name="address-line-2" type="text" placeholder="Apartment, suite, unit, etc. (optional)" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <span class="field-label" id="state-label">State / Province <span class="required">*</span></span>
+              <button class="field select-field" type="button" aria-labelledby="state-label">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-map" /></svg>
+                <span class="select-label">Select state / province</span>
+                <svg class="chevron" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
+              </button>
+            </div>
+
+            <div class="form-row">
+              <label class="field-label" for="phone-number">Phone number <span class="required">*</span></label>
+              <div class="field is-text">
+                <svg class="field-icon" aria-hidden="true"><use href="#icon-phone" /></svg>
+                <input class="field-control" id="phone-number" name="phone-number" type="tel" placeholder="Enter your phone number" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <a class="continue" href="#" aria-label="Continue to order confirmation">
+          <span>Continue</span>
+          <svg aria-hidden="true"><use href="#icon-arrow-right" /></svg>
+        </a>
+      </form>
+
+      <aside class="secure-note" aria-label="Stripe Checkout note">
+        <svg aria-hidden="true"><use href="#icon-shield-lock" /></svg>
+        <p>You will be redirected to Stripe Checkout<br />for secure payment.</p>
+      </aside>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-007 FAQ - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #171b1f;
+        --copy: #62686e;
+        --wine: #98191a;
+        --gold: #b98334;
+        --line: #ece0d4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 11%, rgba(255, 255, 255, 0.92) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, 431.5px);
+        min-height: min(100vh, 911px);
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.95) 0 25%, transparent 58%),
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.65) 0 26%, transparent 61%),
+          radial-gradient(circle at 50% 88%, rgba(255, 255, 255, 0.68) 0 24%, transparent 62%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .hero {
+        position: relative;
+        height: 241px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 68px;
+        left: 25px;
+        display: grid;
+        width: 22px;
+        height: 20px;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 64px;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 8px 15px rgba(112, 65, 41, 0.08);
+      }
+
+      .hero-heading {
+        margin: 34px 0 0;
+        color: #22282c;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 27px;
+        font-weight: 500;
+        line-height: 1.04;
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 23px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 61px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .lede {
+        width: 305px;
+        margin: 16px auto 0;
+        color: var(--copy);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .faq-list {
+        display: grid;
+        gap: 13px;
+        padding: 0 22px;
+      }
+
+      .faq-card {
+        overflow: hidden;
+        border: 0.8px solid rgba(232, 219, 208, 0.96);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow:
+          0 8px 21px rgba(88, 58, 34, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(2px);
+      }
+
+      .faq-question {
+        display: grid;
+        min-height: 62px;
+        grid-template-columns: 46px minmax(0, 1fr) 23px;
+        gap: 11px;
+        align-items: center;
+        padding: 10px 20px 10px 12px;
+      }
+
+      .faq-card:first-child {
+        margin-bottom: 7px;
+      }
+
+      .faq-icon-wrap {
+        display: grid;
+        width: 39px;
+        height: 39px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 45% 43%, rgba(255, 255, 255, 0.75), rgba(246, 239, 231, 0.96));
+      }
+
+      .faq-icon {
+        width: 24px;
+        height: 24px;
+        color: var(--wine);
+        stroke-width: 1.55;
+      }
+
+      .question-text {
+        min-width: 0;
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      .chevron {
+        width: 16px;
+        height: 16px;
+        color: var(--gold);
+        stroke-width: 2.2;
+      }
+
+      .faq-answer {
+        border-top: 1px solid var(--line);
+        padding: 21px 31px 19px;
+        color: #555d63;
+        font-size: 13.7px;
+        line-height: 1.58;
+      }
+
+      .contact {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        margin-top: 28px;
+        font-size: 13.8px;
+        color: #767b80;
+      }
+
+      .contact-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--wine);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      @media (max-width: 390px) {
+        .hero {
+          height: 224px;
+        }
+
+        .back-button {
+          top: 64px;
+          left: 23px;
+        }
+
+        .screen-title {
+          padding-top: 61px;
+          font-size: 26px;
+        }
+
+        .hero-heading {
+          margin-top: 30px;
+          font-size: 24px;
+        }
+
+        .ornament {
+          margin-top: 19px;
+        }
+
+        .lede {
+          width: 286px;
+          margin-top: 13px;
+          font-size: 12.7px;
+        }
+
+        .faq-list {
+          gap: 11px;
+          padding-inline: 20px;
+        }
+
+        .faq-question {
+          min-height: 56px;
+          grid-template-columns: 42px minmax(0, 1fr) 20px;
+          gap: 10px;
+          padding: 9px 18px 9px 11px;
+        }
+
+        .faq-card:first-child {
+          margin-bottom: 5px;
+        }
+
+        .faq-icon-wrap {
+          width: 36px;
+          height: 36px;
+        }
+
+        .faq-icon {
+          width: 22px;
+          height: 22px;
+        }
+
+        .question-text {
+          font-size: 16px;
+        }
+
+        .faq-answer {
+          padding: 17px 29px 18px;
+          font-size: 12.3px;
+          line-height: 1.55;
+        }
+
+        .contact {
+          margin-top: 21px;
+          font-size: 12.5px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="FAQ screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 28 24" aria-hidden="true">
+            <path
+              d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </a>
+        <h1 class="screen-title">FAQ</h1>
+        <h2 class="hero-heading">Frequently asked questions</h2>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="lede">Find answers to common questions about Stone Signature.</p>
+      </header>
+
+      <section class="faq-list" aria-label="Frequently asked questions">
+        <article class="faq-card">
+          <div class="faq-question">
+            <div class="faq-icon-wrap" aria-hidden="true">
+              <svg class="faq-icon" viewBox="0 0 32 32">
+                <path d="M5.5 13h21L20.3 26h-8.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5.5 13 5.9-6.2h9.2L26.5 13M11.4 6.8 8.8 13l7.2 13 7.2-13-2.6-6.2M8.8 13h14.4" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="question-text">How is kanji selected?</h3>
+            <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m4 12 6-6 6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="faq-answer">
+            We carefully select kanji based on your name, meaning, and intention. Each character is chosen for its
+            beauty, positive symbolism, and balance, then reviewed by our design team to ensure it creates a timeless and
+            meaningful seal.
+          </p>
+        </article>
+
+        <article class="faq-card">
+          <div class="faq-question">
+            <div class="faq-icon-wrap" aria-hidden="true">
+              <svg class="faq-icon" viewBox="0 0 32 32">
+                <path d="M5.5 13h21L20.3 26h-8.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5.5 13 5.9-6.2h9.2L26.5 13M11.4 6.8 8.8 13l7.2 13 7.2-13-2.6-6.2M8.8 13h14.4" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="question-text">Can I change my order after payment?</h3>
+            <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m4 7 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </article>
+
+        <article class="faq-card">
+          <div class="faq-question">
+            <div class="faq-icon-wrap" aria-hidden="true">
+              <svg class="faq-icon" viewBox="0 0 32 32">
+                <path d="M5.5 13h21L20.3 26h-8.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5.5 13 5.9-6.2h9.2L26.5 13M11.4 6.8 8.8 13l7.2 13 7.2-13-2.6-6.2M8.8 13h14.4" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="question-text">How long does production take?</h3>
+            <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m4 7 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </article>
+
+        <article class="faq-card">
+          <div class="faq-question">
+            <div class="faq-icon-wrap" aria-hidden="true">
+              <svg class="faq-icon" viewBox="0 0 32 32">
+                <path d="M5.5 13h21L20.3 26h-8.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5.5 13 5.9-6.2h9.2L26.5 13M11.4 6.8 8.8 13l7.2 13 7.2-13-2.6-6.2M8.8 13h14.4" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="question-text">Do you ship internationally?</h3>
+            <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m4 7 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </article>
+
+        <article class="faq-card">
+          <div class="faq-question">
+            <div class="faq-icon-wrap" aria-hidden="true">
+              <svg class="faq-icon" viewBox="0 0 32 32">
+                <path d="M5.5 13h21L20.3 26h-8.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5.5 13 5.9-6.2h9.2L26.5 13M11.4 6.8 8.8 13l7.2 13 7.2-13-2.6-6.2M8.8 13h14.4" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="question-text">Are gemstones one of a kind?</h3>
+            <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m4 7 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </article>
+
+        <article class="faq-card">
+          <div class="faq-question">
+            <div class="faq-icon-wrap" aria-hidden="true">
+              <svg class="faq-icon" viewBox="0 0 32 32">
+                <path d="M5.5 13h21L20.3 26h-8.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5.5 13 5.9-6.2h9.2L26.5 13M11.4 6.8 8.8 13l7.2 13 7.2-13-2.6-6.2M8.8 13h14.4" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="question-text">How do I track my order?</h3>
+            <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m4 7 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </article>
+      </section>
+
+      <footer class="contact">
+        <span>Still have questions?</span>
+        <a class="contact-link" href="#">
+          Contact us
+          <svg class="h-[16px] w-[16px]" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="m6 3 7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+          </svg>
+        </a>
+      </footer>
+    </main>
+  </body>
+</html>

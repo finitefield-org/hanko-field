@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-007 Custom-made Agreement - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #151a1f;
+        --copy: #3b454d;
+        --wine: #8c1216;
+        --gold: #b67b35;
+        --line: #eadac8;
+        --card: rgba(255, 255, 255, 0.55);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 13%, rgba(255, 255, 255, 0.94) 0 24%, transparent 57%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(29px, 6.16vw, 29px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 7%, rgba(255, 255, 255, 0.96) 0 27%, transparent 60%),
+          radial-gradient(circle at 43% 47%, rgba(255, 255, 255, 0.76) 0 25%, transparent 62%),
+          radial-gradient(circle at 59% 88%, rgba(255, 255, 255, 0.68) 0 25%, transparent 63%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 44%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .hero {
+        position: relative;
+        height: 317px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 73px;
+        left: 24px;
+        z-index: 2;
+        display: grid;
+        width: 31px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 28px;
+        height: 23px;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 69px;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        color: #861116;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 43px;
+        font-weight: 600;
+        line-height: 0.95;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        transform: scaleX(0.55);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        position: absolute;
+        top: 119px;
+        left: 0;
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 55px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .brand-seal {
+        position: absolute;
+        top: 151px;
+        left: 50%;
+        width: 95px;
+        height: 95px;
+        border-radius: 999px;
+        transform: translateX(-50%);
+        object-fit: contain;
+      }
+
+      .intro {
+        position: absolute;
+        top: 252px;
+        right: 51px;
+        left: 51px;
+        margin: 0;
+        color: #313b44;
+        font-size: 15.5px;
+        line-height: 1.55;
+      }
+
+      .agreement-card,
+      .notice-card {
+        position: relative;
+        z-index: 1;
+        margin-right: var(--side);
+        margin-left: var(--side);
+        border: 1px solid rgba(231, 215, 197, 0.78);
+        border-radius: 13px;
+        background: var(--card);
+        box-shadow:
+          0 10px 22px rgba(82, 54, 33, 0.05),
+          inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      }
+
+      .agreement-card {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr) 20px;
+        align-items: center;
+        min-height: 92px;
+        gap: 18px;
+        padding: 17px 22px 17px 23px;
+      }
+
+      .agreement-card + .agreement-card {
+        min-height: 107px;
+        margin-top: 13px;
+      }
+
+      .check-zone {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        border-right: 1px solid rgba(190, 135, 71, 0.22);
+      }
+
+      .check-box {
+        display: grid;
+        width: 29px;
+        height: 29px;
+        place-items: center;
+        border-radius: 4px;
+        background:
+          radial-gradient(circle at 30% 18%, rgba(186, 37, 40, 0.42), transparent 45%),
+          linear-gradient(135deg, #9d1519 0%, #811015 100%);
+        box-shadow:
+          0 5px 10px rgba(99, 46, 27, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        color: #fff;
+      }
+
+      .check-box svg {
+        width: 19px;
+        height: 16px;
+        stroke-width: 2.8;
+      }
+
+      .agreement-text {
+        margin: 0;
+        color: #11191f;
+        font-size: 15.7px;
+        line-height: 1.55;
+        white-space: nowrap;
+      }
+
+      .tiny-diamond {
+        width: 11px;
+        height: 11px;
+        justify-self: center;
+        border: 2px solid var(--gold);
+        transform: rotate(45deg);
+      }
+
+      .notice-card {
+        display: grid;
+        grid-template-columns: 77px minmax(0, 1fr);
+        gap: 10px;
+        min-height: 160px;
+        margin-top: 22px;
+        padding: 26px 20px 7px 18px;
+      }
+
+      .shield-disc {
+        display: grid;
+        width: 62px;
+        height: 62px;
+        place-items: center;
+        align-self: start;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 42% 35%, rgba(255, 255, 255, 0.72), rgba(239, 225, 208, 0.88)),
+          linear-gradient(135deg, rgba(244, 234, 223, 0.98), rgba(255, 252, 248, 0.86));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.8),
+          0 8px 18px rgba(94, 60, 34, 0.06);
+      }
+
+      .shield-disc svg {
+        width: 40px;
+        height: 42px;
+        color: var(--gold);
+        stroke-width: 1.55;
+      }
+
+      .notice-title {
+        margin: -4px 0 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 23px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .notice-text {
+        margin: 14px 0 0;
+        color: #2f3941;
+        font-size: 13.2px;
+        line-height: 1.36;
+      }
+
+      .continue-button {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        height: 63px;
+        align-items: center;
+        justify-content: center;
+        margin: 30px var(--side) 0;
+        border-radius: 10px;
+        background:
+          radial-gradient(circle at 25% 22%, rgba(187, 31, 34, 0.48), transparent 45%),
+          linear-gradient(135deg, #9d1115 0%, #821013 100%);
+        color: #fff;
+        box-shadow:
+          0 9px 18px rgba(99, 46, 27, 0.24),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 25px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .continue-button svg {
+        position: absolute;
+        right: 25px;
+        width: 25px;
+        height: 25px;
+        color: #d7a158;
+        stroke-width: 2;
+      }
+
+      @media (max-width: 390px) {
+        .phone {
+          --side: 22px;
+        }
+
+        .hero {
+          height: 313px;
+        }
+
+        .back-button {
+          left: 20px;
+        }
+
+        .screen-title {
+          font-size: 38px;
+          transform: scaleX(0.56);
+        }
+
+        .intro {
+          right: 36px;
+          left: 36px;
+          font-size: 14.6px;
+        }
+
+        .agreement-card {
+          grid-template-columns: 50px minmax(0, 1fr) 18px;
+          gap: 13px;
+          min-height: 90px;
+          padding: 16px 18px 16px 18px;
+        }
+
+        .agreement-card + .agreement-card {
+          min-height: 107px;
+          margin-top: 13px;
+        }
+
+        .agreement-text {
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .notice-card {
+          grid-template-columns: 62px minmax(0, 1fr);
+          gap: 10px;
+          min-height: 160px;
+          padding: 26px 18px 7px 17px;
+        }
+
+        .shield-disc {
+          width: 57px;
+          height: 57px;
+        }
+
+        .shield-disc svg {
+          width: 36px;
+          height: 38px;
+        }
+
+        .notice-title {
+          font-size: 21px;
+        }
+
+        .notice-text {
+          margin-top: 13px;
+          font-size: 12.4px;
+          line-height: 1.36;
+        }
+
+        .continue-button {
+          height: 55px;
+          margin-top: 20px;
+          font-size: 22.5px;
+        }
+
+        .continue-button svg {
+          right: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 28 24">
+        <path d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 20">
+        <path d="m3.2 10.3 5.3 5.2L20.8 3.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-check" viewBox="0 0 32 36">
+        <path d="M16 2.8 28 7.2v8.9c0 8.2-4.7 13.7-12 16.9C8.7 29.8 4 24.3 4 16.1V7.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="m11.3 17.8 3.2 3.2 6.5-7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-chevron-right" viewBox="0 0 24 24">
+        <path d="m8.6 4.5 7.1 7.5-7.1 7.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+    </svg>
+
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Custom-made agreement screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+        </a>
+        <h1 class="screen-title">Custom-made Agreement</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <img class="brand-seal" src="assets/chk-007-brand-seal.png" alt="" />
+        <p class="intro">Please review and confirm the following<br />before proceeding to payment.</p>
+      </header>
+
+      <section class="agreement-card" aria-label="Confirm selected kanji and seal design">
+        <div class="check-zone">
+          <span class="check-box" aria-hidden="true">
+            <svg><use href="#icon-check" /></svg>
+          </span>
+        </div>
+        <p class="agreement-text">I confirm that the selected kanji<br />and seal design are correct.</p>
+        <span class="tiny-diamond" aria-hidden="true"></span>
+      </section>
+
+      <section class="agreement-card" aria-label="Confirm custom-made item cannot be changed">
+        <div class="check-zone">
+          <span class="check-box" aria-hidden="true">
+            <svg><use href="#icon-check" /></svg>
+          </span>
+        </div>
+        <p class="agreement-text">I understand that this is a custom-made<br />item and cannot be changed after<br />production begins.</p>
+        <span class="tiny-diamond" aria-hidden="true"></span>
+      </section>
+
+      <section class="notice-card" aria-label="Crafted just for you notice">
+        <div class="shield-disc" aria-hidden="true">
+          <svg><use href="#icon-shield-check" /></svg>
+        </div>
+        <div>
+          <h2 class="notice-title">Crafted just for you</h2>
+          <p class="notice-text">
+            Each seal is handcrafted to order using natural<br />
+            gemstones. As a personalized item, we are<br />
+            unable to accept cancellations or changes<br />
+            once production has started. Thank you for<br />
+            your understanding.
+          </p>
+        </div>
+      </section>
+
+      <a class="continue-button" href="#" aria-label="Agree and Continue">
+        <span>Agree and Continue</span>
+        <svg aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+      </a>
+    </main>
+  </body>
+</html>

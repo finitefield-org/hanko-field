@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-003 Finding Kanji - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #171d20;
+        --copy: #58626a;
+        --wine: #971719;
+        --deep-wine: #7f1013;
+        --gold: #b6823c;
+        --line: #eadfd4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.94) 0 25%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 43%, #f4ece3 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, 431.5px);
+        height: 911px;
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 23%, transparent 57%),
+          radial-gradient(circle at 49% 35%, rgba(255, 255, 255, 0.75) 0 24%, transparent 55%),
+          radial-gradient(circle at 52% 80%, rgba(255, 255, 255, 0.56) 0 24%, transparent 60%),
+          linear-gradient(136deg, #f2e9df 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .phone::before,
+      .phone::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+      }
+
+      .phone::before {
+        right: -72px;
+        bottom: 34px;
+        width: 270px;
+        height: 410px;
+        opacity: 0.14;
+        background:
+          linear-gradient(120deg, transparent 0 52%, rgba(178, 139, 91, 0.18) 53% 54%, transparent 55%),
+          linear-gradient(31deg, transparent 0 64%, rgba(178, 139, 91, 0.16) 65% 66%, transparent 67%),
+          radial-gradient(ellipse at 51% 53%, rgba(177, 141, 95, 0.13), transparent 62%);
+        transform: rotate(6deg);
+      }
+
+      .phone::after {
+        left: -82px;
+        bottom: -92px;
+        width: 390px;
+        height: 430px;
+        opacity: 0.1;
+        background:
+          linear-gradient(128deg, transparent 0 56%, rgba(177, 139, 92, 0.2) 57% 58%, transparent 59%),
+          radial-gradient(ellipse at 42% 48%, rgba(190, 154, 108, 0.14), transparent 62%);
+      }
+
+      .serif,
+      .screen-title,
+      .loading-title,
+      .name-value {
+        font-family:
+          "Times New Roman", "Bodoni 72", "Cormorant Garamond", "Hanko Serif",
+          serif;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 70px;
+        left: 24px;
+        z-index: 1;
+        display: grid;
+        width: 28px;
+        height: 24px;
+        place-items: center;
+        color: var(--deep-wine);
+      }
+
+      .back-button svg {
+        width: 27px;
+        height: 24px;
+        stroke-width: 1.9;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 70px;
+        left: 0;
+        z-index: 1;
+        width: 100%;
+        margin: 0;
+        color: var(--deep-wine);
+        font-size: 25.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 8px 14px rgba(111, 62, 38, 0.08);
+        white-space: nowrap;
+      }
+
+      .seal-art {
+        position: absolute;
+        top: 164px;
+        left: 50%;
+        z-index: 1;
+        width: 310px;
+        height: 250px;
+        object-fit: cover;
+        transform: translateX(-50%);
+        mix-blend-mode: multiply;
+        -webkit-mask-image: radial-gradient(ellipse at center, #000 0 55%, rgba(0, 0, 0, 0.78) 68%, transparent 84%);
+        mask-image: radial-gradient(ellipse at center, #000 0 55%, rgba(0, 0, 0, 0.78) 68%, transparent 84%);
+      }
+
+      .ornament {
+        position: absolute;
+        top: 429px;
+        left: 50%;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 38px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .loading-title {
+        position: absolute;
+        top: 459px;
+        left: 30px;
+        right: 30px;
+        z-index: 1;
+        margin: 0;
+        color: var(--ink);
+        font-size: 23.8px;
+        font-weight: 400;
+        line-height: 1.18;
+        text-align: center;
+        text-shadow: 0 10px 22px rgba(62, 42, 29, 0.08);
+      }
+
+      .loading-copy {
+        position: absolute;
+        top: 528px;
+        left: 44px;
+        right: 44px;
+        z-index: 1;
+        margin: 0;
+        color: var(--copy);
+        font-size: 13.6px;
+        line-height: 1.8;
+        text-align: center;
+      }
+
+      .spinner {
+        position: absolute;
+        top: 592px;
+        left: 50%;
+        z-index: 1;
+        width: 47px;
+        height: 47px;
+        border: 4px solid rgba(183, 126, 54, 0.2);
+        border-top-color: var(--gold);
+        border-left-color: var(--gold);
+        border-radius: 999px;
+        transform: translateX(-50%) rotate(-32deg);
+      }
+
+      .name-card {
+        position: absolute;
+        top: 669px;
+        left: 70px;
+        z-index: 1;
+        width: 292px;
+        height: 84px;
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr) 44px;
+        align-items: center;
+        border: 1px solid rgba(232, 222, 211, 0.95);
+        border-radius: 13px;
+        background:
+          radial-gradient(circle at 17% 49%, rgba(255, 255, 255, 0.74), transparent 28%),
+          rgba(255, 255, 255, 0.56);
+        box-shadow:
+          0 10px 24px rgba(93, 65, 43, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .person-icon-wrap {
+        display: grid;
+        width: 55px;
+        height: 55px;
+        margin-left: 15px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 42% 40%, rgba(255, 255, 255, 0.82), rgba(245, 238, 230, 0.96));
+      }
+
+      .person-icon {
+        width: 34px;
+        height: 34px;
+        color: var(--gold);
+        stroke-width: 1.6;
+      }
+
+      .name-label {
+        margin: 0 0 7px;
+        color: #59616a;
+        font-size: 13.2px;
+        line-height: 1;
+      }
+
+      .name-value {
+        margin: 0;
+        color: var(--ink);
+        font-size: 19.5px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .spark {
+        width: 20px;
+        height: 20px;
+        color: var(--gold);
+        justify-self: center;
+      }
+
+      @media (max-width: 390px) {
+        .back-button {
+          top: 69px;
+          left: 22px;
+        }
+
+        .screen-title {
+          top: 70px;
+          font-size: 24px;
+        }
+
+        .seal-art {
+          top: 167px;
+          width: 292px;
+          height: 235px;
+        }
+
+        .ornament {
+          top: 421px;
+        }
+
+        .loading-title {
+          top: 450px;
+          left: 28px;
+          right: 28px;
+          font-size: 22px;
+        }
+
+        .loading-copy {
+          top: 515px;
+          left: 36px;
+          right: 36px;
+          font-size: 12.5px;
+          line-height: 1.85;
+        }
+
+        .spinner {
+          top: 581px;
+          width: 44px;
+          height: 44px;
+        }
+
+        .name-card {
+          top: 660px;
+          left: 58px;
+          width: calc(100% - 116px);
+          height: 82px;
+          grid-template-columns: 70px minmax(0, 1fr) 38px;
+        }
+
+        .person-icon-wrap {
+          width: 52px;
+          height: 52px;
+          margin-left: 13px;
+        }
+
+        .name-value {
+          font-size: 19px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Finding kanji loading screen preview">
+      <a class="back-button" href="#" aria-label="Back">
+        <svg viewBox="0 0 28 24" aria-hidden="true">
+          <path
+            d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">Finding Kanji</h1>
+      <img class="seal-art" src="assets/des-003-kanji-seal.png" alt="" />
+
+      <div class="ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond"></span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <h2 class="loading-title">Creating engraving-friendly<br />kanji suggestions...</h2>
+      <p class="loading-copy">
+        We are considering sound, meaning,<br />
+        and simplicity for seal engraving.
+      </p>
+
+      <div class="spinner" aria-label="Loading"></div>
+
+      <section class="name-card" aria-label="Selected name">
+        <div class="person-icon-wrap">
+          <svg class="person-icon" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="10.3" r="5.1" fill="none" stroke="currentColor" />
+            <path d="M6.9 27.2c.8-5.6 4-8.6 9.1-8.6s8.3 3 9.1 8.6" fill="none" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div>
+          <p class="name-label">Name</p>
+          <p class="name-value">Michael</p>
+        </div>
+        <svg class="spark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 2.9c1.6 7.2 5.7 11.3 13.8 13-8.1 1.7-12.2 5.9-13.8 13-1.6-7.1-5.8-11.3-13.7-13 7.9-1.7 12.1-5.8 13.7-13Z" fill="currentColor" />
+        </svg>
+      </section>
+    </main>
+  </body>
+</html>

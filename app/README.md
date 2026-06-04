@@ -3,7 +3,28 @@
 STONE SIGNATURE の Flutter アプリです。
 
 リリースビルドでは、API 経由で本番 Firestore と本番 Stripe を使います。
-必要に応じて `HANKO_APP_PROD_API_BASE_URL` で本番 API の URL を上書きできます。
+必要に応じて `HANKO_API_BASE_URL` で API の URL を上書きできます。
+
+## ローカル API 接続
+
+デザイン画面の漢字提案、印影生成、石一覧、注文作成は API へ接続します。
+シミュレータで確認する前にリポジトリ直下で API を起動してください。
+
+```bash
+make docker-up ENV=dev
+make docker-api ENV=dev
+```
+
+Flutter アプリの既定の接続先は次の通りです。
+
+- iOS Simulator: `http://127.0.0.1:3050`
+- Android Emulator: `http://10.0.2.2:3050`
+
+別の API に接続する場合:
+
+```bash
+flutter run --dart-define=HANKO_API_BASE_URL=https://your-api.example.com
+```
 
 ## Getting Started
 

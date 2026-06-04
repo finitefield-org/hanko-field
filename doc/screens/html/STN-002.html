@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STN-002 Stones Empty - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #14191c;
+        --copy: #5f676e;
+        --gold: #ad7b3e;
+        --paper: #fffcf7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dc;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Hanko Serif", "Yu Mincho", "Hiragino Mincho ProN",
+          serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            ellipse at 50% 9%,
+            rgba(255, 255, 255, 0.96),
+            transparent 35%
+          ),
+          radial-gradient(
+            ellipse at 50% 49%,
+            rgba(255, 255, 255, 0.68),
+            transparent 43%
+          ),
+          radial-gradient(
+            ellipse at 50% 89%,
+            rgba(255, 255, 255, 0.46),
+            transparent 40%
+          ),
+          linear-gradient(127deg, #f4ece4 0%, #fffdf9 42%, #f7efe7 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.26;
+        background:
+          linear-gradient(
+            142deg,
+            transparent 0 72%,
+            rgba(194, 157, 110, 0.17) 72.2%,
+            transparent 72.72%
+          ),
+          linear-gradient(
+            137deg,
+            transparent 0 75%,
+            rgba(197, 160, 114, 0.14) 75.15%,
+            transparent 75.62%
+          ),
+          linear-gradient(
+            141deg,
+            transparent 0 78%,
+            rgba(186, 145, 99, 0.12) 78.12%,
+            transparent 78.55%
+          ),
+          linear-gradient(
+            35deg,
+            transparent 0 76%,
+            rgba(202, 166, 118, 0.12) 76.12%,
+            transparent 76.7%
+          ),
+          linear-gradient(
+            29deg,
+            transparent 0 79%,
+            rgba(184, 144, 98, 0.12) 79.15%,
+            transparent 79.72%
+          );
+        filter: blur(0.72px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 66px rgba(125, 96, 68, 0.075);
+      }
+
+      .back-button {
+        position: absolute;
+        z-index: 3;
+        top: 8.06%;
+        left: 6.04%;
+        display: grid;
+        width: 5.75cqw;
+        height: 5.75cqw;
+        place-items: center;
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      .back-button svg {
+        width: 100%;
+        height: 100%;
+        stroke-width: 2.4;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 2;
+        top: 7.67%;
+        left: 50%;
+        margin: 0;
+        color: #111518;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 7.72cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 9px 15px rgba(65, 43, 29, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .empty-state {
+        position: absolute;
+        z-index: 2;
+        top: 28.18%;
+        left: 50%;
+        display: flex;
+        width: 82%;
+        transform: translateX(-50%);
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .empty-icon {
+        position: relative;
+        display: grid;
+        width: 24.3cqw;
+        height: 24.3cqw;
+        place-items: center;
+        border: 0.18cqw solid rgba(229, 218, 206, 0.86);
+        border-radius: 999px;
+        background: rgba(255, 254, 251, 0.58);
+        box-shadow:
+          0 1.2cqw 2.7cqw rgba(109, 79, 52, 0.055),
+          inset 0 1px 0 rgba(255, 255, 255, 0.94);
+      }
+
+      .empty-icon svg {
+        width: 16.8cqw;
+        height: 16.8cqw;
+        color: var(--gold);
+        overflow: visible;
+      }
+
+      .empty-icon .lens {
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2.05;
+      }
+
+      .empty-icon .gem {
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.35;
+      }
+
+      .empty-title {
+        margin: 8.18cqw 0 0;
+        color: #14191d;
+        font-size: 4.12cqw;
+        font-weight: 500;
+        line-height: 1.24;
+        text-shadow: 0 5px 12px rgba(55, 47, 42, 0.09);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2.72cqw;
+        margin-top: 4.5cqw;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 14.5cqw;
+        height: 0.1cqw;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 1.76cqw;
+        height: 1.76cqw;
+        border: 0.35cqw solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      .empty-copy {
+        margin: 3.25cqw 0 0;
+        color: var(--copy);
+        font-size: 3.55cqw;
+        font-weight: 500;
+        line-height: 1.82;
+        white-space: nowrap;
+      }
+
+      .reset-button {
+        display: inline-flex;
+        width: 44.2cqw;
+        height: 11.55cqw;
+        align-items: center;
+        justify-content: center;
+        gap: 2.35cqw;
+        margin-top: 8.35cqw;
+        border-radius: 999px;
+        color: #fffaf1;
+        font-size: 3.64cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        text-shadow: 0 2px 8px rgba(255, 244, 222, 0.22);
+        background:
+          radial-gradient(
+            ellipse at 24% 28%,
+            rgba(255, 255, 255, 0.11),
+            transparent 40%
+          ),
+          linear-gradient(135deg, #282621, #181713 57%, #27251f);
+        box-shadow:
+          0 1.35cqw 3.6cqw rgba(30, 28, 24, 0.19),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .reset-button svg {
+        width: 3.85cqw;
+        height: 3.85cqw;
+        color: var(--gold);
+        stroke-width: 1.85;
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .empty-title {
+          font-size: 4.04cqw;
+        }
+
+        .empty-copy {
+          font-size: 3.35cqw;
+        }
+
+        .reset-button {
+          font-size: 3.48cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/30 md:shadow-stone-300/40"
+      aria-label="宝石材の検索結果なし"
+    >
+      <a class="back-button" href="#" aria-label="戻る">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.1 4.8 7 16l11.1 11.2M8.6 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">Stones</h1>
+
+      <section class="empty-state" aria-labelledby="empty-title">
+        <div class="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 72 72">
+            <path
+              class="lens"
+              d="M33 13.8a20.2 20.2 0 1 0 0 40.4 20.2 20.2 0 0 0 0-40.4Z"
+            />
+            <path class="lens" d="m47.5 47.4 15.6 15.7" />
+            <path class="gem" d="M20.8 29.1h24.7l-5.7-8H26.5l-5.7 8Z" />
+            <path class="gem" d="m20.8 29.1 12.3 16.5 12.4-16.5" />
+            <path class="gem" d="m26.5 21.1 6.6 24.5 6.7-24.5" />
+            <path class="gem" d="M25.7 29.1h14.8" />
+          </svg>
+        </div>
+
+        <h2 id="empty-title" class="empty-title">
+          条件に合う宝石材が見つかりません
+        </h2>
+
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <p class="empty-copy">
+          フィルターや検索条件を<br />
+          変更するか、リセットしてください。
+        </p>
+
+        <a class="reset-button" href="#" aria-label="条件をリセット">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5.3 8.6A7.8 7.8 0 0 1 18.9 7l1.4 1.7M20.4 4.3v4.4H16M18.7 15.4A7.8 7.8 0 0 1 5.1 17l-1.4-1.7M3.6 19.7v-4.4H8"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>条件をリセット</span>
+        </a>
+      </section>
+    </main>
+  </body>
+</html>

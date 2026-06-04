@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STN-005 Stones Filter - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #14191c;
+        --copy: #565e64;
+        --gold: #ad7b3e;
+        --line: #e6d9cc;
+        --paper: #fffcf7;
+        --button: #201f1b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dc;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Hanko Serif", "Yu Mincho", "Hiragino Mincho ProN",
+          serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          linear-gradient(
+            118deg,
+            transparent 0 39%,
+            rgba(164, 122, 77, 0.04) 39.2%,
+            transparent 40.5%
+          ),
+          radial-gradient(
+            ellipse at 50% 7%,
+            rgba(255, 255, 255, 0.92),
+            transparent 35%
+          ),
+          radial-gradient(
+            ellipse at 50% 54%,
+            rgba(255, 255, 255, 0.6),
+            transparent 42%
+          ),
+          linear-gradient(127deg, #f3ece4 0%, #fffdf9 43%, #f7efe7 100%);
+      }
+
+      .screen::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.25;
+        background:
+          linear-gradient(
+            151deg,
+            transparent 0 18%,
+            rgba(187, 153, 110, 0.16) 18.15%,
+            transparent 18.82%
+          ),
+          linear-gradient(
+            145deg,
+            transparent 0 76%,
+            rgba(194, 160, 117, 0.11) 76.1%,
+            transparent 76.82%
+          );
+        filter: blur(0.7px);
+        pointer-events: none;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 1;
+        top: 7.68%;
+        left: 50%;
+        margin: 0;
+        color: #15191c;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 5.05cqw;
+        font-weight: 500;
+        line-height: 1;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .top-icon {
+        position: absolute;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--gold);
+        padding: 0;
+      }
+
+      .menu-button {
+        top: 7.82%;
+        left: 5.9%;
+        width: 5.36cqw;
+        height: 5.36cqw;
+      }
+
+      .bag-button {
+        top: 7.45%;
+        right: 6.2%;
+        width: 5.35cqw;
+        height: 5.7cqw;
+      }
+
+      .top-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .tabs {
+        position: absolute;
+        z-index: 1;
+        top: 14.92%;
+        left: 0;
+        display: grid;
+        width: 100%;
+        height: 2.96%;
+        grid-template-columns: 1.1fr 1.06fr 1fr 0.98fr 0.98fr 1fr;
+        align-items: start;
+        border-bottom: 0.1cqw solid rgba(210, 200, 188, 0.86);
+        color: #53595e;
+      }
+
+      .tab {
+        position: relative;
+        color: inherit;
+        font-size: 3.18cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .tab.active {
+        color: var(--gold);
+      }
+
+      .tab.active::after {
+        content: "";
+        position: absolute;
+        top: 4.72cqw;
+        left: 50%;
+        width: 7.85cqw;
+        height: 0.32cqw;
+        border-radius: 999px;
+        background: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .dim {
+        position: absolute;
+        z-index: 2;
+        inset: 0;
+        background: rgba(16, 15, 13, 0.64);
+      }
+
+      .sheet {
+        position: absolute;
+        z-index: 3;
+        top: 19.62%;
+        left: 0;
+        width: 100%;
+        min-height: 80.38%;
+        border-radius: 5.75cqw 5.75cqw 0 0;
+        background:
+          radial-gradient(
+            ellipse at 50% 8%,
+            rgba(255, 255, 255, 0.95),
+            transparent 38%
+          ),
+          radial-gradient(
+            ellipse at 50% 78%,
+            rgba(255, 255, 255, 0.48),
+            transparent 41%
+          ),
+          linear-gradient(128deg, #f8f1ea 0%, #fffdf9 46%, #f9f1e9 100%);
+        box-shadow:
+          0 -1.6cqw 4.8cqw rgba(14, 13, 12, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        overflow: hidden;
+      }
+
+      .sheet::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.23;
+        background:
+          linear-gradient(
+            139deg,
+            transparent 0 69%,
+            rgba(164, 122, 77, 0.08) 69.15%,
+            transparent 70.3%
+          ),
+          linear-gradient(
+            144deg,
+            transparent 0 78%,
+            rgba(188, 149, 103, 0.12) 78.12%,
+            transparent 78.62%
+          );
+        pointer-events: none;
+      }
+
+      .grabber {
+        position: absolute;
+        top: 3.05cqw;
+        left: 50%;
+        width: 10.2cqw;
+        height: 1.02cqw;
+        border-radius: 999px;
+        background: #d8cec4;
+        transform: translateX(-50%);
+      }
+
+      .sheet-title {
+        position: absolute;
+        top: 9.95cqw;
+        left: 50%;
+        margin: 0;
+        color: #14191c;
+        font-size: 5.65cqw;
+        font-weight: 500;
+        line-height: 1;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .reset-link {
+        position: absolute;
+        top: 11.3cqw;
+        right: 6.1cqw;
+        color: var(--gold);
+        font-size: 3.24cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .filters {
+        position: relative;
+        z-index: 1;
+        padding: 23.5cqw 5.95cqw 0;
+      }
+
+      .filter-section {
+        padding: 0 0 5.42cqw;
+        border-bottom: 0.1cqw solid rgba(221, 211, 201, 0.95);
+        margin-bottom: 5.3cqw;
+      }
+
+      .filter-section:last-of-type {
+        padding-bottom: 5.42cqw;
+        border-bottom: 0;
+        margin-bottom: 0;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: baseline;
+        gap: 2.2cqw;
+        margin: 0 0 4.62cqw;
+        color: #181c1f;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 4.12cqw;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .section-title span {
+        color: #656b70;
+        font-family:
+          "Hanko Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 3.2cqw;
+      }
+
+      .chip-row {
+        display: flex;
+        align-items: center;
+        gap: 3.55cqw;
+      }
+
+      .chip {
+        display: inline-flex;
+        min-width: 13.1cqw;
+        height: 7.82cqw;
+        align-items: center;
+        justify-content: center;
+        border: 0.12cqw solid #decfc0;
+        border-radius: 999px;
+        background: rgba(255, 253, 249, 0.45);
+        color: #11161a;
+        font-size: 3.62cqw;
+        font-weight: 500;
+        line-height: 1;
+        padding: 0 3.75cqw;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .chip.selected {
+        border-color: var(--gold);
+        background:
+          radial-gradient(
+            ellipse at 24% 28%,
+            rgba(255, 255, 255, 0.1),
+            transparent 40%
+          ),
+          linear-gradient(135deg, #282621, #181713 57%, #27251f);
+        color: #fffaf1;
+        box-shadow:
+          0 0.82cqw 2.15cqw rgba(32, 30, 25, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.13);
+      }
+
+      .color-section {
+        padding-bottom: 4.92cqw;
+      }
+
+      .color-row {
+        display: flex;
+        align-items: center;
+        gap: 5.15cqw;
+      }
+
+      .swatch {
+        width: 7.04cqw;
+        height: 7.04cqw;
+        border: 0.12cqw solid rgba(187, 174, 160, 0.8);
+        border-radius: 999px;
+        box-shadow:
+          0 0.82cqw 1.82cqw rgba(72, 54, 37, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      }
+
+      .green {
+        background: #3c7145;
+      }
+
+      .red {
+        background: #9b4b3d;
+      }
+
+      .pink {
+        background: #efc4d7;
+      }
+
+      .blue {
+        background: #2c3859;
+      }
+
+      .black {
+        background: #151615;
+      }
+
+      .white {
+        background: #fffdf9;
+      }
+
+      .other-chip {
+        margin-left: 0.9cqw;
+      }
+
+      .pattern-row {
+        gap: 3.02cqw;
+      }
+
+      .pattern-row .chip {
+        min-width: 10.4cqw;
+        padding: 0 3.32cqw;
+      }
+
+      .availability-row {
+        gap: 3.8cqw;
+      }
+
+      .availability-row .chip {
+        min-width: 15.35cqw;
+      }
+
+      .apply-button {
+        display: flex;
+        width: 100%;
+        height: 10.35cqw;
+        align-items: center;
+        justify-content: center;
+        border: 0.12cqw solid var(--gold);
+        border-radius: 999px;
+        color: #d0a260;
+        font-size: 3.95cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        text-shadow: 0 2px 8px rgba(255, 244, 222, 0.18);
+        background:
+          radial-gradient(
+            ellipse at 24% 28%,
+            rgba(255, 255, 255, 0.11),
+            transparent 40%
+          ),
+          linear-gradient(135deg, #282621, #181713 57%, #27251f);
+        box-shadow:
+          0 1.2cqw 3.4cqw rgba(30, 28, 24, 0.17),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .chip {
+          font-size: 3.43cqw;
+        }
+
+        .section-title {
+          font-size: 4cqw;
+        }
+
+        .apply-button {
+          font-size: 3.76cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/30 md:shadow-stone-300/40"
+      aria-label="宝石材の絞り込み"
+    >
+      <button
+        class="top-icon menu-button"
+        type="button"
+        aria-label="メニューを開く"
+      >
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <path
+            d="M2.9 6.2h22.2M2.9 14h22.2M2.9 21.8h22.2"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2.15"
+          />
+        </svg>
+      </button>
+
+      <h1 class="screen-title">Stone Signature</h1>
+
+      <button class="top-icon bag-button" type="button" aria-label="カート">
+        <svg viewBox="0 0 32 34" aria-hidden="true">
+          <path
+            d="M8.5 11.7h15l1.4 17.7H7.1l1.4-17.7ZM11.8 11.2V8.1a4.2 4.2 0 0 1 8.4 0v3.1"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.9"
+          />
+        </svg>
+      </button>
+
+      <nav class="tabs" aria-label="宝石材カテゴリ">
+        <a class="tab active" href="#" aria-current="page">すべて</a>
+        <a class="tab" href="#">天然石</a>
+        <a class="tab" href="#">瑪瑙</a>
+        <a class="tab" href="#">水晶</a>
+        <a class="tab" href="#">翡翠</a>
+        <a class="tab" href="#">新着</a>
+      </nav>
+
+      <div class="dim" aria-hidden="true"></div>
+
+      <section class="sheet" aria-labelledby="filter-title">
+        <div class="grabber" aria-hidden="true"></div>
+        <h2 id="filter-title" class="sheet-title">絞り込み</h2>
+        <a class="reset-link" href="#">リセット</a>
+
+        <div class="filters">
+          <section class="filter-section" aria-labelledby="material-title">
+            <h3 id="material-title" class="section-title">
+              Material <span>（素材）</span>
+            </h3>
+            <div class="chip-row">
+              <a class="chip selected" href="#" aria-current="true">すべて</a>
+              <a class="chip" href="#">天然石</a>
+              <a class="chip" href="#">瑪瑙</a>
+              <a class="chip" href="#">水晶</a>
+            </div>
+          </section>
+
+          <section
+            class="filter-section color-section"
+            aria-labelledby="color-title"
+          >
+            <h3 id="color-title" class="section-title">
+              Color <span>（色）</span>
+            </h3>
+            <div class="color-row">
+              <span class="swatch green" aria-label="緑"></span>
+              <span class="swatch red" aria-label="赤"></span>
+              <span class="swatch pink" aria-label="桃"></span>
+              <span class="swatch blue" aria-label="紺"></span>
+              <span class="swatch black" aria-label="黒"></span>
+              <span class="swatch white" aria-label="白"></span>
+              <a class="chip other-chip" href="#">その他</a>
+            </div>
+          </section>
+
+          <section class="filter-section" aria-labelledby="pattern-title">
+            <h3 id="pattern-title" class="section-title">
+              Pattern <span>（模様）</span>
+            </h3>
+            <div class="chip-row pattern-row">
+              <a class="chip selected" href="#" aria-current="true">すべて</a>
+              <a class="chip" href="#">無地</a>
+              <a class="chip" href="#">縞</a>
+              <a class="chip" href="#">マーブル</a>
+              <a class="chip" href="#">斑点</a>
+            </div>
+          </section>
+
+          <section class="filter-section" aria-labelledby="availability-title">
+            <h3 id="availability-title" class="section-title">
+              Availability <span>（在庫状況）</span>
+            </h3>
+            <div class="chip-row availability-row">
+              <a class="chip selected" href="#" aria-current="true">すべて</a>
+              <a class="chip" href="#">在庫あり</a>
+              <a class="chip" href="#">残りわずか</a>
+            </div>
+          </section>
+
+          <a class="apply-button" href="#">この条件で表示する</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

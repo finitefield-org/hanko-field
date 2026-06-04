@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-002 Shipping Address - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #12161a;
+        --copy: #4f5961;
+        --muted: #69737b;
+        --wine: #8c1216;
+        --gold: #bf8540;
+        --line: #eadacc;
+        --field-bg: rgba(255, 255, 255, 0.54);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 13%, rgba(255, 255, 255, 0.94) 0 24%, transparent 57%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(31px, 6.65vw, 31px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 27%, transparent 60%),
+          radial-gradient(circle at 43% 51%, rgba(255, 255, 255, 0.68) 0 25%, transparent 63%),
+          radial-gradient(circle at 52% 88%, rgba(255, 255, 255, 0.62) 0 25%, transparent 62%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .phone::before,
+      .phone::after {
+        content: "";
+        position: absolute;
+        right: 20px;
+        color: rgba(196, 150, 102, 0.18);
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        line-height: 1;
+        pointer-events: none;
+      }
+
+      .phone::before {
+        content: "✦";
+        top: 147px;
+        font-size: 45px;
+      }
+
+      .phone::after {
+        content: "✦";
+        right: 17px;
+        bottom: 91px;
+        font-size: 43px;
+      }
+
+      .hero {
+        position: relative;
+        height: 130px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 68px;
+        left: 25px;
+        z-index: 2;
+        display: grid;
+        width: 33px;
+        height: 29px;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .back-button svg {
+        width: 31px;
+        height: 27px;
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 60px;
+        color: #881216;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: clamp(33px, 8.4vw, 40px);
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 26px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 56px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .notice {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        min-height: 67px;
+        grid-template-columns: 80px minmax(0, 1fr);
+        align-items: center;
+        margin: 0 var(--side);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.48);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      }
+
+      .notice-icon-wrap {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        margin-left: 18px;
+        place-items: center;
+        border: 1px solid var(--wine);
+        border-radius: 999px;
+        color: var(--wine);
+      }
+
+      .notice-icon {
+        width: 26px;
+        height: 26px;
+        stroke-width: 1.55;
+      }
+
+      .notice-text {
+        margin: 0;
+        color: #252c31;
+        font-size: 13.5px;
+        line-height: 1.4;
+      }
+
+      .form {
+        position: relative;
+        z-index: 1;
+        margin: 17px var(--side) 0;
+      }
+
+      .field-card {
+        display: block;
+        height: 71px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--field-bg);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      }
+
+      .field-card + .field-card {
+        margin-top: 13px;
+      }
+
+      .field-inner {
+        position: relative;
+        display: grid;
+        height: 100%;
+        min-height: 0;
+        align-content: center;
+        padding: 11px 48px 10px 18px;
+      }
+
+      .field-card:not(.select-button) .field-inner {
+        padding-right: 18px;
+      }
+
+      .label {
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .required {
+        color: var(--wine);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        vertical-align: 12%;
+      }
+
+      .control,
+      .select-value {
+        min-width: 0;
+        margin-top: 14px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--muted);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      .control {
+        width: 100%;
+        padding: 0;
+      }
+
+      .control::placeholder {
+        color: var(--muted);
+        opacity: 1;
+      }
+
+      .select-button {
+        width: 100%;
+        cursor: default;
+        text-align: left;
+      }
+
+      .chevron {
+        position: absolute;
+        right: 20px;
+        top: 33px;
+        width: 19px;
+        height: 19px;
+        color: var(--gold);
+        stroke-width: 2;
+      }
+
+      .secure-note {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 14px var(--side) 0;
+        color: #252d34;
+      }
+
+      .secure-note svg {
+        width: 20px;
+        height: 23px;
+        flex: 0 0 auto;
+        color: var(--gold);
+        stroke-width: 1.45;
+      }
+
+      .secure-note p {
+        margin: 0;
+        font-size: 12.4px;
+        line-height: 1.45;
+      }
+
+      .secure-note em {
+        font-style: italic;
+      }
+
+      .save-button {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 56px;
+        margin: 17px var(--side) 26px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 17% 24%, rgba(190, 31, 34, 0.5), transparent 42%),
+          linear-gradient(135deg, #9d1014 0%, #821013 100%);
+        color: #fff;
+        box-shadow:
+          0 7px 14px rgba(99, 46, 27, 0.22),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 25px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .save-button svg {
+        position: absolute;
+        right: 21px;
+        width: 22px;
+        height: 22px;
+        color: #d19a56;
+        stroke-width: 2;
+      }
+
+      @media (max-width: 390px) {
+        .phone {
+          --side: 25px;
+        }
+
+        .hero {
+          height: 121px;
+        }
+
+        .back-button {
+          top: 64px;
+          left: 21px;
+        }
+
+        .screen-title {
+          padding-top: 57px;
+          font-size: 34px;
+        }
+
+        .ornament {
+          margin-top: 22px;
+        }
+
+        .ornament-line {
+          width: 50px;
+        }
+
+        .notice {
+          min-height: 65px;
+          grid-template-columns: 72px minmax(0, 1fr);
+        }
+
+        .notice-icon-wrap {
+          margin-left: 16px;
+        }
+
+        .notice-text {
+          font-size: 12.6px;
+        }
+
+        .form {
+          margin-top: 16px;
+        }
+
+        .field-card {
+          height: 67px;
+        }
+
+        .field-card + .field-card {
+          margin-top: 12px;
+        }
+
+        .field-inner {
+          min-height: 0;
+          padding: 10px 45px 9px 16px;
+        }
+
+        .field-card:not(.select-button) .field-inner {
+          padding-right: 16px;
+        }
+
+        .label {
+          font-size: 18px;
+        }
+
+        .control,
+        .select-value {
+          margin-top: 12px;
+          font-size: 13.8px;
+        }
+
+        .control.long-copy {
+          font-size: 12.1px;
+        }
+
+        .chevron {
+          top: 31px;
+          right: 18px;
+        }
+
+        .secure-note {
+          gap: 11px;
+          margin-top: 13px;
+        }
+
+        .secure-note p {
+          font-size: 11.4px;
+        }
+
+        .save-button {
+          height: 53px;
+          margin-top: 27px;
+          font-size: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 28 24">
+        <path d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+      </symbol>
+      <symbol id="icon-globe" viewBox="0 0 24 24">
+        <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" fill="none" stroke="currentColor" />
+        <path d="M3.5 12h17M12 3c2.1 2.4 3.2 5.4 3.2 9S14.1 18.6 12 21M12 3c-2.1 2.4-3.2 5.4-3.2 9s1.1 6.6 3.2 9" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+        <path d="m6.2 9.2 5.8 5.8 5.8-5.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M4.4 12h14.8M13.5 5.6l6.4 6.4-6.4 6.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-lock" viewBox="0 0 24 24">
+        <path d="M12 2.9 19 5.7v5.8c0 4.3-2.7 8-7 9.6-4.3-1.6-7-5.3-7-9.6V5.7Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M9.3 12h5.4v4.2H9.3Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M10.2 12v-1.3a1.8 1.8 0 1 1 3.6 0V12" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Shipping Address screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+        </a>
+        <h1 class="screen-title">Shipping Address</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+      </header>
+
+      <aside class="notice" aria-label="Worldwide shipping note">
+        <span class="notice-icon-wrap" aria-hidden="true">
+          <svg class="notice-icon"><use href="#icon-globe" /></svg>
+        </span>
+        <p class="notice-text">We ship custom gemstone seals worldwide.</p>
+      </aside>
+
+      <form class="form" aria-label="Shipping address form">
+        <button class="field-card select-button" type="button" aria-labelledby="country-label">
+          <span class="field-inner">
+            <span class="label" id="country-label">Country / Region <span class="required">*</span></span>
+            <span class="select-value">Select country or region</span>
+            <svg class="chevron" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
+          </span>
+        </button>
+
+        <label class="field-card" for="postal-code">
+          <span class="field-inner">
+            <span class="label">Postal code <span class="required">*</span></span>
+            <input class="control" id="postal-code" name="postal-code" type="text" placeholder="Enter postal code" />
+          </span>
+        </label>
+
+        <label class="field-card" for="address-line-1">
+          <span class="field-inner">
+            <span class="label">Address line 1 <span class="required">*</span></span>
+            <input class="control long-copy" id="address-line-1" name="address-line-1" type="text" placeholder="Street address, P.O. box, company name, etc." />
+          </span>
+        </label>
+
+        <label class="field-card" for="address-line-2">
+          <span class="field-inner">
+            <span class="label">Address line 2</span>
+            <input class="control long-copy" id="address-line-2" name="address-line-2" type="text" placeholder="Apartment, suite, unit, building, floor, etc. (optional)" />
+          </span>
+        </label>
+
+        <label class="field-card" for="city">
+          <span class="field-inner">
+            <span class="label">City <span class="required">*</span></span>
+            <input class="control" id="city" name="city" type="text" placeholder="Enter city" />
+          </span>
+        </label>
+
+        <label class="field-card" for="state">
+          <span class="field-inner">
+            <span class="label">State / Province <span class="required">*</span></span>
+            <input class="control" id="state" name="state" type="text" placeholder="Enter state or province" />
+          </span>
+        </label>
+      </form>
+
+      <aside class="secure-note" aria-label="Delivery privacy note">
+        <svg aria-hidden="true"><use href="#icon-shield-lock" /></svg>
+        <p>Your <em>information is secure</em> and will only be used for delivery.</p>
+      </aside>
+
+      <a class="save-button" href="#" aria-label="Save address">
+        <span>Save Address</span>
+        <svg aria-hidden="true"><use href="#icon-arrow-right" /></svg>
+      </a>
+    </main>
+  </body>
+</html>

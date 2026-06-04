@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, env, sync::Arc};
 
 use anyhow::{Context, Result, anyhow, bail};
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use firebase_sdk_rust::firebase_firestore::{
     CreateDocumentOptions, Document, FirebaseFirestoreClient, FirebaseFirestoreError,
     GetDocumentOptions, PatchDocumentOptions,
@@ -34,6 +34,43 @@ struct MaterialSeed {
     label_en: &'static str,
     description_ja: &'static str,
     description_en: &'static str,
+    sort_order: i64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct StoneListingSeed {
+    key: &'static str,
+    listing_code: &'static str,
+    material_key: &'static str,
+    size: &'static str,
+    title_ja: &'static str,
+    title_en: &'static str,
+    description_ja: &'static str,
+    description_en: &'static str,
+    story_ja: &'static str,
+    story_en: &'static str,
+    color_family: &'static str,
+    color_tags: &'static [&'static str],
+    pattern_primary: &'static str,
+    pattern_tags: &'static [&'static str],
+    stone_shape: &'static str,
+    translucency: &'static str,
+    photo_asset_id: &'static str,
+    photo_storage_path: &'static str,
+    price_usd: i64,
+    price_jpy: i64,
+    sort_order: i64,
+    published_hours_ago: i64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FacetTagSeed {
+    doc_id: &'static str,
+    facet_type: &'static str,
+    key: &'static str,
+    label_ja: &'static str,
+    label_en: &'static str,
+    aliases: &'static [&'static str],
     sort_order: i64,
 }
 
@@ -88,6 +125,30 @@ async fn main() -> Result<()> {
         )
         .await
         .with_context(|| format!("failed to seed materials/{}", material.key))?;
+    }
+
+    for facet_tag in facet_tag_seeds() {
+        upsert_named_document(
+            &client,
+            &parent,
+            "facet_tags",
+            facet_tag.doc_id,
+            facet_tag_document(&facet_tag, now),
+        )
+        .await
+        .with_context(|| format!("failed to seed facet_tags/{}", facet_tag.doc_id))?;
+    }
+
+    for listing in stone_listing_seeds() {
+        upsert_named_document(
+            &client,
+            &parent,
+            "stone_listings",
+            listing.key,
+            stone_listing_document(&listing, now),
+        )
+        .await
+        .with_context(|| format!("failed to seed stone_listings/{}", listing.key))?;
     }
 
     for country in country_seeds() {
@@ -264,6 +325,92 @@ fn material_document(material: &MaterialSeed, now: DateTime<Utc>) -> Document {
     }
 }
 
+fn stone_listing_document(listing: &StoneListingSeed, now: DateTime<Utc>) -> Document {
+    Document {
+        fields: btree_from_pairs(vec![
+            ("listing_code", fs_string(listing.listing_code)),
+            ("material_key", fs_string(listing.material_key)),
+            ("size", fs_string(listing.size)),
+            (
+                "title_i18n",
+                fs_string_map(&[("ja", listing.title_ja), ("en", listing.title_en)]),
+            ),
+            (
+                "description_i18n",
+                fs_string_map(&[
+                    ("ja", listing.description_ja),
+                    ("en", listing.description_en),
+                ]),
+            ),
+            (
+                "story_i18n",
+                fs_string_map(&[("ja", listing.story_ja), ("en", listing.story_en)]),
+            ),
+            (
+                "facets",
+                fs_map(btree_from_pairs(vec![
+                    ("color_family", fs_string(listing.color_family)),
+                    ("color_tags", fs_string_array(listing.color_tags)),
+                    ("pattern_primary", fs_string(listing.pattern_primary)),
+                    ("pattern_tags", fs_string_array(listing.pattern_tags)),
+                    ("stone_shape", fs_string(listing.stone_shape)),
+                    ("translucency", fs_string(listing.translucency)),
+                ])),
+            ),
+            (
+                "photos",
+                fs_array(vec![fs_map(btree_from_pairs(vec![
+                    ("asset_id", fs_string(listing.photo_asset_id)),
+                    ("storage_path", fs_string(listing.photo_storage_path)),
+                    (
+                        "alt_i18n",
+                        fs_string_map(&[("ja", listing.title_ja), ("en", listing.title_en)]),
+                    ),
+                    ("sort_order", fs_int(0)),
+                    ("is_primary", fs_bool(true)),
+                    ("width", fs_int(1200)),
+                    ("height", fs_int(1200)),
+                ]))]),
+            ),
+            (
+                "price_by_currency",
+                fs_int_map(&[("USD", listing.price_usd), ("JPY", listing.price_jpy)]),
+            ),
+            ("status", fs_string("published")),
+            ("is_active", fs_bool(true)),
+            (
+                "published_at",
+                fs_timestamp(now - Duration::hours(listing.published_hours_ago)),
+            ),
+            ("sort_order", fs_int(listing.sort_order)),
+            ("version", fs_int(1)),
+            ("created_at", fs_timestamp(now)),
+            ("updated_at", fs_timestamp(now)),
+        ]),
+        ..Document::default()
+    }
+}
+
+fn facet_tag_document(tag: &FacetTagSeed, now: DateTime<Utc>) -> Document {
+    Document {
+        fields: btree_from_pairs(vec![
+            ("facet_type", fs_string(tag.facet_type)),
+            ("key", fs_string(tag.key)),
+            (
+                "label_i18n",
+                fs_string_map(&[("ja", tag.label_ja), ("en", tag.label_en)]),
+            ),
+            ("aliases", fs_string_array(tag.aliases)),
+            ("is_active", fs_bool(true)),
+            ("sort_order", fs_int(tag.sort_order)),
+            ("version", fs_int(1)),
+            ("created_at", fs_timestamp(now)),
+            ("updated_at", fs_timestamp(now)),
+        ]),
+        ..Document::default()
+    }
+}
+
 fn country_document(country: &CountrySeed, now: DateTime<Utc>) -> Document {
     Document {
         fields: btree_from_pairs(vec![
@@ -329,6 +476,14 @@ fn font_seeds() -> Vec<FontSeed> {
             font_stylesheet_url: "https://fonts.googleapis.com/css2?family=WDXL+Lubrifont+JP+N&display=swap",
             kanji_style: "chinese",
             sort_order: 50,
+        },
+        FontSeed {
+            key: "ai_generated_seal",
+            label: "AI generated seal preview",
+            font_family: "'Noto Sans JP', system-ui, sans-serif",
+            font_stylesheet_url: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap",
+            kanji_style: "japanese",
+            sort_order: 90,
         },
     ]
 }
@@ -398,6 +553,142 @@ fn material_seeds() -> Vec<MaterialSeed> {
             description_ja: "凍ったような半透明感としっとりした質感が特徴の、篆刻向けの石材です。",
             description_en: "A seal-carving stone with a moist, semi-translucent appearance reminiscent of frozen stone.",
             sort_order: 80,
+        },
+    ]
+}
+
+fn stone_listing_seeds() -> Vec<StoneListingSeed> {
+    vec![
+        StoneListingSeed {
+            key: "qingtian_stone_01",
+            listing_code: "QTN-0001",
+            material_key: "qingtian_stone",
+            size: "15mm x 15mm x 60mm",
+            title_ja: "青田石の一点物 01",
+            title_en: "One-of-a-kind Qingtian Stone 01",
+            description_ja: "淡い緑と灰色の揺らぎが入った、落ち着きのある印材です。",
+            description_en: "A calm seal stone with soft green and gray natural movement.",
+            story_ja: "きめ細かな石質で、日常使いにも贈り物にも合わせやすい一本です。",
+            story_en: "Its fine texture makes it suitable for daily use or a thoughtful gift.",
+            color_family: "green",
+            color_tags: &["soft_green", "gray_green"],
+            pattern_primary: "cloud",
+            pattern_tags: &["cloud", "mottled"],
+            stone_shape: "square",
+            translucency: "semi_translucent",
+            photo_asset_id: "lst_qingtian_stone_01",
+            photo_storage_path: "stone_listings/qingtian_stone/qingtian_stone_01/main.webp",
+            price_usd: 21_000,
+            price_jpy: 32_000,
+            sort_order: 10,
+            published_hours_ago: 40,
+        },
+        StoneListingSeed {
+            key: "shoushan_stone_01",
+            listing_code: "SHS-0001",
+            material_key: "shoushan_stone",
+            size: "18mm x 18mm x 60mm",
+            title_ja: "寿山石の一点物 01",
+            title_en: "One-of-a-kind Shoushan Stone 01",
+            description_ja: "あたたかな黄味に自然な筋が走る、存在感のある個体です。",
+            description_en: "A warm yellow piece with natural veining and a strong presence.",
+            story_ja: "柔らかな色味と彫り心地のよさが魅力の、表情豊かな石です。",
+            story_en: "A characterful stone known for its gentle color and smooth carving feel.",
+            color_family: "yellow",
+            color_tags: &["warm_yellow", "cream"],
+            pattern_primary: "veined",
+            pattern_tags: &["veined", "cloud"],
+            stone_shape: "square",
+            translucency: "opaque",
+            photo_asset_id: "lst_shoushan_stone_01",
+            photo_storage_path: "stone_listings/shoushan_stone/shoushan_stone_01/main.webp",
+            price_usd: 30_000,
+            price_jpy: 46_000,
+            sort_order: 20,
+            published_hours_ago: 30,
+        },
+        StoneListingSeed {
+            key: "frozen_stone_01",
+            listing_code: "FRZ-0001",
+            material_key: "frozen_stone",
+            size: "16mm x 16mm x 60mm",
+            title_ja: "凍石の一点物 01",
+            title_en: "One-of-a-kind Frozen Stone 01",
+            description_ja: "白く半透明な奥行きがあり、清らかな印象に仕上がる石です。",
+            description_en: "A white, translucent stone that gives the finished seal a clear impression.",
+            story_ja: "凍った光のような質感が、印面の朱色を引き立てます。",
+            story_en: "Its frozen-light texture sets off the red seal impression beautifully.",
+            color_family: "white",
+            color_tags: &["white", "translucent"],
+            pattern_primary: "plain",
+            pattern_tags: &["plain"],
+            stone_shape: "square",
+            translucency: "translucent",
+            photo_asset_id: "lst_frozen_stone_01",
+            photo_storage_path: "stone_listings/frozen_stone/frozen_stone_01/main.webp",
+            price_usd: 25_000,
+            price_jpy: 38_000,
+            sort_order: 30,
+            published_hours_ago: 20,
+        },
+    ]
+}
+
+fn facet_tag_seeds() -> Vec<FacetTagSeed> {
+    vec![
+        FacetTagSeed {
+            doc_id: "color:green",
+            facet_type: "color",
+            key: "green",
+            label_ja: "緑",
+            label_en: "Green",
+            aliases: &["soft_green", "gray_green"],
+            sort_order: 10,
+        },
+        FacetTagSeed {
+            doc_id: "color:yellow",
+            facet_type: "color",
+            key: "yellow",
+            label_ja: "黄",
+            label_en: "Yellow",
+            aliases: &["warm_yellow", "cream"],
+            sort_order: 20,
+        },
+        FacetTagSeed {
+            doc_id: "color:white",
+            facet_type: "color",
+            key: "white",
+            label_ja: "白",
+            label_en: "White",
+            aliases: &["translucent"],
+            sort_order: 30,
+        },
+        FacetTagSeed {
+            doc_id: "pattern:cloud",
+            facet_type: "pattern",
+            key: "cloud",
+            label_ja: "雲状",
+            label_en: "Cloud",
+            aliases: &["mottled"],
+            sort_order: 10,
+        },
+        FacetTagSeed {
+            doc_id: "pattern:veined",
+            facet_type: "pattern",
+            key: "veined",
+            label_ja: "筋",
+            label_en: "Veined",
+            aliases: &[],
+            sort_order: 20,
+        },
+        FacetTagSeed {
+            doc_id: "pattern:plain",
+            facet_type: "pattern",
+            key: "plain",
+            label_ja: "無地",
+            label_en: "Plain",
+            aliases: &[],
+            sort_order: 30,
         },
     ]
 }
@@ -507,6 +798,10 @@ fn fs_array(values: Vec<JsonValue>) -> JsonValue {
     json!({ "arrayValue": { "values": values } })
 }
 
+fn fs_string_array(values: &[&str]) -> JsonValue {
+    fs_array(values.iter().map(|value| fs_string(*value)).collect())
+}
+
 fn fs_string_map(values: &[(&str, &str)]) -> JsonValue {
     let mut fields = BTreeMap::new();
     for (key, value) in values {
@@ -528,4 +823,85 @@ fn btree_from_pairs(pairs: Vec<(&str, JsonValue)>) -> BTreeMap<String, JsonValue
         .into_iter()
         .map(|(key, value)| (key.to_owned(), value))
         .collect::<BTreeMap<_, _>>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn font_seeds_include_active_ai_generated_seal_record() {
+        let font = font_seeds()
+            .into_iter()
+            .find(|font| font.key == "ai_generated_seal")
+            .expect("ai_generated_seal seed should exist");
+
+        assert_eq!(font.label, "AI generated seal preview");
+        assert!(!font.font_family.trim().is_empty());
+        assert!(!font.font_stylesheet_url.trim().is_empty());
+        assert_eq!(font.kanji_style, "japanese");
+    }
+
+    #[test]
+    fn ai_generated_seal_document_keeps_font_lookup_fields_active() {
+        let font = font_seeds()
+            .into_iter()
+            .find(|font| font.key == "ai_generated_seal")
+            .expect("ai_generated_seal seed should exist");
+        let now = DateTime::parse_from_rfc3339("2026-05-21T11:30:00Z")
+            .expect("timestamp")
+            .with_timezone(&Utc);
+
+        let document = font_document(&font, now);
+
+        assert_eq!(
+            document.fields.get("label"),
+            Some(&fs_string("AI generated seal preview"))
+        );
+        assert_eq!(
+            document.fields.get("font_family"),
+            Some(&fs_string("'Noto Sans JP', system-ui, sans-serif"))
+        );
+        assert_eq!(
+            document.fields.get("kanji_style"),
+            Some(&fs_string("japanese"))
+        );
+        assert_eq!(document.fields.get("is_active"), Some(&fs_bool(true)));
+        assert_eq!(document.fields.get("version"), Some(&fs_int(1)));
+    }
+
+    #[test]
+    fn stone_listing_seeds_include_published_records() {
+        let listings = stone_listing_seeds();
+
+        assert!(listings.len() >= 3);
+        assert!(
+            listings
+                .iter()
+                .all(|listing| !listing.key.trim().is_empty())
+        );
+        assert!(listings.iter().all(|listing| listing.price_jpy > 0));
+        assert!(listings.iter().all(|listing| listing.price_usd > 0));
+    }
+
+    #[test]
+    fn stone_listing_document_contains_app_required_fields() {
+        let listing = stone_listing_seeds()
+            .into_iter()
+            .find(|listing| listing.key == "qingtian_stone_01")
+            .expect("qingtian stone listing seed should exist");
+        let now = DateTime::parse_from_rfc3339("2026-05-25T12:00:00Z")
+            .expect("timestamp")
+            .with_timezone(&Utc);
+
+        let document = stone_listing_document(&listing, now);
+
+        assert_eq!(document.fields.get("status"), Some(&fs_string("published")));
+        assert_eq!(document.fields.get("is_active"), Some(&fs_bool(true)));
+        assert!(document.fields.contains_key("title_i18n"));
+        assert!(document.fields.contains_key("facets"));
+        assert!(document.fields.contains_key("photos"));
+        assert!(document.fields.contains_key("price_by_currency"));
+        assert!(document.fields.contains_key("published_at"));
+    }
 }
