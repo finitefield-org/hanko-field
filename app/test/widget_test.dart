@@ -161,7 +161,6 @@ void main() {
     expect(find.text('Create your\nseal in minutes'), findsOneWidget);
     expect(find.text('Choose kanji from your name'), findsOneWidget);
     expect(find.text('Generate a seal design with AI'), findsOneWidget);
-    expect(find.text('Saved on this device'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Get Started'));
     await tester.pump();

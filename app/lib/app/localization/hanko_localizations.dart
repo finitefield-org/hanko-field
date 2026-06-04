@@ -1309,7 +1309,7 @@ const _localizedValues = {
           'Our AI creates beautiful, balanced seal designs just for you.',
       onboardingStoneTitle: 'Select a gemstone and order',
       onboardingStoneMessage:
-          'Pick your favorite gemstone and we will craft your seal with care.',
+          "Pick your favorite gemstone and we'll craft your seal with care.",
       onboardingStorageTitle: 'Saved on this device',
       onboardingStorageMessage:
           'Saved seal designs and preview images stay on this device. Payment details and checkout secrets are never saved locally.',
