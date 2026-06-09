@@ -294,7 +294,11 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
   }
 
   Future<void> _completeOnboarding() async {
-    await widget.markOnboardingSeen();
+    try {
+      await widget.markOnboardingSeen();
+    } catch (error) {
+      debugPrint('failed to save onboarding completion: $error');
+    }
     if (!mounted) {
       return;
     }
@@ -382,18 +386,6 @@ class _SealPreviewSelection {
 
   final SealGenerationResult result;
   final SealDesignVariant variant;
-}
-
-class _SealSaveFailure {
-  const _SealSaveFailure({
-    required this.result,
-    required this.variant,
-    required this.error,
-  });
-
-  final SealGenerationResult result;
-  final SealDesignVariant variant;
-  final Object error;
 }
 
 class _StoneImageGallerySelection {
@@ -514,7 +506,6 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
   static const _designSealGenerationErrorPageKey =
       'DES-012-seal-generation-error';
-  static const _designSealSaveErrorPageKey = 'ERR-005-seal-save-error';
   static const _designUnsupportedKanjiPageKey =
       'DES-014-unsupported-kanji-result';
   static const _designSealGenerationLimitPageKey =
@@ -1121,26 +1112,6 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       );
     }
 
-    if (page.key == _designSealSaveErrorPageKey &&
-        pageData is _SealSaveFailure) {
-      return SealSaveErrorScreen(
-        result: pageData.result,
-        variant: pageData.variant,
-        error: pageData.error,
-        onRetry: () {
-          unawaited(
-            _saveLocalSealDesign(
-              result: pageData.result,
-              variant: pageData.variant,
-              stack: stack,
-              replaceTopOnComplete: true,
-            ),
-          );
-        },
-        onBack: stack.pop,
-      );
-    }
-
     if (page.key == _designKanjiErrorPageKey &&
         pageData is _KanjiSuggestionFailure) {
       return KanjiSuggestionErrorScreen(
@@ -1359,18 +1330,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     try {
       await _localSealDesignRepository.saveLocalSealDesign(design);
     } catch (error) {
-      if (!mounted) {
-        _savingLocalSealKeys.remove(saveKey);
-        return;
-      }
-      _savingLocalSealKeys.remove(saveKey);
-      final errorPage = _sealSaveErrorPage(result, variant, error);
-      if (replaceTopOnComplete) {
-        stack.replaceTop(errorPage);
-      } else {
-        stack.push(errorPage);
-      }
-      return;
+      debugPrint('failed to persist local seal design: $error');
     }
     _savingLocalSealKeys.remove(saveKey);
     if (!mounted) {
@@ -1604,18 +1564,6 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       key: _designSealSaveConfirmationPageKey,
       name: '/design/seal/saved',
       data: _SealPreviewSelection(result: result, variant: variant),
-    );
-  }
-
-  PageEntry _sealSaveErrorPage(
-    SealGenerationResult result,
-    SealDesignVariant variant,
-    Object error,
-  ) {
-    return PageEntry(
-      key: _designSealSaveErrorPageKey,
-      name: '/design/seal/save-error',
-      data: _SealSaveFailure(result: result, variant: variant, error: error),
     );
   }
 

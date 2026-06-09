@@ -198,6 +198,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('COM-002 continues when onboarding completion save fails', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: HankoApp(
+          hasSeenOnboardingResolver: () async => false,
+          markOnboardingSeen: () async => throw StateError('no storage'),
+          splashMinimumDuration: Duration.zero,
+          listStoneListings: _emptyStoneListingsLoader,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Get Started'));
+    await tester.pump();
+    await tester.tap(find.text('Get Started'));
+    await tester.pump();
+
+    expect(find.byType(BottomNavigationShell), findsOneWidget);
+    expect(
+      find.text('Could not save onboarding status. Please try again.'),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('boots the COM-003 bottom navigation shell', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
     tester.view.devicePixelRatio = 1;
@@ -495,7 +531,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('M12-T05 shows storage save errors in the design flow', (
+  testWidgets('DES-010 continues when local seal persistence fails', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(432, 912);
@@ -519,15 +555,10 @@ void main() {
     await tester.tap(find.text('Save Seal'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SealSaveErrorScreen), findsOneWidget);
-    expect(find.text("Couldn't Save Seal"), findsOneWidget);
-    expect(
-      find.text(
-        "The seal image couldn't be saved on this device. Check storage permissions and available space, then try again.",
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Try Again'), findsOneWidget);
+    expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
+    expect(find.text("Couldn't Save Seal"), findsNothing);
+    expect(find.text('Seal Saved'), findsOneWidget);
+    expect(find.text('Seal saved to My Seals'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

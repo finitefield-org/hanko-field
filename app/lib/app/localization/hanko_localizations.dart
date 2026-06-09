@@ -1769,7 +1769,7 @@ const _localizedValues = {
       appTitle: 'STONE SIGNATURE',
       splashPreparing: 'デザイン体験を準備しています。',
       onboardingTitle: 'ようこそ',
-      onboardingHeroTitle: '数分で\n印影を作成',
+      onboardingHeroTitle: 'あなたの名前を\n美しい印影に',
       onboardingTagline: 'あなたらしく。時を超えて。\n唯一無二の印鑑へ。',
       onboardingKanjiTitle: '名前から漢字を選ぶ',
       onboardingKanjiMessage: '名前に合わせて意味のある漢字候補を提案します。',
