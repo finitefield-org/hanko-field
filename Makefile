@@ -12,11 +12,13 @@ LOCALE ?= ja
 STRIPE_WEBHOOK_URL ?= http://localhost:3050/v1/payments/stripe/webhook
 GCP_PROD_PROJECT ?= hanko-field-prod
 GCP_PROD_REGION ?= asia-northeast1
+DOCKER_CARGO_TARGET_DIR ?= /tmp/hanko-field-cargo-target
 
 ADMIN_MODE_EXPORT := $(if $(HANKO_ADMIN_MODE),export HANKO_ADMIN_MODE=$(HANKO_ADMIN_MODE);,)
 WEB_MODE_EXPORT := $(if $(HANKO_WEB_MODE),export HANKO_WEB_MODE=$(HANKO_WEB_MODE);,)
+DOCKER_CARGO_TARGET_EXPORT := export CARGO_TARGET_DIR=$${CARGO_TARGET_DIR:-$(DOCKER_CARGO_TARGET_DIR)};
 
-.PHONY: help docker-up docker-down docker-shell docker-api docker-admin docker-web docker-dev stripe-listen deploy-web-prod
+.PHONY: help docker-up docker-down docker-shell docker-api docker-admin docker-web docker-dev stripe-listen deploy-api-prod deploy-web-prod
 
 ifneq ($(wildcard $(ENV_FILE)),)
 COMPOSE_ENV_FILE_OPT := --env-file $(ENV_FILE)
@@ -35,6 +37,7 @@ help:
 	@echo "  make docker-admin   # Run Admin server in container"
 	@echo "  make docker-web     # Run Web server in container"
 	@echo "  make docker-dev     # Run API/Admin/Web together in container"
+	@echo "  make deploy-api-prod # Deploy API to Cloud Run with explicit project/region"
 	@echo "  make deploy-web-prod # Deploy Web to Cloud Run with explicit project/region"
 	@echo "  make stripe-listen  # Forward Stripe webhooks to the local API"
 	@echo ""
@@ -54,16 +57,19 @@ docker-shell:
 	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc '$(ENV_LOAD_CMD) exec devbox shell'
 
 docker-api:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(DOCKER_CARGO_TARGET_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)}'
 
 docker-admin:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ADMIN_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(DOCKER_CARGO_TARGET_EXPORT) $(ADMIN_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)}'
 
 docker-web:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(DOCKER_CARGO_TARGET_EXPORT) $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
 
 docker-dev:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ADMIN_MODE_EXPORT) $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace; exec devbox run -- bash ./scripts/docker-dev.sh'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(DOCKER_CARGO_TARGET_EXPORT) $(ADMIN_MODE_EXPORT) $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace; exec devbox run -- bash ./scripts/docker-dev.sh'
+
+deploy-api-prod:
+	./scripts/deploy-api-prod.sh
 
 deploy-web-prod:
 	./scripts/deploy-web-prod.sh
