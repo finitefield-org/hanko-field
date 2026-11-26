@@ -862,6 +862,30 @@ abstract class GeneratedHankoLocalizations {
   /// **'Dense'**
   String get sealBalanceDense;
 
+  /// Lettering style of a generated seal candidate: formal serif (Mincho-like) characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Formal serif'**
+  String get sealFontProfileFormalSerif;
+
+  /// Lettering style of a generated seal candidate: soft sans-serif characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft sans'**
+  String get sealFontProfileSoftSans;
+
+  /// Lettering style of a generated seal candidate: bold brush-written characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Bold brush'**
+  String get sealFontProfileBoldBrush;
+
+  /// Lettering style of a generated seal candidate: classic seal script (tensho).
+  ///
+  /// In en, this message translates to:
+  /// **'Seal script'**
+  String get sealFontProfileClassicSeal;
+
   /// Localized app string for sealStyleSummaryTitle.
   ///
   /// In en, this message translates to:
@@ -975,6 +999,18 @@ abstract class GeneratedHankoLocalizations {
   /// In en, this message translates to:
   /// **'Choose one AI seal design.'**
   String get sealVariantSelectionMessage;
+
+  /// Title of a generated seal candidate card. The number placeholder is the 1-based position of the candidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Option {number}'**
+  String sealVariantOptionTitle(int number);
+
+  /// Button on a generated seal candidate card that selects that candidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose'**
+  String get sealVariantChooseAction;
 
   /// Localized app string for sealVariantSelectedBadge.
   ///
@@ -1324,11 +1360,89 @@ abstract class GeneratedHankoLocalizations {
   /// **'Color'**
   String get stoneFilterColor;
 
+  /// Localized app string for stoneColorGreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get stoneColorGreen;
+
+  /// Localized app string for stoneColorYellow.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get stoneColorYellow;
+
+  /// Localized app string for stoneColorWhite.
+  ///
+  /// In en, this message translates to:
+  /// **'White'**
+  String get stoneColorWhite;
+
+  /// Localized app string for stoneColorPink.
+  ///
+  /// In en, this message translates to:
+  /// **'Pink'**
+  String get stoneColorPink;
+
+  /// Localized app string for stoneColorRed.
+  ///
+  /// In en, this message translates to:
+  /// **'Red'**
+  String get stoneColorRed;
+
+  /// Localized app string for stoneColorBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get stoneColorBlue;
+
+  /// Localized app string for stoneColorBlack.
+  ///
+  /// In en, this message translates to:
+  /// **'Black'**
+  String get stoneColorBlack;
+
   /// Localized app string for stoneFilterPattern.
   ///
   /// In en, this message translates to:
   /// **'Pattern'**
   String get stoneFilterPattern;
+
+  /// Localized app string for stonePatternPlain.
+  ///
+  /// In en, this message translates to:
+  /// **'Plain'**
+  String get stonePatternPlain;
+
+  /// Localized app string for stonePatternVeined.
+  ///
+  /// In en, this message translates to:
+  /// **'Veined'**
+  String get stonePatternVeined;
+
+  /// Localized app string for stonePatternCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud'**
+  String get stonePatternCloud;
+
+  /// Localized app string for stonePatternMottled.
+  ///
+  /// In en, this message translates to:
+  /// **'Mottled'**
+  String get stonePatternMottled;
+
+  /// Localized app string for stonePatternBanded.
+  ///
+  /// In en, this message translates to:
+  /// **'Banded'**
+  String get stonePatternBanded;
+
+  /// Localized app string for stonePatternSpeckled.
+  ///
+  /// In en, this message translates to:
+  /// **'Speckled'**
+  String get stonePatternSpeckled;
 
   /// Localized app string for stoneFilterAvailability.
   ///
@@ -1341,6 +1455,24 @@ abstract class GeneratedHankoLocalizations {
   /// In en, this message translates to:
   /// **'Reset'**
   String get stoneFilterReset;
+
+  /// Localized app string for stoneFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Stones'**
+  String get stoneFilterApply;
+
+  /// Localized app string for stoneFilterActiveCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 filter applied} other{{count} filters applied}}'**
+  String stoneFilterActiveCount(int count);
+
+  /// Localized app string for stoneFilterRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove filter: {label}'**
+  String stoneFilterRemove(String label);
 
   /// Localized app string for noStonesMatchFilters.
   ///
@@ -1665,6 +1797,30 @@ abstract class GeneratedHankoLocalizations {
   /// In en, this message translates to:
   /// **'Continue to Shipping'**
   String get continueToShipping;
+
+  /// Title of the bar above the bottom tabs that reopens the order review while an order draft has a seal or stone selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your order'**
+  String get orderDraftBarTitle;
+
+  /// Order draft bar status when both a seal design and a stone are selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Seal and stone selected.'**
+  String get orderDraftBarReadyMessage;
+
+  /// Order draft bar status when a seal design is selected but no stone yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Seal selected. Next, choose a stone.'**
+  String get orderDraftBarMissingStoneMessage;
+
+  /// Order draft bar status when a stone is selected but no seal design yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Stone selected. Next, choose a seal.'**
+  String get orderDraftBarMissingSealMessage;
 
   /// Localized app string for checkoutInputTitle.
   ///

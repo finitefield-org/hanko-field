@@ -315,6 +315,18 @@
   "@sealBalanceDense": {
     "description": "Localized app string for sealBalanceDense."
   },
+  "@sealFontProfileFormalSerif": {
+    "description": "Lettering style of a generated seal candidate: formal serif (Mincho-like) characters."
+  },
+  "@sealFontProfileSoftSans": {
+    "description": "Lettering style of a generated seal candidate: soft sans-serif characters."
+  },
+  "@sealFontProfileBoldBrush": {
+    "description": "Lettering style of a generated seal candidate: bold brush-written characters."
+  },
+  "@sealFontProfileClassicSeal": {
+    "description": "Lettering style of a generated seal candidate: classic seal script (tensho)."
+  },
   "@sealStyleSummaryTitle": {
     "description": "Localized app string for sealStyleSummaryTitle."
   },
@@ -371,6 +383,18 @@
   },
   "@sealVariantSelectionMessage": {
     "description": "Localized app string for sealVariantSelectionMessage."
+  },
+  "@sealVariantOptionTitle": {
+    "description": "Title of a generated seal candidate card. The number placeholder is the 1-based position of the candidate.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "@sealVariantChooseAction": {
+    "description": "Button on a generated seal candidate card that selects that candidate."
   },
   "@sealVariantSelectedBadge": {
     "description": "Localized app string for sealVariantSelectedBadge."
@@ -546,14 +570,72 @@
   "@stoneFilterColor": {
     "description": "Localized app string for stoneFilterColor."
   },
+  "@stoneColorGreen": {
+    "description": "Localized app string for stoneColorGreen."
+  },
+  "@stoneColorYellow": {
+    "description": "Localized app string for stoneColorYellow."
+  },
+  "@stoneColorWhite": {
+    "description": "Localized app string for stoneColorWhite."
+  },
+  "@stoneColorPink": {
+    "description": "Localized app string for stoneColorPink."
+  },
+  "@stoneColorRed": {
+    "description": "Localized app string for stoneColorRed."
+  },
+  "@stoneColorBlue": {
+    "description": "Localized app string for stoneColorBlue."
+  },
+  "@stoneColorBlack": {
+    "description": "Localized app string for stoneColorBlack."
+  },
   "@stoneFilterPattern": {
     "description": "Localized app string for stoneFilterPattern."
+  },
+  "@stonePatternPlain": {
+    "description": "Localized app string for stonePatternPlain."
+  },
+  "@stonePatternVeined": {
+    "description": "Localized app string for stonePatternVeined."
+  },
+  "@stonePatternCloud": {
+    "description": "Localized app string for stonePatternCloud."
+  },
+  "@stonePatternMottled": {
+    "description": "Localized app string for stonePatternMottled."
+  },
+  "@stonePatternBanded": {
+    "description": "Localized app string for stonePatternBanded."
+  },
+  "@stonePatternSpeckled": {
+    "description": "Localized app string for stonePatternSpeckled."
   },
   "@stoneFilterAvailability": {
     "description": "Localized app string for stoneFilterAvailability."
   },
   "@stoneFilterReset": {
     "description": "Localized app string for stoneFilterReset."
+  },
+  "@stoneFilterApply": {
+    "description": "Localized app string for stoneFilterApply."
+  },
+  "@stoneFilterActiveCount": {
+    "description": "Localized app string for stoneFilterActiveCount.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@stoneFilterRemove": {
+    "description": "Localized app string for stoneFilterRemove.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "@noStonesMatchFilters": {
     "description": "Localized app string for noStonesMatchFilters."
@@ -716,6 +798,18 @@
   },
   "@continueToShipping": {
     "description": "Localized app string for continueToShipping."
+  },
+  "@orderDraftBarTitle": {
+    "description": "Title of the bar above the bottom tabs that reopens the order review while an order draft has a seal or stone selected."
+  },
+  "@orderDraftBarReadyMessage": {
+    "description": "Order draft bar status when both a seal design and a stone are selected."
+  },
+  "@orderDraftBarMissingStoneMessage": {
+    "description": "Order draft bar status when a seal design is selected but no stone yet."
+  },
+  "@orderDraftBarMissingSealMessage": {
+    "description": "Order draft bar status when a stone is selected but no seal design yet."
   },
   "@checkoutInputTitle": {
     "description": "Localized app string for checkoutInputTitle."

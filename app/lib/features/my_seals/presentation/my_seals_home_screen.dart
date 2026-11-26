@@ -240,6 +240,9 @@ class _SavedSealComparisonCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: HankoTextStyles.cardTitle.copyWith(
               fontFamily: HankoFonts.serif,
+              fontFamilyFallback: HankoFonts.serifFallbackFor(
+                design.selectedKanji,
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -391,6 +394,9 @@ class _SavedSealCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: HankoTextStyles.sectionTitle.copyWith(
                               fontFamily: HankoFonts.serif,
+                              fontFamilyFallback: HankoFonts.serifFallbackFor(
+                                design.selectedKanji,
+                              ),
                             ),
                           ),
                         ),
@@ -510,7 +516,12 @@ class SealDetailScreen extends StatelessWidget {
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 36, 18, HankoSpacing.xl),
+          padding: EdgeInsets.fromLTRB(
+            18,
+            HankoPageInsets.headerTop,
+            18,
+            HankoPageInsets.bottom(context),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -783,7 +794,9 @@ class _SealDetailInfoRow extends StatelessWidget {
                   data.value,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: HankoTextStyles.cardTitle,
+                  style: HankoTextStyles.cardTitle.copyWith(
+                    fontFamilyFallback: HankoFonts.serifFallbackFor(data.value),
+                  ),
                 ),
               ],
             ),
@@ -913,6 +926,9 @@ class _DetailBadge extends StatelessWidget {
                   style: HankoTextStyles.label.copyWith(
                     color: HankoColors.red,
                     fontFamily: HankoFonts.serif,
+                    fontFamilyFallback: HankoFonts.serifFallbackFor(
+                      label ?? '',
+                    ),
                     fontSize: 17,
                   ),
                 )
@@ -950,6 +966,7 @@ class _SavedSealMedallion extends StatelessWidget {
                 style: HankoTextStyles.cardTitle.copyWith(
                   color: Colors.white,
                   fontFamily: HankoFonts.serif,
+                  fontFamilyFallback: HankoFonts.serifFallbackFor(text),
                   fontSize: 28,
                   height: 1.05,
                 ),

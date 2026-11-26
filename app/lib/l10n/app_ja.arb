@@ -420,6 +420,22 @@
   "@sealBalanceDense": {
     "description": "Localized app string for sealBalanceDense."
   },
+  "sealFontProfileFormalSerif": "明朝体",
+  "@sealFontProfileFormalSerif": {
+    "description": "Lettering style of a generated seal candidate: formal serif (Mincho-like) characters."
+  },
+  "sealFontProfileSoftSans": "やわらかなゴシック体",
+  "@sealFontProfileSoftSans": {
+    "description": "Lettering style of a generated seal candidate: soft sans-serif characters."
+  },
+  "sealFontProfileBoldBrush": "筆文字",
+  "@sealFontProfileBoldBrush": {
+    "description": "Lettering style of a generated seal candidate: bold brush-written characters."
+  },
+  "sealFontProfileClassicSeal": "篆書体",
+  "@sealFontProfileClassicSeal": {
+    "description": "Lettering style of a generated seal candidate: classic seal script (tensho)."
+  },
   "sealStyleSummaryTitle": "現在のスタイル",
   "@sealStyleSummaryTitle": {
     "description": "Localized app string for sealStyleSummaryTitle."
@@ -495,6 +511,20 @@
   "sealVariantSelectionMessage": "AI印影候補から1件を選択してください。",
   "@sealVariantSelectionMessage": {
     "description": "Localized app string for sealVariantSelectionMessage."
+  },
+  "sealVariantOptionTitle": "候補 {number}",
+  "@sealVariantOptionTitle": {
+    "description": "Title of a generated seal candidate card. The number placeholder is the 1-based position of the candidate.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "sealVariantChooseAction": "選ぶ",
+  "@sealVariantChooseAction": {
+    "description": "Button on a generated seal candidate card that selects that candidate."
   },
   "sealVariantSelectedBadge": "選択中",
   "@sealVariantSelectedBadge": {
@@ -728,9 +758,61 @@
   "@stoneFilterColor": {
     "description": "Localized app string for stoneFilterColor."
   },
+  "stoneColorGreen": "緑",
+  "@stoneColorGreen": {
+    "description": "Localized app string for stoneColorGreen."
+  },
+  "stoneColorYellow": "黄色",
+  "@stoneColorYellow": {
+    "description": "Localized app string for stoneColorYellow."
+  },
+  "stoneColorWhite": "白",
+  "@stoneColorWhite": {
+    "description": "Localized app string for stoneColorWhite."
+  },
+  "stoneColorPink": "ピンク",
+  "@stoneColorPink": {
+    "description": "Localized app string for stoneColorPink."
+  },
+  "stoneColorRed": "赤",
+  "@stoneColorRed": {
+    "description": "Localized app string for stoneColorRed."
+  },
+  "stoneColorBlue": "青",
+  "@stoneColorBlue": {
+    "description": "Localized app string for stoneColorBlue."
+  },
+  "stoneColorBlack": "黒",
+  "@stoneColorBlack": {
+    "description": "Localized app string for stoneColorBlack."
+  },
   "stoneFilterPattern": "模様",
   "@stoneFilterPattern": {
     "description": "Localized app string for stoneFilterPattern."
+  },
+  "stonePatternPlain": "無地",
+  "@stonePatternPlain": {
+    "description": "Localized app string for stonePatternPlain."
+  },
+  "stonePatternVeined": "筋模様",
+  "@stonePatternVeined": {
+    "description": "Localized app string for stonePatternVeined."
+  },
+  "stonePatternCloud": "雲状",
+  "@stonePatternCloud": {
+    "description": "Localized app string for stonePatternCloud."
+  },
+  "stonePatternMottled": "まだら",
+  "@stonePatternMottled": {
+    "description": "Localized app string for stonePatternMottled."
+  },
+  "stonePatternBanded": "縞模様",
+  "@stonePatternBanded": {
+    "description": "Localized app string for stonePatternBanded."
+  },
+  "stonePatternSpeckled": "斑点",
+  "@stonePatternSpeckled": {
+    "description": "Localized app string for stonePatternSpeckled."
   },
   "stoneFilterAvailability": "在庫",
   "@stoneFilterAvailability": {
@@ -739,6 +821,28 @@
   "stoneFilterReset": "リセット",
   "@stoneFilterReset": {
     "description": "Localized app string for stoneFilterReset."
+  },
+  "stoneFilterApply": "この条件で表示する",
+  "@stoneFilterApply": {
+    "description": "Localized app string for stoneFilterApply."
+  },
+  "stoneFilterActiveCount": "{count}件の条件で絞り込み中",
+  "@stoneFilterActiveCount": {
+    "description": "Localized app string for stoneFilterActiveCount.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stoneFilterRemove": "絞り込みを解除：{label}",
+  "@stoneFilterRemove": {
+    "description": "Localized app string for stoneFilterRemove.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "noStonesMatchFilters": "条件に合う石がありません",
   "@noStonesMatchFilters": {
@@ -955,6 +1059,22 @@
   "continueToShipping": "配送先入力へ進む",
   "@continueToShipping": {
     "description": "Localized app string for continueToShipping."
+  },
+  "orderDraftBarTitle": "ご注文の続き",
+  "@orderDraftBarTitle": {
+    "description": "Title of the bar above the bottom tabs that reopens the order review while an order draft has a seal or stone selected."
+  },
+  "orderDraftBarReadyMessage": "印影と宝石材を選択済みです。",
+  "@orderDraftBarReadyMessage": {
+    "description": "Order draft bar status when both a seal design and a stone are selected."
+  },
+  "orderDraftBarMissingStoneMessage": "印影を選択済みです。次に宝石材を選びましょう。",
+  "@orderDraftBarMissingStoneMessage": {
+    "description": "Order draft bar status when a seal design is selected but no stone yet."
+  },
+  "orderDraftBarMissingSealMessage": "宝石材を選択済みです。次に印影を選びましょう。",
+  "@orderDraftBarMissingSealMessage": {
+    "description": "Order draft bar status when a stone is selected but no seal design yet."
   },
   "checkoutInputTitle": "Checkout情報",
   "@checkoutInputTitle": {

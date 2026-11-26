@@ -26,11 +26,15 @@ class SettingsScreen extends StatefulWidget {
     this.onClose,
     this.initialDestination,
     this.onLocaleSelected,
+    this.onOpenOrderLookup,
   });
 
   final VoidCallback? onClose;
   final SettingsInitialDestination? initialDestination;
   final ValueChanged<Locale>? onLocaleSelected;
+
+  /// Opens the order lookup flow. The entry is hidden when this is null.
+  final VoidCallback? onOpenOrderLookup;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -100,6 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return _SettingsMenuPage(
             onOpenDestination: _openDestination,
             onClose: widget.onClose,
+            onOpenOrderLookup: widget.onOpenOrderLookup,
           );
         },
         onPopTop: _popDestination,
@@ -133,10 +138,12 @@ class _SettingsMenuPage extends StatelessWidget {
   const _SettingsMenuPage({
     required this.onOpenDestination,
     required this.onClose,
+    required this.onOpenOrderLookup,
   });
 
   final ValueChanged<_SettingsDestination> onOpenDestination;
   final VoidCallback? onClose;
+  final VoidCallback? onOpenOrderLookup;
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +160,19 @@ class _SettingsMenuPage extends StatelessWidget {
               color: HankoColors.gold,
             ),
       children: [
+        if (onOpenOrderLookup != null) ...[
+          HankoSurfaceCard(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            radius: HankoRadii.md,
+            child: _SettingsMenuRow(
+              key: const Key('settings-order-lookup'),
+              icon: Icons.receipt_long_outlined,
+              label: l10n.orderLookup,
+              onTap: onOpenOrderLookup!,
+            ),
+          ),
+          const SizedBox(height: HankoSpacing.md),
+        ],
         HankoSurfaceCard(
           padding: const EdgeInsets.symmetric(vertical: 8),
           radius: HankoRadii.md,
@@ -206,19 +226,39 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = destination.title(context.l10n);
+    return _SettingsMenuRow(
+      icon: destination.icon,
+      label: destination.title(context.l10n),
+      onTap: () => onTap(destination),
+    );
+  }
+}
 
+class _SettingsMenuRow extends StatelessWidget {
+  const _SettingsMenuRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Semantics(
       button: true,
       child: SizedBox(
         height: 52,
         child: InkWell(
-          onTap: () => onTap(destination),
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(
               children: [
-                Icon(destination.icon, color: HankoColors.gold, size: 22),
+                Icon(icon, color: HankoColors.gold, size: 22),
                 const SizedBox(width: 14),
                 Expanded(child: Text(label, style: HankoTextStyles.label)),
                 const Icon(
@@ -973,7 +1013,12 @@ class _SettingsPageFrame extends StatelessWidget {
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(26, 48, 26, HankoSpacing.xl),
+          padding: EdgeInsets.fromLTRB(
+            26,
+            HankoPageInsets.titleTop,
+            26,
+            HankoPageInsets.bottom(context),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

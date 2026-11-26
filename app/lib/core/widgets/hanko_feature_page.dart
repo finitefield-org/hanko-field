@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_theme.dart';
+import 'hanko_page_insets.dart';
 
 class HankoFeaturePage extends StatelessWidget {
   const HankoFeaturePage({
@@ -8,7 +9,7 @@ class HankoFeaturePage extends StatelessWidget {
     required this.title,
     required this.children,
     this.horizontalPadding = 26,
-    this.topPadding = 48,
+    this.topPadding = HankoPageInsets.titleTop,
   });
 
   final String title;
@@ -32,7 +33,7 @@ class HankoFeaturePage extends StatelessWidget {
               horizontalPadding,
               topPadding,
               horizontalPadding,
-              HankoSpacing.xl,
+              HankoPageInsets.bottom(context),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

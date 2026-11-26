@@ -428,6 +428,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     with WidgetsBindingObserver {
   static const _checkoutInputRetentionDuration = Duration(hours: 24);
 
+  /// Pages keep a phone-width column on wide screens and always fill the
+  /// available height, so a short page starts at the top instead of floating
+  /// in the middle of the screen.
+  static const _pageConstraints = BoxConstraints(
+    maxWidth: 432,
+    minHeight: double.infinity,
+  );
+
   static const _shellPage = PageEntry(
     key: 'COM-003-bottom-navigation-shell',
     name: '/shell',
@@ -652,43 +660,54 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   Widget build(BuildContext context) {
     return DeclarativePagesNavigator(
       pages: _pages,
-      buildPage: (context, page) {
-        if (page.key == _paymentStatusPage.key) {
-          return _buildPaymentStatusPage();
-        }
-        if (page.key == _orderCompletePage.key) {
-          return _buildOrderCompletePage();
-        }
-        if (page.key == _orderLookupPage.key) {
-          return _buildOrderLookupPage();
-        }
-        if (page.key == _stripeCheckoutTransitionPage.key ||
-            page.key == _stripeCheckoutCanceledPage.key ||
-            page.key == _stripeCheckoutFailedPage.key) {
-          return _buildStripeCheckoutTransitionPage();
-        }
-        if (page.key == _checkoutDeepLinkErrorPage.key) {
-          return _buildCheckoutDeepLinkErrorPage();
-        }
-        if (page.key == _checkoutProcessingPage.key) {
-          return _buildCheckoutProcessingPage();
-        }
-        if (page.key == _orderConfirmationPage.key) {
-          return _buildOrderConfirmationPage();
-        }
-        if (page.key == _checkoutInputPage.key) {
-          return _buildCheckoutInputPage();
-        }
-        if (page.key == _orderReviewPage.key) {
-          return _buildOrderReviewPage();
-        }
-        if (page.key == _settingsPage.key) {
-          return _buildSettingsPage(page);
-        }
-        return _buildShellPage(context);
-      },
+      // Every page starts below the status bar and inside the side cutouts.
+      // The bottom inset is left to the tab bar and to each page's own scroll
+      // padding so content can still run to the bottom edge.
+      buildPage: (context, page) => ColoredBox(
+        color: HankoColors.background,
+        child: SafeArea(
+          bottom: false,
+          child: _KeyboardVisibility(child: _buildPage(context, page)),
+        ),
+      ),
       onPopTop: _closeTopPage,
     );
+  }
+
+  Widget _buildPage(BuildContext context, PageEntry page) {
+    if (page.key == _paymentStatusPage.key) {
+      return _buildPaymentStatusPage();
+    }
+    if (page.key == _orderCompletePage.key) {
+      return _buildOrderCompletePage();
+    }
+    if (page.key == _orderLookupPage.key) {
+      return _buildOrderLookupPage();
+    }
+    if (page.key == _stripeCheckoutTransitionPage.key ||
+        page.key == _stripeCheckoutCanceledPage.key ||
+        page.key == _stripeCheckoutFailedPage.key) {
+      return _buildStripeCheckoutTransitionPage();
+    }
+    if (page.key == _checkoutDeepLinkErrorPage.key) {
+      return _buildCheckoutDeepLinkErrorPage();
+    }
+    if (page.key == _checkoutProcessingPage.key) {
+      return _buildCheckoutProcessingPage();
+    }
+    if (page.key == _orderConfirmationPage.key) {
+      return _buildOrderConfirmationPage();
+    }
+    if (page.key == _checkoutInputPage.key) {
+      return _buildCheckoutInputPage();
+    }
+    if (page.key == _orderReviewPage.key) {
+      return _buildOrderReviewPage();
+    }
+    if (page.key == _settingsPage.key) {
+      return _buildSettingsPage(page);
+    }
+    return _buildShellPage(context);
   }
 
   Widget _buildShellPage(BuildContext context) {
@@ -698,22 +717,45 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _TabItem(l10n.mySeals, _TabIcon.mySeals),
       _TabItem(l10n.stones, _TabIcon.stones),
     ];
+    // Once a seal or a stone is chosen, the way back into the order stays on
+    // screen in every tab. It stays hidden right after a completed order,
+    // whose selections remain in the draft until the next one starts.
+    final hasOrderInProgress =
+        _completedOrderDraft == null &&
+        (_orderDraft.hasSealSelection || _orderDraft.hasStoneSelection);
 
     return Scaffold(
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: HankoTabNavigationShell(
             tabs: _navigationTabs,
             selectedTab: _requestedTab,
             selectedTabPages: _requestedTabPages,
             buildPage: _buildTabPage,
             buildBottomNavigation: (context, selectedIndex, onSelected) {
-              return _BottomTabs(
-                selectedIndex: selectedIndex,
-                tabs: tabItems,
-                onSelected: onSelected,
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (hasOrderInProgress)
+                    // The bar steps aside while the keyboard is open so text
+                    // entry keeps its room.
+                    Builder(
+                      builder: (context) => _KeyboardVisibility.isOpen(context)
+                          ? const SizedBox.shrink()
+                          : _OrderDraftBar(
+                              draft: _orderDraft,
+                              onOpen: _openOrderReview,
+                            ),
+                    ),
+                  _BottomTabs(
+                    selectedIndex: selectedIndex,
+                    tabs: tabItems,
+                    onSelected: onSelected,
+                  ),
+                ],
               );
             },
           ),
@@ -731,11 +773,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: SettingsScreen(
             onClose: _closeTopPage,
             initialDestination: initialDestination,
             onLocaleSelected: widget.onLocaleSelected,
+            onOpenOrderLookup: _openOrderLookup,
           ),
         ),
       ),
@@ -747,7 +790,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: OrderFlowEntryScreen(
             draft: _orderDraft,
             onBack: _closeTopPage,
@@ -765,7 +808,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: CheckoutInputScreen(
             input: _orderDraft.input,
             onBack: _closeTopPage,
@@ -782,7 +825,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: OrderConfirmationScreen(
             draft: _orderDraft,
             onBack: _closeTopPage,
@@ -799,7 +842,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: CheckoutProcessingScreen(
             step: _checkoutProcessingStep,
             createdOrder: _checkoutCreatedOrder,
@@ -819,7 +862,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: StripeCheckoutTransitionScreen(
             draft: _orderDraft,
             step: _stripeCheckoutStep,
@@ -843,7 +886,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: CheckoutDeepLinkErrorScreen(
             error: _checkoutDeepLinkError,
             onBack: _closeTopPage,
@@ -861,7 +904,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: PaymentStatusScreen(
             draft: _orderDraft,
             step: _paymentStatusStep,
@@ -881,7 +924,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: OrderCompleteScreen(
             draft: _completedOrderDraft ?? _orderDraft,
             status: _paymentStatus,
@@ -900,12 +943,15 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 432),
+          constraints: _pageConstraints,
           child: OrderLookupEntryScreen(
             onBack: _closeTopPage,
             initialOrderNo:
                 _paymentStatus?.orderNo ?? _checkoutCreatedOrder?.orderNo,
-            initialEmail: _orderDraft.input.contact.email,
+            // The live draft's input is cleared once an order completes, so
+            // the address used for that order comes from the completed draft.
+            initialEmail:
+                (_completedOrderDraft ?? _orderDraft).input.contact.email,
             lookupOrder: widget.lookupOrder,
           ),
         ),
@@ -2092,9 +2138,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   }
 
   void _openOrderLookup() {
-    setState(
-      () => _pages = const [_shellPage, _orderCompletePage, _orderLookupPage],
-    );
+    if (_pages.last.key == _orderLookupPage.key) {
+      return;
+    }
+    // Opens on top of whichever page asked for it (order complete or
+    // settings), so closing the lookup returns there.
+    setState(() => _pages = List.unmodifiable([..._pages, _orderLookupPage]));
   }
 
   void _openContactSupport() {
@@ -2393,6 +2442,124 @@ String _primaryStonePhotoUrl(List<StoneListingPhoto> photos) {
   return sorted.first.assetUrl;
 }
 
+/// Tells descendants whether the on-screen keyboard is open.
+///
+/// The inset is read above the page's `Scaffold`, which hides it from its
+/// body. Descendants are notified only when the open/closed state flips, so a
+/// page is not rebuilt on every frame of the keyboard animation.
+class _KeyboardVisibility extends StatelessWidget {
+  const _KeyboardVisibility({required this.child});
+
+  final Widget child;
+
+  static bool isOpen(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<_KeyboardVisibilityScope>()
+            ?.isOpen ??
+        false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _KeyboardVisibilityScope(
+      isOpen: MediaQuery.viewInsetsOf(context).bottom > 0,
+      child: child,
+    );
+  }
+}
+
+class _KeyboardVisibilityScope extends InheritedWidget {
+  const _KeyboardVisibilityScope({required this.isOpen, required super.child});
+
+  final bool isOpen;
+
+  @override
+  bool updateShouldNotify(_KeyboardVisibilityScope oldWidget) {
+    return oldWidget.isOpen != isOpen;
+  }
+}
+
+class _OrderDraftBar extends StatelessWidget {
+  const _OrderDraftBar({required this.draft, required this.onOpen});
+
+  final OrderDraft draft;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final status = !draft.hasSealSelection
+        ? l10n.orderDraftBarMissingSealMessage
+        : !draft.hasStoneSelection
+        ? l10n.orderDraftBarMissingStoneMessage
+        : l10n.orderDraftBarReadyMessage;
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: '${l10n.orderDraftBarTitle}. $status',
+      onTap: onOpen,
+      child: ExcludeSemantics(
+        child: Material(
+          key: const Key('order-draft-bar'),
+          color: HankoColors.surface,
+          shape: const Border(
+            top: BorderSide(color: HankoColors.navBorder, width: 0.7),
+          ),
+          child: InkWell(
+            onTap: onOpen,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.shopping_bag_outlined,
+                      color: HankoColors.red,
+                      size: 24,
+                    ),
+                    const SizedBox(width: HankoSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.orderDraftBarTitle,
+                            style: HankoTextStyles.label.copyWith(height: 1.3),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            status,
+                            style: HankoTextStyles.compactBody.copyWith(
+                              fontSize: 12.5,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: HankoSpacing.sm),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: HankoColors.red,
+                      size: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BottomTabs extends StatelessWidget {
   const _BottomTabs({
     required this.selectedIndex,
@@ -2406,25 +2573,29 @@ class _BottomTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 100,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final tabWidth = constraints.maxWidth / tabs.length;
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              color: HankoColors.background,
-              border: Border(
-                top: BorderSide(color: HankoColors.navBorder, width: 0.7),
-              ),
-            ),
-            child: Stack(
+    // The bar's background runs to the bottom edge of the screen while the
+    // buttons stay above the system gesture area (home indicator on iOS,
+    // gesture or button navigation on Android).
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: HankoColors.background,
+        border: Border(
+          top: BorderSide(color: HankoColors.navBorder, width: 0.7),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tabWidth = constraints.maxWidth / tabs.length;
+            return Stack(
               children: [
-                AnimatedPositioned(
+                AnimatedPositionedDirectional(
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutCubic,
                   top: 0,
-                  left: tabWidth * selectedIndex + (tabWidth / 2) - 25,
+                  start: tabWidth * selectedIndex + (tabWidth / 2) - 25,
                   width: 50,
                   height: 4,
                   child: DecoratedBox(
@@ -2446,16 +2617,10 @@ class _BottomTabs extends StatelessWidget {
                       ),
                   ],
                 ),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 8,
-                  child: Center(child: _HomeIndicator()),
-                ),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -2486,7 +2651,7 @@ class _BottomTabButton extends StatelessWidget {
           containedInkWell: true,
           highlightShape: BoxShape.rectangle,
           child: Padding(
-            padding: const EdgeInsets.only(top: 21, bottom: 20),
+            padding: const EdgeInsets.only(top: 12, bottom: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -2511,22 +2676,6 @@ class _BottomTabButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _HomeIndicator extends StatelessWidget {
-  const _HomeIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 136,
-      height: 5,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(10),
       ),
     );
   }
