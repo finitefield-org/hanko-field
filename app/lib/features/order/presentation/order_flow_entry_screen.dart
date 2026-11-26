@@ -1807,7 +1807,12 @@ class _OrderScreenFrame extends StatelessWidget {
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 36, 18, HankoSpacing.xl),
+            padding: EdgeInsets.fromLTRB(
+              18,
+              HankoPageInsets.headerTop,
+              18,
+              HankoPageInsets.bottom(context),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -2202,6 +2207,7 @@ class _SealPreviewFallback extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: HankoTextStyles.heroTitle.copyWith(
             color: HankoColors.red,
+            fontFamilyFallback: HankoFonts.serifFallbackFor(text),
             fontSize: 38,
             height: 1.05,
           ),
@@ -2406,7 +2412,9 @@ class _OrderDetailLine extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: HankoTextStyles.cardTitle,
+          style: HankoTextStyles.cardTitle.copyWith(
+            fontFamilyFallback: HankoFonts.serifFallbackFor(value),
+          ),
         ),
         if (hasDivider) ...[
           const SizedBox(height: HankoSpacing.md),

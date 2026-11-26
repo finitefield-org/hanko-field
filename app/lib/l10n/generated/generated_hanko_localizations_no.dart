@@ -347,6 +347,18 @@ class GeneratedHankoLocalizationsNo extends GeneratedHankoLocalizations {
   String get sealBalanceDense => 'Dense';
 
   @override
+  String get sealFontProfileFormalSerif => 'Formal serif';
+
+  @override
+  String get sealFontProfileSoftSans => 'Soft sans';
+
+  @override
+  String get sealFontProfileBoldBrush => 'Bold brush';
+
+  @override
+  String get sealFontProfileClassicSeal => 'Seal script';
+
+  @override
   String get sealStyleSummaryTitle => 'Current style';
 
   @override
@@ -409,6 +421,14 @@ class GeneratedHankoLocalizationsNo extends GeneratedHankoLocalizations {
 
   @override
   String get sealVariantSelectionMessage => 'Choose one AI seal design.';
+
+  @override
+  String sealVariantOptionTitle(int number) {
+    return 'Option $number';
+  }
+
+  @override
+  String get sealVariantChooseAction => 'Choose';
 
   @override
   String get sealVariantSelectedBadge => 'Selected';
@@ -600,13 +620,71 @@ class GeneratedHankoLocalizationsNo extends GeneratedHankoLocalizations {
   String get stoneFilterColor => 'Color';
 
   @override
+  String get stoneColorGreen => 'Green';
+
+  @override
+  String get stoneColorYellow => 'Yellow';
+
+  @override
+  String get stoneColorWhite => 'White';
+
+  @override
+  String get stoneColorPink => 'Pink';
+
+  @override
+  String get stoneColorRed => 'Red';
+
+  @override
+  String get stoneColorBlue => 'Blue';
+
+  @override
+  String get stoneColorBlack => 'Black';
+
+  @override
   String get stoneFilterPattern => 'Pattern';
+
+  @override
+  String get stonePatternPlain => 'Plain';
+
+  @override
+  String get stonePatternVeined => 'Veined';
+
+  @override
+  String get stonePatternCloud => 'Cloud';
+
+  @override
+  String get stonePatternMottled => 'Mottled';
+
+  @override
+  String get stonePatternBanded => 'Banded';
+
+  @override
+  String get stonePatternSpeckled => 'Speckled';
 
   @override
   String get stoneFilterAvailability => 'Availability';
 
   @override
   String get stoneFilterReset => 'Reset';
+
+  @override
+  String get stoneFilterApply => 'Show Stones';
+
+  @override
+  String stoneFilterActiveCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count filters applied',
+      one: '1 filter applied',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String stoneFilterRemove(String label) {
+    return 'Remove filter: $label';
+  }
 
   @override
   String get noStonesMatchFilters => 'No stones match filters';
@@ -781,6 +859,20 @@ class GeneratedHankoLocalizationsNo extends GeneratedHankoLocalizations {
 
   @override
   String get continueToShipping => 'Continue to Shipping';
+
+  @override
+  String get orderDraftBarTitle => 'Continue your order';
+
+  @override
+  String get orderDraftBarReadyMessage => 'Seal and stone selected.';
+
+  @override
+  String get orderDraftBarMissingStoneMessage =>
+      'Seal selected. Next, choose a stone.';
+
+  @override
+  String get orderDraftBarMissingSealMessage =>
+      'Stone selected. Next, choose a seal.';
 
   @override
   String get checkoutInputTitle => 'Checkout Information';

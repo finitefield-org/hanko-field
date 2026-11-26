@@ -329,6 +329,18 @@ class GeneratedHankoLocalizationsJa extends GeneratedHankoLocalizations {
   String get sealBalanceDense => '密度高め';
 
   @override
+  String get sealFontProfileFormalSerif => '明朝体';
+
+  @override
+  String get sealFontProfileSoftSans => 'やわらかなゴシック体';
+
+  @override
+  String get sealFontProfileBoldBrush => '筆文字';
+
+  @override
+  String get sealFontProfileClassicSeal => '篆書体';
+
+  @override
   String get sealStyleSummaryTitle => '現在のスタイル';
 
   @override
@@ -386,6 +398,14 @@ class GeneratedHankoLocalizationsJa extends GeneratedHankoLocalizations {
 
   @override
   String get sealVariantSelectionMessage => 'AI印影候補から1件を選択してください。';
+
+  @override
+  String sealVariantOptionTitle(int number) {
+    return '候補 $number';
+  }
+
+  @override
+  String get sealVariantChooseAction => '選ぶ';
 
   @override
   String get sealVariantSelectedBadge => '選択中';
@@ -563,13 +583,65 @@ class GeneratedHankoLocalizationsJa extends GeneratedHankoLocalizations {
   String get stoneFilterColor => '色';
 
   @override
+  String get stoneColorGreen => '緑';
+
+  @override
+  String get stoneColorYellow => '黄色';
+
+  @override
+  String get stoneColorWhite => '白';
+
+  @override
+  String get stoneColorPink => 'ピンク';
+
+  @override
+  String get stoneColorRed => '赤';
+
+  @override
+  String get stoneColorBlue => '青';
+
+  @override
+  String get stoneColorBlack => '黒';
+
+  @override
   String get stoneFilterPattern => '模様';
+
+  @override
+  String get stonePatternPlain => '無地';
+
+  @override
+  String get stonePatternVeined => '筋模様';
+
+  @override
+  String get stonePatternCloud => '雲状';
+
+  @override
+  String get stonePatternMottled => 'まだら';
+
+  @override
+  String get stonePatternBanded => '縞模様';
+
+  @override
+  String get stonePatternSpeckled => '斑点';
 
   @override
   String get stoneFilterAvailability => '在庫';
 
   @override
   String get stoneFilterReset => 'リセット';
+
+  @override
+  String get stoneFilterApply => 'この条件で表示する';
+
+  @override
+  String stoneFilterActiveCount(int count) {
+    return '$count件の条件で絞り込み中';
+  }
+
+  @override
+  String stoneFilterRemove(String label) {
+    return '絞り込みを解除：$label';
+  }
 
   @override
   String get noStonesMatchFilters => '条件に合う石がありません';
@@ -734,6 +806,18 @@ class GeneratedHankoLocalizationsJa extends GeneratedHankoLocalizations {
 
   @override
   String get continueToShipping => '配送先入力へ進む';
+
+  @override
+  String get orderDraftBarTitle => 'ご注文の続き';
+
+  @override
+  String get orderDraftBarReadyMessage => '印影と宝石材を選択済みです。';
+
+  @override
+  String get orderDraftBarMissingStoneMessage => '印影を選択済みです。次に宝石材を選びましょう。';
+
+  @override
+  String get orderDraftBarMissingSealMessage => '宝石材を選択済みです。次に印影を選びましょう。';
 
   @override
   String get checkoutInputTitle => 'Checkout情報';

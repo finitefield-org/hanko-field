@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'hanko_serif_coverage.dart';
+
 abstract final class HankoTheme {
   static ThemeData light() {
     return ThemeData(
@@ -66,12 +68,27 @@ abstract final class HankoColors {
 abstract final class HankoFonts {
   static const sans = 'Manrope';
   static const serif = 'Noto Serif';
+
+  /// Noto Serif has no CJK glyphs, so serif text falls back to the bundled
+  /// Japanese serif instead of the platform's sans-serif system font.
+  static const serifFallback = <String>['Noto Serif JP'];
+
+  /// Serif fallback for [text] whose characters are not known in advance, such
+  /// as a kanji name suggested in the Chinese or Taiwanese naming style.
+  ///
+  /// The Japanese serif lacks many Chinese characters. When it cannot draw
+  /// every ideograph in [text], no fallback is returned so the whole string
+  /// uses the platform font rather than two typefaces side by side.
+  static List<String> serifFallbackFor(String text) {
+    return hankoSerifCoversIdeographs(text) ? serifFallback : const <String>[];
+  }
 }
 
 abstract final class HankoTextStyles {
   static const pageTitle = TextStyle(
     color: HankoColors.red,
     fontFamily: HankoFonts.serif,
+    fontFamilyFallback: HankoFonts.serifFallback,
     fontSize: 38,
     fontWeight: FontWeight.w500,
     height: 1,
@@ -81,6 +98,7 @@ abstract final class HankoTextStyles {
   static const heroTitle = TextStyle(
     color: HankoColors.ink,
     fontFamily: HankoFonts.serif,
+    fontFamilyFallback: HankoFonts.serifFallback,
     fontSize: 36,
     fontWeight: FontWeight.w500,
     height: 1.12,
@@ -90,6 +108,7 @@ abstract final class HankoTextStyles {
   static const sectionTitle = TextStyle(
     color: HankoColors.ink,
     fontFamily: HankoFonts.serif,
+    fontFamilyFallback: HankoFonts.serifFallback,
     fontSize: 25,
     fontWeight: FontWeight.w500,
     height: 1.12,
@@ -99,6 +118,7 @@ abstract final class HankoTextStyles {
   static const cardTitle = TextStyle(
     color: HankoColors.ink,
     fontFamily: HankoFonts.serif,
+    fontFamilyFallback: HankoFonts.serifFallback,
     fontSize: 21.5,
     fontWeight: FontWeight.w500,
     height: 1.05,
@@ -107,6 +127,7 @@ abstract final class HankoTextStyles {
 
   static const buttonLabel = TextStyle(
     fontFamily: HankoFonts.serif,
+    fontFamilyFallback: HankoFonts.serifFallback,
     fontSize: 16,
     fontWeight: FontWeight.w500,
     height: 1,

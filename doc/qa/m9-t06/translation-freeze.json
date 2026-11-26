@@ -1,13 +1,13 @@
 {
   "format_version": 1,
   "task": "M9-T06",
-  "frozen_at": "2026-07-14",
+  "frozen_at": "2026-11-26",
   "release_candidate": "next-app-release",
   "review_policy": {
     "translation_changes_after_freeze_require_explicit_review": true,
     "m0_t05_preservation_gates_recorded": true,
     "current_task_changes_translations": true,
-    "current_task_changes_registry_flags": true,
+    "current_task_changes_registry_flags": false,
     "current_task_changes_release_credentials": false
   },
   "language_set": {
@@ -201,28 +201,28 @@
     },
     {
       "path": "app/lib/l10n/app_ar.arb",
-      "sha256": "573e31356ba8cc94ef64680a1953453eacf76d5ed6ec37c6b40781d3eaa4b915",
-      "bytes": 64972
+      "sha256": "7e36017991a9f2282e9815834c9f7aabd21c9bc76b2aeaa9a7539a25f158a526",
+      "bytes": 69307
     },
     {
       "path": "app/lib/l10n/app_en.arb",
-      "sha256": "871b3265b95c8f24109e3cc5e066ba5eafc5a6ad9e8e518d69a42dd2df36b85d",
-      "bytes": 64972
+      "sha256": "4ae7719cab2ea335124af164569440f8820909d52e3d21b99bd8b7f34b697e95",
+      "bytes": 69307
     },
     {
       "path": "app/lib/l10n/app_ja.arb",
-      "sha256": "f09bb848cb96e4a9c34a1116d1e1941a6add07d972760d05d29a779e3464379a",
-      "bytes": 68490
+      "sha256": "806b836efed00bcbf1b4b39719bdba1fc3e9b5cc4950f7b4d8d0eaa7fbe6da3f",
+      "bytes": 72923
     },
     {
       "path": "app/lib/l10n/app_zh.arb",
-      "sha256": "e7e8d6c8efeb40768057fc2a5a1218c13d193cf1ea03b97a4fe0175263a4e8fd",
-      "bytes": 64968
+      "sha256": "f33fd768fda7d7528d4e45641d21b78ef78d4df82699dacb44bd77c16722aad6",
+      "bytes": 69303
     },
     {
       "path": "app/lib/l10n/app_zh_Hant.arb",
-      "sha256": "bd6f727df3c8d068a1f627e26712bc4bc28b509c7f62ebf3ac5dd131bceade25",
-      "bytes": 64973
+      "sha256": "03e890a4beea392feb5cd6c701f6d9ddf51cf346c0fae95a94b7b956cc6a789a",
+      "bytes": 69308
     },
     {
       "path": "config/languages.json",

@@ -240,11 +240,17 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
       child: Column(
         children: [
           Expanded(
-            child: IndexedStack(
-              index: safeIndex,
-              children: [
-                for (final tab in widget.tabs) _buildNavigatorForTab(tab),
-              ],
+            // The bottom navigation covers the system gesture area, so tab
+            // pages must not reserve that inset a second time.
+            child: MediaQuery.removePadding(
+              context: context,
+              removeBottom: true,
+              child: IndexedStack(
+                index: safeIndex,
+                children: [
+                  for (final tab in widget.tabs) _buildNavigatorForTab(tab),
+                ],
+              ),
             ),
           ),
           widget.buildBottomNavigation(context, safeIndex, _selectTabIndex),

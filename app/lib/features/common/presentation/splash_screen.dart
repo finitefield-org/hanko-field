@@ -151,6 +151,7 @@ class _SplashBrandTitle extends StatelessWidget {
             style: TextStyle(
               color: HankoColors.red,
               fontFamily: HankoFonts.serif,
+              fontFamilyFallback: HankoFonts.serifFallback,
               fontSize: 42,
               fontWeight: FontWeight.w500,
               height: 0.95,
@@ -166,6 +167,7 @@ class _SplashBrandTitle extends StatelessWidget {
 const _brandTextStyle = TextStyle(
   color: HankoColors.ink,
   fontFamily: HankoFonts.serif,
+  fontFamilyFallback: HankoFonts.serifFallback,
   fontSize: 42,
   fontWeight: FontWeight.w500,
   height: 0.95,

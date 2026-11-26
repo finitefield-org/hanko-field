@@ -148,22 +148,25 @@ class _OnboardingBrand extends StatelessWidget {
             painter: _BrandDiamondPainter(),
           ),
           const SizedBox(width: 7),
-          Flexible(
-            child: Transform.scale(
-              scaleX: 0.86,
-              alignment: Alignment.centerLeft,
-              child: const Text(
-                'Stone Signature',
-                maxLines: 1,
-                overflow: TextOverflow.visible,
-                style: TextStyle(
-                  color: Color(0xFF8D1018),
-                  fontFamily: HankoFonts.serif,
-                  fontSize: 27,
-                  fontWeight: FontWeight.w500,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
+          const Flexible(
+            child: Text(
+              'Stone Signature',
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              style: TextStyle(
+                color: Color(0xFF8D1018),
+                fontFamily: HankoFonts.serif,
+                fontFamilyFallback: HankoFonts.serifFallback,
+                fontSize: 27,
+                fontWeight: FontWeight.w500,
+                // Condensed cut from the font's own width axis rather than
+                // squeezing the glyphs with a transform.
+                fontVariations: [
+                  FontVariation('wdth', 86),
+                  FontVariation('wght', 500),
+                ],
+                height: 1,
+                letterSpacing: 0,
               ),
             ),
           ),
@@ -181,9 +184,16 @@ class _OnboardingHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return SizedBox(
-      height: compact ? 292 : 300,
+    final title = l10n.onboardingHeroTitle;
+    final titleStyle = _heroTitleStyle(title, compact: compact);
+
+    // The copy flows in a column so a taller headline pushes the ornament and
+    // tagline down instead of running into them; the photo stays pinned to the
+    // right edge behind it.
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: compact ? 292 : 300),
       child: Stack(
+        alignment: Alignment.topLeft,
         clipBehavior: Clip.none,
         children: [
           Positioned(
@@ -194,36 +204,61 @@ class _OnboardingHero extends StatelessWidget {
               height: compact ? 325 : 350,
             ),
           ),
-          Positioned(
-            left: compact ? 30 : 33,
-            top: compact ? 92 : 100,
-            width: compact ? 360 : 390,
-            child: Transform.scale(
-              scaleX: 0.68,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l10n.onboardingHeroTitle,
-                style: HankoTextStyles.heroTitle.copyWith(
-                  fontSize: compact ? 46 : 50,
-                  height: 1.01,
-                ),
+          Padding(
+            padding: EdgeInsets.only(
+              left: compact ? 30 : 33,
+              top: compact ? 92 : 100,
+            ),
+            child: SizedBox(
+              width: compact ? 245 : 265,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // A headline authored with line breaks keeps each line
+                  // whole and is scaled down when a line is wider than the
+                  // column. One without breaks wraps normally.
+                  if (title.contains('\n'))
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(title, softWrap: false, style: titleStyle),
+                    )
+                  else
+                    Text(title, style: titleStyle),
+                  const SizedBox(height: 23),
+                  const _Ornament(),
+                  const SizedBox(height: 26),
+                  Text(l10n.onboardingTagline, style: HankoTextStyles.body),
+                ],
               ),
             ),
-          ),
-          Positioned(
-            left: compact ? 30 : 33,
-            top: compact ? 218 : 224,
-            child: const _Ornament(),
-          ),
-          Positioned(
-            left: compact ? 30 : 33,
-            top: compact ? 252 : 260,
-            child: Text(l10n.onboardingTagline, style: HankoTextStyles.body),
           ),
         ],
       ),
     );
   }
+}
+
+/// The hero title is set in a condensed serif. Latin text uses the width axis
+/// of Noto Serif; scripts served by a fallback font have no such axis, so they
+/// are set smaller instead of being squeezed out of proportion.
+TextStyle _heroTitleStyle(String title, {required bool compact}) {
+  final isLatin = title.runes.every((rune) => rune < 0x0250);
+  if (isLatin) {
+    return HankoTextStyles.heroTitle.copyWith(
+      fontSize: compact ? 46 : 50,
+      height: 1.01,
+      fontVariations: const [
+        FontVariation('wdth', 68),
+        FontVariation('wght', 500),
+      ],
+    );
+  }
+  return HankoTextStyles.heroTitle.copyWith(
+    fontSize: compact ? 33 : 36,
+    height: 1.3,
+  );
 }
 
 class _OnboardingStampPhoto extends StatelessWidget {
@@ -354,6 +389,7 @@ class _KanjiSealIcon extends StatelessWidget {
             style: TextStyle(
               color: HankoColors.red,
               fontFamily: HankoFonts.serif,
+              fontFamilyFallback: HankoFonts.serifFallback,
               fontSize: size * 0.56,
               fontWeight: FontWeight.w600,
               height: 1,

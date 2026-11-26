@@ -103,7 +103,12 @@ class _StoneDetailScreenState extends State<StoneDetailScreen> {
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 36, 18, HankoSpacing.xl),
+          padding: EdgeInsets.fromLTRB(
+            18,
+            HankoPageInsets.headerTop,
+            18,
+            HankoPageInsets.bottom(context),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

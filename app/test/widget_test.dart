@@ -1717,11 +1717,8 @@ void main() {
     );
 
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
-    expect(find.text('Rose Quartz'), findsWidgets);
+    expect(find.text('Rose Quartz · 24x24x60 mm'), findsOneWidget);
     expect(find.text('¥18,000'), findsOneWidget);
-    expect(find.text('Pink'), findsWidgets);
-    expect(find.text('Plain'), findsWidgets);
-    expect(find.text('24x24x60 mm'), findsOneWidget);
     expect(find.text('Available'), findsWidgets);
     expect(find.text('Select Stone'), findsOneWidget);
 
@@ -1828,35 +1825,224 @@ void main() {
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
     expect(find.text('Green Jade Seal Stone'), findsOneWidget);
     expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
+    // Filters live in a bottom sheet, not in the list flow.
+    expect(find.byKey(const Key('stone-filter-material-jade')), findsNothing);
+    expect(find.byKey(const Key('stone-filters-clear')), findsNothing);
 
+    await tester.tap(find.byKey(const Key('stone-filters-open')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('stone-filter-material-jade')));
     await tester.pump();
+    await tester.tap(find.byKey(const Key('stone-filters-apply')));
+    await tester.pumpAndSettle();
 
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsNothing);
     expect(find.text('Green Jade Seal Stone'), findsOneWidget);
     expect(find.text('Black Onyx Seal Stone'), findsNothing);
+    expect(
+      find.byKey(const Key('stone-active-filter-material')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stone-filters-open')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
 
+    await tester.tap(find.byKey(const Key('stone-filters-open')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('stone-filters-reset')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('stone-filter-color-pink')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('stone-filter-pattern-plain')));
     await tester.pump();
+    await tester.tap(find.byKey(const Key('stone-filters-apply')));
+    await tester.pumpAndSettle();
 
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
     expect(find.text('Green Jade Seal Stone'), findsNothing);
     expect(find.text('Black Onyx Seal Stone'), findsNothing);
+    expect(find.byKey(const Key('stone-active-filter-material')), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stone-filters-open')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const Key('stone-filters-reset')));
+    // Active filters can be cleared without opening the sheet.
+    await tester.tap(find.byKey(const Key('stone-filters-clear')));
     await tester.pump();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Green Jade Seal Stone'), findsOneWidget);
+    expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
+    expect(find.byKey(const Key('stone-filters-clear')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('stone-filters-open')));
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const Key('stone-filter-availability-unavailable')),
     );
     await tester.pump();
+    await tester.tap(find.byKey(const Key('stone-filters-apply')));
+    await tester.pumpAndSettle();
 
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsNothing);
     expect(find.text('Green Jade Seal Stone'), findsNothing);
     expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Remove filter: Unavailable'));
+    await tester.pump();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
+
+    // Dismissing the sheet without applying keeps the current filters.
+    await tester.tap(find.byKey(const Key('stone-filters-open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-filter-material-jade')));
+    await tester.pump();
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-001 shows compact cards without opening filters', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    StoneListing? openedStone;
+    StoneListing? selectedStone;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: GeneratedHankoLocalizations.supportedLocales,
+        localizationsDelegates:
+            GeneratedHankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          result: _stoneListingsResult(
+            listings: [
+              for (var index = 1; index <= 5; index++)
+                _stoneListing(
+                  id: 'stone_listing_00$index',
+                  title: 'Seal Stone $index',
+                  priceAmount: 18000 + index,
+                ),
+            ],
+          ),
+          selectedStoneId: 'stone_listing_002',
+          onOpenStoneDetail: (listing) => openedStone = listing,
+          onSelectStone: (listing) => selectedStone = listing,
+        ),
+      ),
+    );
+
+    // How many cards fit on the first screen is checked with the real fonts
+    // in first_screen_layout_test.dart; the test font is too wide to tell.
+    final cards = find.byKey(const Key('stone-card-open'));
+    expect(cards, findsNWidgets(5));
+    expect(find.byKey(const Key('stone-filter-material-all')), findsNothing);
+
+    final price = tester.widget<Text>(find.text('¥18,001'));
+    expect(price.style?.fontSize, greaterThanOrEqualTo(17));
+    expect(price.style?.color, HankoColors.ink);
+
+    // The selected stone is marked and announced as selected.
+    expect(find.text('Selected for Order'), findsOneWidget);
+    expect(
+      tester.getSemantics(cards.at(1)),
+      containsSemantics(isSelected: true, hint: 'View Details'),
+    );
+
+    await tester.tap(find.text('Seal Stone 3'));
+    await tester.pump();
+    expect(openedStone?.id, 'stone_listing_003');
+
+    await tester.tap(find.byKey(const Key('stone-card-select')).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pump();
+    expect(selectedStone?.id, 'stone_listing_001');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-001 localizes stone facet labels in Japanese', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ja'),
+        supportedLocales: GeneratedHankoLocalizations.supportedLocales,
+        localizationsDelegates:
+            GeneratedHankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          result: _stoneListingsResult(
+            listings: [
+              _stoneListing(
+                title: '翡翠の印材',
+                materialLabel: '翡翠',
+                colorFamily: 'green',
+                patternPrimary: 'mottled',
+              ),
+              _stoneListing(
+                id: 'stone_listing_002',
+                title: '未知の印材',
+                colorFamily: 'teal_blue',
+                patternPrimary: 'veined',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('翡翠 · 24x24x60 mm'), findsOneWidget);
+
+    // Colour and pattern are offered as filters, with localized labels and a
+    // readable fallback for a token the app does not know.
+    await tester.tap(find.byKey(const Key('stone-filters-open')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('絞り込み'), findsWidgets);
+    expect(find.text('筋模様'), findsOneWidget);
+    expect(find.text('Teal Blue'), findsOneWidget);
+    expect(find.text('Green'), findsNothing);
+    expect(find.text('Mottled'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stone-filter-color-green')),
+        matching: find.text('緑'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stone-filter-pattern-mottled')),
+        matching: find.text('まだら'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('この条件で表示する'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -2019,9 +2205,9 @@ void main() {
 
     await tester.tap(find.text('Stones').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('View Details'));
+    await tester.ensureVisible(find.byKey(const Key('stone-card-open')));
     await tester.pump();
-    await tester.tap(find.text('View Details'));
+    await tester.tap(find.byKey(const Key('stone-card-open')));
     await tester.pumpAndSettle();
 
     expect(capturedQuery?.listingId, 'stone_listing_001');
@@ -2050,9 +2236,9 @@ void main() {
 
     await tester.tap(find.text('Stones').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('View Details'));
+    await tester.ensureVisible(find.byKey(const Key('stone-card-open')));
     await tester.pump();
-    await tester.tap(find.text('View Details'));
+    await tester.tap(find.byKey(const Key('stone-card-open')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('stone-detail-gallery-thumbnail-1')));
@@ -2146,9 +2332,9 @@ void main() {
 
     await tester.tap(find.text('Stones').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('View Details'));
+    await tester.ensureVisible(find.byKey(const Key('stone-card-open')));
     await tester.pump();
-    await tester.tap(find.text('View Details'));
+    await tester.tap(find.byKey(const Key('stone-card-open')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('stone-sold-out-state')), findsOneWidget);
@@ -4238,6 +4424,107 @@ void main() {
 
     expect(find.byType(SettingsScreen), findsNothing);
     expect(find.byType(BottomNavigationShell), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('COM-004 opens order lookup from settings and returns', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(tester);
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-order-lookup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderLookupEntryScreen), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderLookupEntryScreen), findsNothing);
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('COM-003 keeps the header and tabs inside the system insets', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+    tester.view.viewPadding = const FakeViewPadding(top: 59, bottom: 34);
+    addTearDown(tester.view.reset);
+
+    await pumpLaunchedApp(tester);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getRect(find.byTooltip('Settings')).top,
+      greaterThanOrEqualTo(59),
+    );
+    expect(
+      tester.getRect(find.text('My Seals').last).bottom,
+      lessThanOrEqualTo(912 - 34),
+    );
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(find.text('Settings')).top, greaterThanOrEqualTo(59));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('order draft bar reopens the order review from another tab', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: InMemoryLocalSealDesignRepository([
+        _localSealDesign(),
+      ]),
+      localOrderDraftRepository: InMemoryLocalOrderDraftRepository(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('order-draft-bar')), findsNothing);
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsNothing);
+    expect(find.byKey(const Key('order-draft-bar')), findsOneWidget);
+    expect(find.text('Continue your order'), findsOneWidget);
+    expect(find.text('Seal selected. Next, choose a stone.'), findsOneWidget);
+
+    await tester.tap(find.text('Design').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('order-draft-bar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
